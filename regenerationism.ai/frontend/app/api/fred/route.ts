@@ -37,9 +37,8 @@ export async function GET(request: NextRequest) {
     if (endDate) {
       fredUrl.searchParams.set('observation_end', endDate)
     }
-    if (endpoint === 'observations') {
-      fredUrl.searchParams.set('frequency', 'm') // Monthly
-    }
+    // Note: Don't force monthly frequency - some series (like GDP, Investment)
+    // are only available quarterly. Let FRED return native frequency.
 
     console.log(`Proxying FRED request: ${fredPath} for ${seriesId}`)
 
