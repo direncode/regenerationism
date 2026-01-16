@@ -1,10 +1,13 @@
 //! NIV Engine API Server
-//! 
+//!
 //! Endpoints:
 //! - GET /api/v1/latest - Current NIV score and recession probability
 //! - GET /api/v1/history - Historical NIV data (1960-present)
 //! - GET /api/v1/components - Current component breakdown
 //! - GET /api/v1/compare - NIV vs Fed Yield Curve comparison
+//! - POST /api/v1/simulate - Run simulation with custom parameters
+//! - POST /api/v1/monte-carlo - Run Monte Carlo analysis
+//! - POST /api/v1/sensitivity - Run sensitivity analysis
 //! - GET /health - Health check
 
 mod niv;
@@ -14,7 +17,7 @@ use axum::{
     extract::{Query, State},
     http::StatusCode,
     response::Json,
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use chrono::{NaiveDate, Datelike};
@@ -55,6 +58,44 @@ struct HistoryQuery {
 
 fn default_limit() -> usize {
     1000
+}
+
+/// Simulation request parameters
+#[derive(Debug, Deserialize)]
+struct SimulateRequest {
+    eta: Option<f64>,
+    weights: Option<ComponentWeightsRequest>,
+    smooth_window: Option<usize>,
+    start: Option<String>,  // YYYY-MM-DD
+    end: Option<String>,    // YYYY-MM-DD
+    fred_api_key: Option<String>,  // Optional FRED API key for live data
+    use_live_data: Option<bool>,   // Whether to use live FRED data
+}
+
+#[derive(Debug, Deserialize)]
+struct ComponentWeightsRequest {
+    thrust: Option<f64>,
+    efficiency: Option<f64>,
+    slack: Option<f64>,
+    drag: Option<f64>,
+}
+
+/// Monte Carlo request parameters
+#[derive(Debug, Deserialize)]
+struct MonteCarloRequest {
+    num_draws: Option<usize>,
+    window_size: Option<usize>,
+    confidence_level: Option<f64>,
+    eta: Option<f64>,
+}
+
+/// Sensitivity analysis request
+#[derive(Debug, Deserialize)]
+struct SensitivityRequest {
+    component: String,  // "eta", "thrust", "efficiency", "slack", "drag"
+    min_value: Option<f64>,
+    max_value: Option<f64>,
+    steps: Option<usize>,
 }
 
 /// API Response types
@@ -126,6 +167,94 @@ struct ErrorResponse {
     code: String,
 }
 
+/// Simulation response
+#[derive(Serialize)]
+struct SimulateResponse {
+    params: SimulationParamsResponse,
+    data: Vec<HistoryDataPoint>,
+    summary: SimulationSummary,
+}
+
+#[derive(Serialize)]
+struct SimulationParamsResponse {
+    eta: f64,
+    weights: ComponentWeightsResponse,
+    smooth_window: usize,
+    start_date: String,
+    end_date: String,
+}
+
+#[derive(Serialize)]
+struct ComponentWeightsResponse {
+    thrust: f64,
+    efficiency: f64,
+    slack: f64,
+    drag: f64,
+}
+
+#[derive(Serialize)]
+struct SimulationSummary {
+    total_points: usize,
+    avg_probability: f64,
+    max_probability: f64,
+    min_probability: f64,
+    recessions_detected: usize,
+    false_positives: usize,
+    true_positives: usize,
+}
+
+/// Monte Carlo response
+#[derive(Serialize)]
+struct MonteCarloResponse {
+    num_draws: usize,
+    window_size: usize,
+    current_probability: f64,
+    distribution: MonteCarloDistribution,
+    percentiles: MonteCarloPercentiles,
+}
+
+#[derive(Serialize)]
+struct MonteCarloDistribution {
+    buckets: Vec<MonteCarloBucket>,
+    mean: f64,
+    std_dev: f64,
+}
+
+#[derive(Serialize)]
+struct MonteCarloBucket {
+    range_start: f64,
+    range_end: f64,
+    count: usize,
+    frequency: f64,
+}
+
+#[derive(Serialize)]
+struct MonteCarloPercentiles {
+    p5: f64,
+    p10: f64,
+    p25: f64,
+    p50: f64,
+    p75: f64,
+    p90: f64,
+    p95: f64,
+}
+
+/// Sensitivity response
+#[derive(Serialize)]
+struct SensitivityResponse {
+    component: String,
+    baseline_value: f64,
+    baseline_probability: f64,
+    sensitivity_data: Vec<SensitivityPoint>,
+}
+
+#[derive(Serialize)]
+struct SensitivityPoint {
+    value: f64,
+    probability: f64,
+    delta_from_baseline: f64,
+}
+
 #[tokio::main]
 async fn main() {
     // Initialize tracing
@@ -177,6 +306,10 @@ async fn main() {
         .route("/api/v1/components", get(get_components))
         .route("/api/v1/compare", get(get_comparison))
         .route("/api/v1/recessions", get(get_recessions))
+        // New simulation endpoints
+        .route("/api/v1/simulate", post(run_simulation))
+        .route("/api/v1/monte-carlo", post(run_monte_carlo))
+        .route("/api/v1/sensitivity", post(run_sensitivity))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
@@ -449,6 +582,419 @@ fn interpret_drag(v: f64) -> String {
         v if v > 0.03 => "Elevated drag - watch closely".to_string(),
         v if v > 0.01 => "Normal friction levels".to_string(),
         _ => "Low friction - smooth capital flow".to_string(),
+    }
+}
+
+// ============================================================================
+// SIMULATION ENDPOINTS
+// ============================================================================
+
+/// Run simulation with custom parameters
+async fn run_simulation(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<SimulateRequest>,
+) -> Result<Json<SimulateResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // Parse parameters with defaults
+    let eta = req.eta.unwrap_or(niv::ETA);
+    let weights = ComponentWeightsResponse {
+        thrust: req.weights.as_ref().and_then(|w| w.thrust).unwrap_or(1.0),
+        efficiency: req.weights.as_ref().and_then(|w| w.efficiency).unwrap_or(1.0),
+        slack: req.weights.as_ref().and_then(|w| w.slack).unwrap_or(1.0),
+        drag: req.weights.as_ref().and_then(|w| w.drag).unwrap_or(1.0),
+    };
+    let smooth_window = req.smooth_window.unwrap_or(niv::SMOOTH_WINDOW);
+
+    // Parse date range
+    let start_date = req.start
+        .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
+        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2000, 1, 1).unwrap());
+    let end_date = req.end
+        .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
+        .unwrap_or_else(|| chrono::Utc::now().date_naive());
+
+    // Create engine with custom eta
+    let engine = niv::NIVEngine::with_eta(eta);
+
+    // Determine data source: live FRED or mock
+    let use_live = req.use_live_data.unwrap_or(false);
+    let economic_data = if use_live {
+        if let Some(api_key) = &req.fred_api_key {
+            // Try to fetch live FRED data
+            let client = fred::FredClient::with_api_key(api_key.clone());
+            match client.fetch_all(Some(start_date), Some(end_date)).await {
+                Ok(data) => {
+                    tracing::info!("Fetched {} live data points from FRED", data.len());
+                    data
+                }
+                Err(e) => {
+                    tracing::warn!("FRED fetch failed: {}, falling back to mock data", e);
+                    mock::generate_mock_data(start_date.year(), end_date.year())
+                }
+            }
+        } else {
+            tracing::warn!("Live data requested but no API key provided, using mock data");
+            mock::generate_mock_data(start_date.year(), end_date.year())
+        }
+    } else {
+        // Generate mock data for the date range
+        mock::generate_mock_data(start_date.year(), end_date.year())
+    };
+
+    // Filter by date range
+    let filtered_data: Vec<_> = economic_data.into_iter()
+        .filter(|d| d.date >= start_date && d.date <= end_date)
+        .collect();
+
+    // Calculate with custom weights (apply as multipliers)
+    let results: Vec<niv::NIVResult> = filtered_data.iter()
+        .map(|data| {
+            let mut result = engine.calculate(data);
+            // Apply weight multipliers
+            result.components.thrust *= weights.thrust;
+            result.components.efficiency *= weights.efficiency;
+            result.components.slack *= weights.slack;
+            result.components.drag *= weights.drag;
+            // Recalculate probability based on weighted components
+            let weighted_niv = (result.components.thrust * result.components.efficiency)
+                / (result.components.slack + result.components.drag).powf(eta);
+            result.niv_score = (weighted_niv * 100.0).clamp(-100.0, 100.0);
+            result.recession_probability = 1.0 / (1.0 + (result.niv_score / 10.0).exp());
+            result.alert_level = niv::AlertLevel::from_probability(result.recession_probability);
+            result
+        })
+        .collect();
+
+    // Apply smoothing
+    let smoothed = apply_custom_smoothing(&results, smooth_window);
+
+    // Convert to response format
+    let data: Vec<HistoryDataPoint> = smoothed.iter()
+        .map(|r| HistoryDataPoint {
+            date: r.date.to_string(),
+            niv_score: round2(r.niv_score),
+            recession_probability: round2(r.recession_probability * 100.0),
+            alert_level: r.alert_level,
+            is_recession: niv::RecessionPeriods::is_recession(r.date),
+        })
+        .collect();
+
+    // Calculate summary statistics
+    let summary = calculate_simulation_summary(&smoothed);
+
+    Ok(Json(SimulateResponse {
+        params: SimulationParamsResponse {
+            eta,
+            weights,
+            smooth_window,
+            start_date: start_date.to_string(),
+            end_date: end_date.to_string(),
+        },
+        data,
+        summary,
+    }))
+}
+
+/// Run Monte Carlo simulation
+async fn run_monte_carlo(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<MonteCarloRequest>,
+) -> Result<Json<MonteCarloResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let num_draws = req.num_draws.unwrap_or(1000).min(10000); // Cap at 10k
+    let window_size = req.window_size.unwrap_or(60); // 5 years default
+    let confidence_level = req.confidence_level.unwrap_or(0.95);
+    let eta = req.eta.unwrap_or(niv::ETA);
+
+    // Get historical data
+    let data = state.data.read().await;
+
+    if data.len() < window_size {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "Not enough historical data for Monte Carlo".to_string(),
+                code: "INSUFFICIENT_DATA".to_string(),
+            }),
+        ));
+    }
+
+    // Current probability
+    let current_prob = data.last()
+        .map(|r| r.recession_probability)
+        .unwrap_or(0.0);
+
+    // Run Monte Carlo draws
+    let mut draws: Vec<f64> = Vec::with_capacity(num_draws);
+    let engine = niv::NIVEngine::with_eta(eta);
+
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    for i in 0..num_draws {
+        // Pseudo-random window selection
+        let mut hasher = DefaultHasher::new();
+        i.hash(&mut hasher);
+        let hash = hasher.finish() as usize;
+        let start_idx = hash % (data.len() - window_size);
+
+        // Sample from window
+        let window = &data[start_idx..start_idx + window_size];
+        let avg_prob: f64 = window.iter()
+            .map(|r| r.recession_probability)
+            .sum::<f64>() / window_size as f64;
+
+        draws.push(avg_prob * 100.0);
+    }
+
+    // Sort for percentile calculation
+    draws.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    // Calculate statistics
+    let mean: f64 = draws.iter().sum::<f64>() / num_draws as f64;
+    let variance: f64 = draws.iter()
+        .map(|x| (x - mean).powi(2))
+        .sum::<f64>() / num_draws as f64;
+    let std_dev = variance.sqrt();
+
+    // Percentiles
+    let percentile = |p: f64| -> f64 {
+        let idx = ((num_draws as f64 * p) as usize).min(num_draws - 1);
+        draws[idx]
+    };
+
+    // Create histogram buckets
+    let bucket_count = 20;
+    let min_val = draws.first().copied().unwrap_or(0.0);
+    let max_val = draws.last().copied().unwrap_or(100.0);
+    let bucket_width = (max_val - min_val) / bucket_count as f64;
+
+    let mut buckets: Vec<MonteCarloBucket> = Vec::with_capacity(bucket_count);
+    for i in 0..bucket_count {
+        let range_start = min_val + i as f64 * bucket_width;
+        let range_end = range_start + bucket_width;
+        let count = draws.iter()
+            .filter(|&&v| v >= range_start && v < range_end)
+            .count();
+
+        buckets.push(MonteCarloBucket {
+            range_start: round2(range_start),
+            range_end: round2(range_end),
+            count,
+            frequency: round3(count as f64 / num_draws as f64),
+        });
+    }
+
+    Ok(Json(MonteCarloResponse {
+        num_draws,
+        window_size,
+        current_probability: round2(current_prob * 100.0),
+        distribution: MonteCarloDistribution {
+            buckets,
+            mean: round2(mean),
+            std_dev: round2(std_dev),
+        },
+        percentiles: MonteCarloPercentiles {
+            p5: round2(percentile(0.05)),
+            p10: round2(percentile(0.10)),
+            p25: round2(percentile(0.25)),
+            p50: round2(percentile(0.50)),
+            p75: round2(percentile(0.75)),
+            p90: round2(percentile(0.90)),
+            p95: round2(percentile(0.95)),
+        },
+    }))
+}
+
+/// Run sensitivity analysis
+async fn run_sensitivity(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<SensitivityRequest>,
+) -> Result<Json<SensitivityResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let steps = req.steps.unwrap_or(20).min(50);
+
+    // Determine parameter range based on component
+    let (min_val, max_val, baseline) = match req.component.to_lowercase().as_str() {
+        "eta" => (
+            req.min_value.unwrap_or(0.5),
+            req.max_value.unwrap_or(3.0),
+            niv::ETA,
+        ),
+        "thrust" | "efficiency" | "slack" | "drag" => (
+            req.min_value.unwrap_or(0.0),
+            req.max_value.unwrap_or(2.0),
+            1.0,
+        ),
+        _ => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: format!("Unknown component: {}. Valid: eta, thrust, efficiency, slack, drag", req.component),
+                    code: "INVALID_COMPONENT".to_string(),
+                }),
+            ));
+        }
+    };
+
+    let step_size = (max_val - min_val) / steps as f64;
+
+    // Get latest data point
+    let data = state.data.read().await;
+    let latest = data.last().ok_or_else(|| (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(ErrorResponse {
+            error: "No data available".to_string(),
+            code: "NO_DATA".to_string(),
+        }),
+    ))?;
+
+    // Calculate baseline probability
+    let baseline_prob = latest.recession_probability * 100.0;
+
+    // Generate sensitivity data
+    let mut sensitivity_data: Vec<SensitivityPoint> = Vec::with_capacity(steps);
+
+    for i in 0..=steps {
+        let value = min_val + i as f64 * step_size;
+
+        // Calculate probability at this parameter value
+        let prob = match req.component.to_lowercase().as_str() {
+            "eta" => {
+                let engine = niv::NIVEngine::with_eta(value);
+                // Recalculate with new eta
+                let niv_score = (latest.components.thrust * latest.components.efficiency)
+                    / (latest.components.slack + latest.components.drag).powf(value);
+                let normalized = (niv_score * 100.0).clamp(-100.0, 100.0);
+                1.0 / (1.0 + (normalized / 10.0).exp()) * 100.0
+            }
+            "thrust" => {
+                let weighted = latest.components.thrust * value;
+                let niv_score = (weighted * latest.components.efficiency)
+                    / (latest.components.slack + latest.components.drag).powf(niv::ETA);
+                let normalized = (niv_score * 100.0).clamp(-100.0, 100.0);
+                1.0 / (1.0 + (normalized / 10.0).exp()) * 100.0
+            }
+            "efficiency" => {
+                let weighted = latest.components.efficiency * value;
+                let niv_score = (latest.components.thrust * weighted)
+                    / (latest.components.slack + latest.components.drag).powf(niv::ETA);
+                let normalized = (niv_score * 100.0).clamp(-100.0, 100.0);
+                1.0 / (1.0 + (normalized / 10.0).exp()) * 100.0
+            }
+            "slack" => {
+                let weighted = latest.components.slack * value;
+                let niv_score = (latest.components.thrust * latest.components.efficiency)
+                    / (weighted + latest.components.drag).powf(niv::ETA);
+                let normalized = (niv_score * 100.0).clamp(-100.0, 100.0);
+                1.0 / (1.0 + (normalized / 10.0).exp()) * 100.0
+            }
+            "drag" => {
+                let weighted = latest.components.drag * value;
+                let niv_score = (latest.components.thrust * latest.components.efficiency)
+                    / (latest.components.slack + weighted).powf(niv::ETA);
+                let normalized = (niv_score * 100.0).clamp(-100.0, 100.0);
+                1.0 / (1.0 + (normalized / 10.0).exp()) * 100.0
+            }
+            _ => baseline_prob,
+        };
+
+        sensitivity_data.push(SensitivityPoint {
+            value: round3(value),
+            probability: round2(prob),
+            delta_from_baseline: round2(prob - baseline_prob),
+        });
+    }
+
+    Ok(Json(SensitivityResponse {
+        component: req.component,
+        baseline_value: round3(baseline),
+        baseline_probability: round2(baseline_prob),
+        sensitivity_data,
+    }))
+}
+
+/// Apply custom smoothing window
+fn apply_custom_smoothing(results: &[niv::NIVResult], window: usize) -> Vec<niv::NIVResult> {
+    if results.len() < window {
+        return results.to_vec();
+    }
+
+    let mut smoothed = Vec::with_capacity(results.len());
+
+    for i in 0..results.len() {
+        if i < window - 1 {
+            smoothed.push(results[i].clone());
+            continue;
+        }
+
+        let window_start = i + 1 - window;
+        let window_slice = &results[window_start..=i];
+
+        let avg_niv: f64 = window_slice.iter().map(|r| r.niv_score).sum::<f64>() / window as f64;
+        let avg_prob: f64 = window_slice.iter().map(|r| r.recession_probability).sum::<f64>() / window as f64;
+
+        smoothed.push(niv::NIVResult {
+            date: results[i].date,
+            niv_score: avg_niv,
+            recession_probability: avg_prob,
+            components: results[i].components.clone(),
+            alert_level: niv::AlertLevel::from_probability(avg_prob),
+        });
+    }
+
+    smoothed
+}
+
+/// Calculate simulation summary statistics
+fn calculate_simulation_summary(results: &[niv::NIVResult]) -> SimulationSummary {
+    if results.is_empty() {
+        return SimulationSummary {
+            total_points: 0,
+            avg_probability: 0.0,
+            max_probability: 0.0,
+            min_probability: 0.0,
+            recessions_detected: 0,
+            false_positives: 0,
+            true_positives: 0,
+        };
+    }
+
+    let probabilities: Vec<f64> = results.iter()
+        .map(|r| r.recession_probability * 100.0)
+        .collect();
+
+    let avg = probabilities.iter().sum::<f64>() / probabilities.len() as f64;
+    let max = probabilities.iter().cloned().fold(0.0f64, f64::max);
+    let min = probabilities.iter().cloned().fold(100.0f64, f64::min);
+
+    // Count recession signals (probability > 50%)
+    let recession_signals: usize = results.iter()
+        .filter(|r| r.recession_probability > 0.5)
+        .count();
+
+    // Count true/false positives against known recessions
+    let mut true_positives = 0;
+    let mut false_positives = 0;
+
+    for r in results {
+        let predicted_recession = r.recession_probability > 0.5;
+        let actual_recession = niv::RecessionPeriods::is_recession(r.date);
+
+        if predicted_recession {
+            if actual_recession {
+                true_positives += 1;
+            } else {
+                false_positives += 1;
+            }
+        }
+    }
+
+    SimulationSummary {
+        total_points: results.len(),
+        avg_probability: round2(avg),
+        max_probability: round2(max),
+        min_probability: round2(min),
+        recessions_detected: recession_signals,
+        false_positives,
+        true_positives,
     }
 }
 

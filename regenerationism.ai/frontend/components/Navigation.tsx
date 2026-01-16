@@ -8,6 +8,7 @@ import { Activity, Menu, X, ExternalLink } from 'lucide-react'
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/simulator', label: 'Simulator' },
   { href: '/explorer', label: 'Explorer' },
   { href: '/api-docs', label: 'API' },
 ]
