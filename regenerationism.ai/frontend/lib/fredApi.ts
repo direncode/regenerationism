@@ -55,11 +55,22 @@ const SERIES = {
   RECESSION: 'USREC',
 }
 
-// FRED API base URL
+// Use our proxy API route to bypass CORS
+// The proxy runs on the same origin, so no CORS issues
+const getProxyUrl = () => {
+  // In browser, use relative URL
+  if (typeof window !== 'undefined') {
+    return '/api/fred'
+  }
+  // On server, use full URL
+  return `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/fred`
+}
+
+// Direct FRED API (for server-side only, not used in browser)
 const FRED_API_BASE = 'https://api.stlouisfed.org/fred'
 
 /**
- * Fetch a single FRED series
+ * Fetch a single FRED series via our proxy
  */
 async function fetchFREDSeries(
   seriesId: string,
@@ -67,32 +78,32 @@ async function fetchFREDSeries(
   startDate: string,
   endDate: string
 ): Promise<FREDObservation[]> {
-  const url = new URL(`${FRED_API_BASE}/series/observations`)
-  url.searchParams.set('series_id', seriesId)
-  url.searchParams.set('api_key', apiKey)
-  url.searchParams.set('file_type', 'json')
-  url.searchParams.set('observation_start', startDate)
-  url.searchParams.set('observation_end', endDate)
-  url.searchParams.set('frequency', 'm') // Monthly frequency
+  // Use our proxy to bypass CORS
+  const proxyUrl = new URL(getProxyUrl(), typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+  proxyUrl.searchParams.set('series_id', seriesId)
+  proxyUrl.searchParams.set('api_key', apiKey)
+  proxyUrl.searchParams.set('observation_start', startDate)
+  proxyUrl.searchParams.set('observation_end', endDate)
+  proxyUrl.searchParams.set('endpoint', 'observations')
 
-  console.log(`Fetching FRED series ${seriesId}...`)
+  console.log(`Fetching FRED series ${seriesId} via proxy...`)
 
   try {
-    const response = await fetch(url.toString())
+    const response = await fetch(proxyUrl.toString())
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`FRED API error for ${seriesId}:`, response.status, errorText)
-      throw new Error(`FRED API error for ${seriesId}: ${response.status} ${response.statusText}`)
+      const errorData = await response.json().catch(() => ({}))
+      console.error(`FRED API error for ${seriesId}:`, response.status, errorData)
+      throw new Error(`FRED API error for ${seriesId}: ${response.status} ${errorData.error || response.statusText}`)
     }
 
     const data = await response.json()
     console.log(`Got ${data.observations?.length || 0} observations for ${seriesId}`)
 
     // Handle FRED API error responses
-    if (data.error_code || data.error_message) {
+    if (data.error_code || data.error_message || data.error) {
       console.error(`FRED API returned error:`, data)
-      throw new Error(`FRED API error: ${data.error_message || 'Unknown error'}`)
+      throw new Error(`FRED API error: ${data.error_message || data.error || 'Unknown error'}`)
     }
 
     return data.observations || []
@@ -392,7 +403,7 @@ export function markRecessions(
 }
 
 /**
- * Validate FRED API key
+ * Validate FRED API key using our proxy
  */
 export async function validateFREDApiKey(apiKey: string): Promise<boolean> {
   // Basic format validation - FRED API keys are 32 character alphanumeric strings
@@ -401,33 +412,35 @@ export async function validateFREDApiKey(apiKey: string): Promise<boolean> {
   }
 
   try {
-    // Try to fetch series metadata (less data than observations)
-    const url = new URL(`${FRED_API_BASE}/series`)
-    url.searchParams.set('series_id', 'GDP')
-    url.searchParams.set('api_key', apiKey)
-    url.searchParams.set('file_type', 'json')
+    // Use our proxy to validate (fetch series metadata)
+    const proxyUrl = new URL(getProxyUrl(), typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+    proxyUrl.searchParams.set('series_id', 'GDP')
+    proxyUrl.searchParams.set('api_key', apiKey)
+    proxyUrl.searchParams.set('endpoint', '') // Just series info, not observations
 
-    const response = await fetch(url.toString())
+    const response = await fetch(proxyUrl.toString())
 
     // If we get a response, check if it's valid
     if (response.ok) {
+      const data = await response.json()
+      // Check if FRED returned an error in the response body
+      if (data.error_code || data.error_message || data.error) {
+        console.log('FRED validation returned error:', data)
+        return false
+      }
       return true
     }
 
     // Check for specific error codes
-    // 400 = bad request (invalid key format)
-    // 401 = unauthorized (invalid key)
-    // 403 = forbidden
     if (response.status === 400 || response.status === 401 || response.status === 403) {
       return false
     }
 
-    // For other errors (CORS, network), assume valid and let actual fetch verify
+    // For other errors, assume valid and let actual fetch verify
     return true
   } catch (error) {
-    // Network error or CORS - assume valid, will be verified on actual use
-    // FRED API does support CORS but may have intermittent issues
-    console.log('FRED validation request failed (likely CORS), assuming valid:', error)
+    // Network error - assume valid, will be verified on actual use
+    console.log('FRED validation request failed, assuming valid:', error)
     return true
   }
 }
