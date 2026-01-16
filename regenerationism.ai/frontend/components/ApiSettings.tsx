@@ -15,8 +15,7 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.regenerationism.ai'
+import { validateFREDApiKey } from '@/lib/fredApi'
 
 export default function ApiSettings() {
   const { apiSettings, setFredApiKey, toggleLiveData } = useSessionStore()
@@ -26,7 +25,7 @@ export default function ApiSettings() {
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle')
   const [keyInput, setKeyInput] = useState(apiSettings.fredApiKey)
 
-  // Validate FRED API key by making a test request
+  // Validate FRED API key by making a test request directly to FRED
   const validateApiKey = async () => {
     if (!keyInput.trim()) {
       setValidationStatus('invalid')
@@ -37,39 +36,19 @@ export default function ApiSettings() {
     setValidationStatus('idle')
 
     try {
-      // Test the key with a simple FRED API request
-      const response = await fetch(
-        `https://api.stlouisfed.org/fred/series?series_id=GDP&api_key=${keyInput}&file_type=json`
-      )
+      const isValid = await validateFREDApiKey(keyInput)
 
-      if (response.ok) {
+      if (isValid) {
         setValidationStatus('valid')
         setFredApiKey(keyInput)
       } else {
         setValidationStatus('invalid')
       }
     } catch (err) {
-      // CORS might block direct browser request, so try via our backend
-      try {
-        const backendResponse = await fetch(`${API_URL}/api/v1/validate-fred-key`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: keyInput }),
-        })
-
-        if (backendResponse.ok) {
-          setValidationStatus('valid')
-          setFredApiKey(keyInput)
-        } else {
-          // Assume valid if we can't verify (CORS)
-          setValidationStatus('valid')
-          setFredApiKey(keyInput)
-        }
-      } catch {
-        // Save anyway, validation can happen server-side
-        setValidationStatus('valid')
-        setFredApiKey(keyInput)
-      }
+      // If validation fails due to network, save the key anyway
+      // Real validation will happen when user runs simulation
+      setValidationStatus('valid')
+      setFredApiKey(keyInput)
     } finally {
       setIsValidating(false)
     }
