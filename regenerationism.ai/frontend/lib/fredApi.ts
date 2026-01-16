@@ -75,14 +75,31 @@ async function fetchFREDSeries(
   url.searchParams.set('observation_end', endDate)
   url.searchParams.set('frequency', 'm') // Monthly frequency
 
-  const response = await fetch(url.toString())
+  console.log(`Fetching FRED series ${seriesId}...`)
 
-  if (!response.ok) {
-    throw new Error(`FRED API error for ${seriesId}: ${response.statusText}`)
+  try {
+    const response = await fetch(url.toString())
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`FRED API error for ${seriesId}:`, response.status, errorText)
+      throw new Error(`FRED API error for ${seriesId}: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    console.log(`Got ${data.observations?.length || 0} observations for ${seriesId}`)
+
+    // Handle FRED API error responses
+    if (data.error_code || data.error_message) {
+      console.error(`FRED API returned error:`, data)
+      throw new Error(`FRED API error: ${data.error_message || 'Unknown error'}`)
+    }
+
+    return data.observations || []
+  } catch (error) {
+    console.error(`Failed to fetch ${seriesId}:`, error)
+    throw error
   }
-
-  const data: FREDSeriesResponse = await response.json()
-  return data.observations
 }
 
 /**
@@ -105,21 +122,36 @@ export async function fetchAllFREDData(
 ): Promise<Map<string, FREDObservation[]>> {
   const seriesList = Object.entries(SERIES)
   const results = new Map<string, FREDObservation[]>()
+  let successCount = 0
+  let errorCount = 0
+
+  console.log(`Fetching ${seriesList.length} FRED series from ${startDate} to ${endDate}`)
 
   for (let i = 0; i < seriesList.length; i++) {
     const [name, seriesId] = seriesList[i]
-    onProgress?.(name, (i / seriesList.length) * 100)
+    onProgress?.(`Fetching ${name}`, (i / seriesList.length) * 100)
 
     try {
       const data = await fetchFREDSeries(seriesId, apiKey, startDate, endDate)
       results.set(name, data)
+      if (data.length > 0) {
+        successCount++
+      }
     } catch (error) {
       console.error(`Failed to fetch ${seriesId}:`, error)
       results.set(name, [])
+      errorCount++
     }
   }
 
+  console.log(`FRED fetch complete: ${successCount} series with data, ${errorCount} errors`)
   onProgress?.('Complete', 100)
+
+  // If we got zero data, throw an error
+  if (successCount === 0) {
+    throw new Error(`Failed to fetch any FRED data. Please check your API key and try again.`)
+  }
+
   return results
 }
 

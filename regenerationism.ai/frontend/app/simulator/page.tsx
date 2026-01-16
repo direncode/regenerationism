@@ -190,7 +190,9 @@ export default function SimulatorPage() {
         }))
         setSimulationResults(results)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'FRED API request failed')
+        const errorMessage = err instanceof Error ? err.message : 'FRED API request failed'
+        console.error('Simulation error:', err)
+        setError(errorMessage)
         setIsUsingLiveData(false)
         generateMockSimulation()
       } finally {
