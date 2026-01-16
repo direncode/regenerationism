@@ -416,7 +416,7 @@ export async function validateFREDApiKey(apiKey: string): Promise<boolean> {
     const proxyUrl = new URL(getProxyUrl(), typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
     proxyUrl.searchParams.set('series_id', 'GDP')
     proxyUrl.searchParams.set('api_key', apiKey)
-    proxyUrl.searchParams.set('endpoint', '') // Just series info, not observations
+    // Don't set endpoint - this will use /series for metadata validation
 
     const response = await fetch(proxyUrl.toString())
 

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const apiKey = searchParams.get('api_key')
   const startDate = searchParams.get('observation_start')
   const endDate = searchParams.get('observation_end')
-  const endpoint = searchParams.get('endpoint') || 'observations'
+  const endpoint = searchParams.get('endpoint')
 
   if (!seriesId || !apiKey) {
     return NextResponse.json(
@@ -23,7 +23,10 @@ export async function GET(request: NextRequest) {
 
   try {
     // Build FRED API URL
-    const fredUrl = new URL(`${FRED_API_BASE}/series/${endpoint}`)
+    // If endpoint is empty or not provided, use /series (for metadata)
+    // Otherwise use /series/{endpoint} (e.g., /series/observations)
+    const fredPath = endpoint ? `/series/${endpoint}` : '/series'
+    const fredUrl = new URL(`${FRED_API_BASE}${fredPath}`)
     fredUrl.searchParams.set('series_id', seriesId)
     fredUrl.searchParams.set('api_key', apiKey)
     fredUrl.searchParams.set('file_type', 'json')
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
       fredUrl.searchParams.set('frequency', 'm') // Monthly
     }
 
-    console.log(`Proxying FRED request for ${seriesId}`)
+    console.log(`Proxying FRED request: ${fredPath} for ${seriesId}`)
 
     const response = await fetch(fredUrl.toString(), {
       headers: {
