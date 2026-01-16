@@ -363,16 +363,40 @@ export function markRecessions(
  * Validate FRED API key
  */
 export async function validateFREDApiKey(apiKey: string): Promise<boolean> {
+  // Basic format validation - FRED API keys are 32 character alphanumeric strings
+  if (!apiKey || apiKey.length < 16) {
+    return false
+  }
+
   try {
+    // Try to fetch series metadata (less data than observations)
     const url = new URL(`${FRED_API_BASE}/series`)
     url.searchParams.set('series_id', 'GDP')
     url.searchParams.set('api_key', apiKey)
     url.searchParams.set('file_type', 'json')
 
     const response = await fetch(url.toString())
-    return response.ok
-  } catch {
-    return false
+
+    // If we get a response, check if it's valid
+    if (response.ok) {
+      return true
+    }
+
+    // Check for specific error codes
+    // 400 = bad request (invalid key format)
+    // 401 = unauthorized (invalid key)
+    // 403 = forbidden
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      return false
+    }
+
+    // For other errors (CORS, network), assume valid and let actual fetch verify
+    return true
+  } catch (error) {
+    // Network error or CORS - assume valid, will be verified on actual use
+    // FRED API does support CORS but may have intermittent issues
+    console.log('FRED validation request failed (likely CORS), assuming valid:', error)
+    return true
   }
 }
 

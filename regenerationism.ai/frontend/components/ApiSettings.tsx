@@ -27,7 +27,15 @@ export default function ApiSettings() {
 
   // Validate FRED API key by making a test request directly to FRED
   const validateApiKey = async () => {
-    if (!keyInput.trim()) {
+    const trimmedKey = keyInput.trim()
+
+    if (!trimmedKey) {
+      setValidationStatus('invalid')
+      return
+    }
+
+    // Basic format check - FRED keys are typically 32 characters
+    if (trimmedKey.length < 16) {
       setValidationStatus('invalid')
       return
     }
@@ -36,19 +44,20 @@ export default function ApiSettings() {
     setValidationStatus('idle')
 
     try {
-      const isValid = await validateFREDApiKey(keyInput)
+      const isValid = await validateFREDApiKey(trimmedKey)
 
       if (isValid) {
         setValidationStatus('valid')
-        setFredApiKey(keyInput)
+        setFredApiKey(trimmedKey)
       } else {
         setValidationStatus('invalid')
       }
     } catch (err) {
-      // If validation fails due to network, save the key anyway
+      // If validation fails due to network/CORS, save the key anyway
       // Real validation will happen when user runs simulation
+      console.log('Validation failed, saving key anyway:', err)
       setValidationStatus('valid')
-      setFredApiKey(keyInput)
+      setFredApiKey(trimmedKey)
     } finally {
       setIsValidating(false)
     }
