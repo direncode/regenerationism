@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 const FRED_API_BASE = 'https://api.stlouisfed.org/fred'
 
 /**
- * Proxy endpoint for FRED API requests
+ * Proxy endpoint for FRED API requests (v2)
  * This bypasses CORS restrictions by making server-side requests
+ * v2: Removed forced monthly frequency - quarterly series now work
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
