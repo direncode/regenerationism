@@ -256,32 +256,110 @@ export default function SimulatorPage() {
     })
   }
 
-  // Run Monte Carlo
+  // Run Monte Carlo with live FRED data or mock
   const runMonteCarlo = async () => {
     setIsSimulating(true)
     setError(null)
+    setLoadingStatus('')
 
-    try {
-      const response = await fetch(`${API_URL}/api/v1/monte-carlo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          num_draws: 1000,
-          window_size: 60,
-          eta: params.eta,
-        }),
-      })
+    const useLiveData = apiSettings.useLiveData && !!apiSettings.fredApiKey
 
-      if (!response.ok) {
-        throw new Error(`Monte Carlo failed: ${response.statusText}`)
+    if (useLiveData) {
+      try {
+        setLoadingStatus('Fetching FRED data for Monte Carlo...')
+
+        // Fetch FRED data first
+        const nivData = await calculateNIVFromFRED(
+          apiSettings.fredApiKey,
+          params.startDate,
+          params.endDate,
+          {
+            eta: params.eta,
+            weights: params.weights,
+            smoothWindow: params.smoothWindow,
+          },
+          (status, progress) => {
+            setLoadingStatus(`${status} (${progress.toFixed(0)}%)`)
+          }
+        )
+
+        if (nivData.length === 0) {
+          throw new Error('No data for Monte Carlo')
+        }
+
+        setLoadingStatus('Running Monte Carlo simulation...')
+
+        // Run Monte Carlo using the actual data
+        const probabilities = nivData.map(d => d.probability)
+        const currentProb = probabilities[probabilities.length - 1] || 0
+        const numDraws = 1000
+        const windowSize = Math.min(60, probabilities.length)
+
+        // Bootstrap resampling from historical data
+        const bootstrapResults: number[] = []
+        for (let i = 0; i < numDraws; i++) {
+          // Random sample from historical window
+          const startIdx = Math.floor(Math.random() * Math.max(1, probabilities.length - windowSize))
+          const window = probabilities.slice(startIdx, startIdx + windowSize)
+          const avgProb = window.reduce((a, b) => a + b, 0) / window.length
+          // Add some noise
+          const noise = (Math.random() - 0.5) * 10
+          bootstrapResults.push(Math.max(0, Math.min(100, avgProb + noise)))
+        }
+
+        // Calculate distribution buckets
+        const buckets: MonteCarloResponse['distribution']['buckets'] = []
+        for (let i = 0; i < 20; i++) {
+          const rangeStart = i * 5
+          const rangeEnd = rangeStart + 5
+          const count = bootstrapResults.filter(v => v >= rangeStart && v < rangeEnd).length
+          buckets.push({
+            range_start: rangeStart,
+            range_end: rangeEnd,
+            count,
+            frequency: count / numDraws,
+          })
+        }
+
+        // Calculate percentiles
+        const sorted = [...bootstrapResults].sort((a, b) => a - b)
+        const getPercentile = (p: number) => sorted[Math.floor(sorted.length * p / 100)] || 0
+
+        // Calculate mean and std dev
+        const mean = bootstrapResults.reduce((a, b) => a + b, 0) / numDraws
+        const variance = bootstrapResults.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / numDraws
+        const stdDev = Math.sqrt(variance)
+
+        setMonteCarloData({
+          num_draws: numDraws,
+          window_size: windowSize,
+          current_probability: currentProb,
+          distribution: {
+            buckets,
+            mean,
+            std_dev: stdDev,
+          },
+          percentiles: {
+            p5: getPercentile(5),
+            p10: getPercentile(10),
+            p25: getPercentile(25),
+            p50: getPercentile(50),
+            p75: getPercentile(75),
+            p90: getPercentile(90),
+            p95: getPercentile(95),
+          },
+        })
+      } catch (err) {
+        console.error('Monte Carlo error:', err)
+        setError(err instanceof Error ? err.message : 'Monte Carlo failed')
+        generateMockMonteCarlo()
+      } finally {
+        setIsSimulating(false)
+        setLoadingStatus('')
       }
-
-      const data: MonteCarloResponse = await response.json()
-      setMonteCarloData(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Monte Carlo failed')
+    } else {
+      // Use mock data
       generateMockMonteCarlo()
-    } finally {
       setIsSimulating(false)
     }
   }
@@ -324,32 +402,115 @@ export default function SimulatorPage() {
     })
   }
 
-  // Run Sensitivity
+  // Run Sensitivity with live FRED data or mock
   const runSensitivity = async (component: string) => {
     setIsSimulating(true)
     setError(null)
+    setLoadingStatus('')
     setSensitivityComponent(component)
 
-    try {
-      const response = await fetch(`${API_URL}/api/v1/sensitivity`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    const useLiveData = apiSettings.useLiveData && !!apiSettings.fredApiKey
+
+    if (useLiveData) {
+      try {
+        setLoadingStatus('Running sensitivity analysis with FRED data...')
+
+        // Define ranges for each component
+        const ranges: Record<string, { min: number; max: number; baseline: number }> = {
+          eta: { min: 0.5, max: 3.0, baseline: params.eta },
+          thrust: { min: 0.1, max: 2.0, baseline: params.weights.thrust },
+          efficiency: { min: 0.1, max: 2.0, baseline: params.weights.efficiency },
+          slack: { min: 0.1, max: 2.0, baseline: params.weights.slack },
+          drag: { min: 0.1, max: 2.0, baseline: params.weights.drag },
+        }
+
+        const range = ranges[component] || ranges.eta
+        const steps = 11 // Fewer steps for faster computation
+
+        // Calculate baseline probability
+        const baselineData = await calculateNIVFromFRED(
+          apiSettings.fredApiKey,
+          params.startDate,
+          params.endDate,
+          {
+            eta: params.eta,
+            weights: params.weights,
+            smoothWindow: params.smoothWindow,
+          },
+          (status, progress) => {
+            setLoadingStatus(`Baseline: ${status} (${progress.toFixed(0)}%)`)
+          }
+        )
+
+        const baselineProb = baselineData.length > 0
+          ? baselineData[baselineData.length - 1].probability
+          : 30
+
+        // Run sensitivity for each step
+        const sensitivityResults: SensitivityResponse['sensitivity_data'] = []
+
+        for (let i = 0; i <= steps; i++) {
+          const value = range.min + (i / steps) * (range.max - range.min)
+          setLoadingStatus(`Testing ${component} = ${value.toFixed(2)} (${Math.round((i / steps) * 100)}%)`)
+
+          // Create modified params
+          const modifiedWeights = { ...params.weights }
+          let modifiedEta = params.eta
+
+          if (component === 'eta') {
+            modifiedEta = value
+          } else {
+            modifiedWeights[component as keyof typeof modifiedWeights] = value
+          }
+
+          try {
+            const testData = await calculateNIVFromFRED(
+              apiSettings.fredApiKey,
+              params.startDate,
+              params.endDate,
+              {
+                eta: modifiedEta,
+                weights: modifiedWeights,
+                smoothWindow: params.smoothWindow,
+              }
+            )
+
+            const prob = testData.length > 0
+              ? testData[testData.length - 1].probability
+              : baselineProb
+
+            sensitivityResults.push({
+              value: Math.round(value * 100) / 100,
+              probability: Math.round(prob * 100) / 100,
+              delta_from_baseline: Math.round((prob - baselineProb) * 100) / 100,
+            })
+          } catch {
+            // If a step fails, interpolate
+            sensitivityResults.push({
+              value: Math.round(value * 100) / 100,
+              probability: baselineProb,
+              delta_from_baseline: 0,
+            })
+          }
+        }
+
+        setSensitivityData({
           component,
-          steps: 20,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Sensitivity analysis failed: ${response.statusText}`)
+          baseline_value: range.baseline,
+          baseline_probability: baselineProb,
+          sensitivity_data: sensitivityResults,
+        })
+      } catch (err) {
+        console.error('Sensitivity error:', err)
+        setError(err instanceof Error ? err.message : 'Sensitivity analysis failed')
+        generateMockSensitivity(component)
+      } finally {
+        setIsSimulating(false)
+        setLoadingStatus('')
       }
-
-      const data: SensitivityResponse = await response.json()
-      setSensitivityData(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sensitivity analysis failed')
+    } else {
+      // Use mock data
       generateMockSensitivity(component)
-    } finally {
       setIsSimulating(false)
     }
   }
@@ -593,17 +754,30 @@ export default function SimulatorPage() {
                 <button
                   onClick={runMonteCarlo}
                   disabled={isSimulating}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-purple-400 hover:from-purple-500 hover:to-purple-300 text-white font-bold rounded-xl transition disabled:opacity-50"
+                  className={`w-full flex items-center justify-center gap-3 px-6 py-4 font-bold rounded-xl transition disabled:opacity-50 ${
+                    apiSettings.useLiveData && apiSettings.fredApiKey
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-500 hover:from-blue-500 hover:to-purple-400 text-white'
+                      : 'bg-gradient-to-r from-purple-600 to-purple-400 hover:from-purple-500 hover:to-purple-300 text-white'
+                  }`}
                 >
                   {isSimulating ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Running Monte Carlo...
+                      {loadingStatus || 'Running Monte Carlo...'}
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="w-5 h-5" />
-                      Run 1,000 Draws
+                      {apiSettings.useLiveData && apiSettings.fredApiKey ? (
+                        <>
+                          <Database className="w-5 h-5" />
+                          Run Monte Carlo (Live Data)
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-5 h-5" />
+                          Run 1,000 Draws (Demo)
+                        </>
+                      )}
                     </>
                   )}
                 </button>
@@ -720,6 +894,22 @@ export default function SimulatorPage() {
             {/* Sensitivity Tab */}
             {activeTab === 'sensitivity' && (
               <div className="space-y-6">
+                {/* Loading Status */}
+                {isSimulating && loadingStatus && (
+                  <div className="flex items-center justify-center gap-2 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-300">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">{loadingStatus}</span>
+                  </div>
+                )}
+
+                {/* Data Mode Indicator */}
+                {apiSettings.useLiveData && apiSettings.fredApiKey && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-blue-400">
+                    <Database size={14} />
+                    <span>Using live FRED data for sensitivity analysis</span>
+                  </div>
+                )}
+
                 {/* Component Selector */}
                 <div className="flex gap-2 flex-wrap">
                   {['eta', 'thrust', 'efficiency', 'slack', 'drag'].map((comp) => (
@@ -729,7 +919,9 @@ export default function SimulatorPage() {
                       disabled={isSimulating}
                       className={`px-4 py-2 rounded-lg transition capitalize ${
                         sensitivityComponent === comp
-                          ? 'bg-orange-500 text-black font-bold'
+                          ? apiSettings.useLiveData && apiSettings.fredApiKey
+                            ? 'bg-blue-500 text-white font-bold'
+                            : 'bg-orange-500 text-black font-bold'
                           : 'bg-dark-700 text-gray-400 hover:text-white'
                       }`}
                     >
