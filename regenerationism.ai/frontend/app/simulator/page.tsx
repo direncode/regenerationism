@@ -26,12 +26,14 @@ import {
   Target,
   Zap,
   Download,
-  RefreshCw
+  RefreshCw,
+  Database
 } from 'lucide-react'
 import ParameterPanel from '@/components/ParameterPanel'
 import ScenarioLibrary from '@/components/ScenarioLibrary'
 import ApiSettings from '@/components/ApiSettings'
 import { useSessionStore, SimulationResult } from '@/store/sessionStore'
+import { calculateNIVFromFRED, NIVDataPoint } from '@/lib/fredApi'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.regenerationism.ai'
 
@@ -106,54 +108,99 @@ export default function SimulatorPage() {
   const [activeTab, setActiveTab] = useState<'simulation' | 'montecarlo' | 'sensitivity'>('simulation')
   const [sensitivityComponent, setSensitivityComponent] = useState('eta')
   const [error, setError] = useState<string | null>(null)
+  const [loadingStatus, setLoadingStatus] = useState<string>('')
+  const [isUsingLiveData, setIsUsingLiveData] = useState(false)
 
-  // Run simulation
+  // Run simulation with direct FRED API or mock data
   const runSimulation = useCallback(async () => {
     setIsSimulating(true)
     setError(null)
+    setLoadingStatus('')
 
-    try {
-      const response = await fetch(`${API_URL}/api/v1/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eta: params.eta,
-          weights: params.weights,
-          smooth_window: params.smoothWindow,
-          start: params.startDate,
-          end: params.endDate,
-          // Pass FRED API key if live data is enabled
-          fred_api_key: apiSettings.useLiveData && apiSettings.fredApiKey ? apiSettings.fredApiKey : undefined,
-          use_live_data: apiSettings.useLiveData && !!apiSettings.fredApiKey,
-        }),
-      })
+    // Check if we should use live FRED data
+    const useLiveData = apiSettings.useLiveData && !!apiSettings.fredApiKey
 
-      if (!response.ok) {
-        throw new Error(`Simulation failed: ${response.statusText}`)
+    if (useLiveData) {
+      // Use direct FRED API calls
+      try {
+        setIsUsingLiveData(true)
+        const nivData = await calculateNIVFromFRED(
+          apiSettings.fredApiKey,
+          params.startDate,
+          params.endDate,
+          {
+            eta: params.eta,
+            weights: params.weights,
+            smoothWindow: params.smoothWindow,
+          },
+          (status, progress) => {
+            setLoadingStatus(`${status} (${progress.toFixed(0)}%)`)
+          }
+        )
+
+        if (nivData.length === 0) {
+          throw new Error('No data returned from FRED API')
+        }
+
+        // Convert NIVDataPoint[] to SimulationResponse format
+        const data: SimulationResponse['data'] = nivData.map((point) => ({
+          date: point.date,
+          niv_score: point.niv * 100,
+          recession_probability: point.probability,
+          alert_level: point.probability > 70 ? 'critical' : point.probability > 50 ? 'warning' : point.probability > 30 ? 'elevated' : 'normal',
+          is_recession: point.isRecession,
+        }))
+
+        const probabilities = data.map((d) => d.recession_probability)
+        const recessionMonths = data.filter((d) => d.is_recession)
+        const highProbMonths = data.filter((d) => d.recession_probability > 50)
+
+        setSimulationData({
+          params: {
+            eta: params.eta,
+            weights: params.weights,
+            smooth_window: params.smoothWindow,
+            start_date: params.startDate,
+            end_date: params.endDate,
+          },
+          data,
+          summary: {
+            total_points: data.length,
+            avg_probability: probabilities.reduce((a, b) => a + b, 0) / probabilities.length,
+            max_probability: Math.max(...probabilities),
+            min_probability: Math.min(...probabilities),
+            recessions_detected: highProbMonths.length,
+            false_positives: highProbMonths.filter((d) => !d.is_recession).length,
+            true_positives: highProbMonths.filter((d) => d.is_recession).length,
+          },
+        })
+
+        // Convert to store format
+        const results: SimulationResult[] = data.map((d) => ({
+          date: d.date,
+          nivScore: d.niv_score,
+          recessionProbability: d.recession_probability,
+          alertLevel: d.alert_level as any,
+          components: {
+            thrust: params.weights.thrust,
+            efficiency: params.weights.efficiency,
+            slack: params.weights.slack,
+            drag: params.weights.drag,
+          },
+        }))
+        setSimulationResults(results)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'FRED API request failed')
+        setIsUsingLiveData(false)
+        generateMockSimulation()
+      } finally {
+        setIsSimulating(false)
+        setLoadingStatus('')
       }
-
-      const data: SimulationResponse = await response.json()
-      setSimulationData(data)
-
-      // Convert to store format
-      const results: SimulationResult[] = data.data.map((d) => ({
-        date: d.date,
-        nivScore: d.niv_score,
-        recessionProbability: d.recession_probability,
-        alertLevel: d.alert_level as any,
-        components: {
-          thrust: params.weights.thrust,
-          efficiency: params.weights.efficiency,
-          slack: params.weights.slack,
-          drag: params.weights.drag,
-        },
-      }))
-      setSimulationResults(results)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Simulation failed')
-      // Use mock data on error
+    } else {
+      // Use mock data
+      setIsUsingLiveData(false)
       generateMockSimulation()
-    } finally {
       setIsSimulating(false)
     }
   }, [params, apiSettings, setIsSimulating, setSimulationResults])
@@ -419,20 +466,47 @@ export default function SimulatorPage() {
                 <button
                   onClick={runSimulation}
                   disabled={isSimulating}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-regen-600 to-regen-400 hover:from-regen-500 hover:to-regen-300 text-black font-bold rounded-xl transition disabled:opacity-50"
+                  className={`w-full flex items-center justify-center gap-3 px-6 py-4 font-bold rounded-xl transition disabled:opacity-50 ${
+                    apiSettings.useLiveData && apiSettings.fredApiKey
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white'
+                      : 'bg-gradient-to-r from-regen-600 to-regen-400 hover:from-regen-500 hover:to-regen-300 text-black'
+                  }`}
                 >
                   {isSimulating ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Running Simulation...
+                      {loadingStatus || 'Running Simulation...'}
                     </>
                   ) : (
                     <>
-                      <Play className="w-5 h-5" />
-                      Run Simulation
+                      {apiSettings.useLiveData && apiSettings.fredApiKey ? (
+                        <>
+                          <Database className="w-5 h-5" />
+                          Run with Live FRED Data
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-5 h-5" />
+                          Run Simulation (Demo Data)
+                        </>
+                      )}
                     </>
                   )}
                 </button>
+
+                {/* Data Source Indicator */}
+                {simulationData && (
+                  <div className={`flex items-center justify-center gap-2 text-sm ${
+                    isUsingLiveData ? 'text-blue-400' : 'text-gray-400'
+                  }`}>
+                    <Database size={14} />
+                    <span>
+                      {isUsingLiveData
+                        ? 'Using live FRED data from Federal Reserve'
+                        : 'Using simulated demo data'}
+                    </span>
+                  </div>
+                )}
 
                 {/* Summary Cards */}
                 {simulationData && (
