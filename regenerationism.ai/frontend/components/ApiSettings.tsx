@@ -116,6 +116,49 @@ export default function ApiSettings() {
         </button>
       </div>
 
+      {/* Live/Mock Mode Toggle - More Prominent */}
+      {apiSettings.fredApiKey && (
+        <div className={`p-4 rounded-xl border-2 transition-all ${
+          apiSettings.useLiveData
+            ? 'bg-blue-500/10 border-blue-500/50'
+            : 'bg-dark-700/50 border-white/10'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-300">Data Mode</span>
+            <button
+              onClick={toggleLiveData}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                apiSettings.useLiveData ? 'bg-blue-500' : 'bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  apiSettings.useLiveData ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            {apiSettings.useLiveData ? (
+              <>
+                <Wifi size={16} className="text-blue-400" />
+                <span className="text-sm text-blue-400 font-medium">Live FRED Data</span>
+              </>
+            ) : (
+              <>
+                <WifiOff size={16} className="text-gray-400" />
+                <span className="text-sm text-gray-400">Demo Data (Mock)</span>
+              </>
+            )}
+          </div>
+          {apiSettings.useLiveData && (
+            <p className="text-xs text-blue-300/70 mt-1">
+              Fetches real economic data from Federal Reserve
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Current Status */}
       {apiSettings.fredApiKey && (
         <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">

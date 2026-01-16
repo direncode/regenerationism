@@ -289,7 +289,12 @@ export const useSessionStore = create<SessionState>()(
       })),
 
       setFredApiKey: (fredApiKey) => set((state) => ({
-        apiSettings: { ...state.apiSettings, fredApiKey },
+        // Auto-enable live data when API key is set, disable when cleared
+        apiSettings: {
+          ...state.apiSettings,
+          fredApiKey,
+          useLiveData: fredApiKey ? true : false,
+        },
       })),
 
       toggleLiveData: () => set((state) => ({
