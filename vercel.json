@@ -1,7 +1,6 @@
 {
-  "buildCommand": "cd regenerationism.ai/frontend && npm install && npm run build",
-  "outputDirectory": "regenerationism.ai/frontend/.next",
-  "installCommand": "cd regenerationism.ai/frontend && npm install",
-  "framework": "nextjs",
-  "rootDirectory": "regenerationism.ai/frontend"
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "framework": "nextjs"
 }
