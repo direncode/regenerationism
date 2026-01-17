@@ -499,10 +499,7 @@ export default function MethodologyPage() {
 }
 
 /**
- * ═══════════════════════════════════════════════════════════════════════════
- * NIV ENGINE v6 - OOS VERIFIED
- * No Mock Data. No Min-Max Normalization. Pure Physics.
- * ═══════════════════════════════════════════════════════════════════════════
+ * NIV ENGINE
  *
  * Master Formula: NIV = (u × P²) / (X + F)^η
  *   u = tanh(1.0*dG + 1.0*dA - 0.7*dr)

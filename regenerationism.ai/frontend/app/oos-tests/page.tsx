@@ -213,7 +213,7 @@ export default function OOSTestsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             {/* NIV Engine Specification */}
             <div className="space-y-3">
-              <h3 className="font-semibold text-regen-400">NIV Engine v6 (OOS-Validated)</h3>
+              <h3 className="font-semibold text-regen-400">NIV Engine</h3>
               <div className="bg-dark-700/50 rounded-lg p-3 font-mono text-xs space-y-1">
                 <div className="text-gray-400">// Master Equation</div>
                 <div className="text-white">NIV = (u × P²) / (X + F)^η</div>
@@ -224,30 +224,6 @@ export default function OOSTestsPage() {
                 <div className="text-red-300">F = 0.4·YieldPen + 0.4·max(0,RealRate) + 0.2·Vol</div>
                 <div className="text-gray-400 mt-2">η = 1.5, ε = 0.001</div>
               </div>
-            </div>
-
-            {/* Probability Thresholds */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-regen-400">Calibrated Probability Thresholds</h3>
-              <div className="bg-dark-700/50 rounded-lg p-3 text-xs space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">NIV ≤ 0</span>
-                  <span className="text-red-400 font-bold">99% recession probability</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">NIV &lt; 0.015</span>
-                  <span className="text-orange-400 font-bold">85% recession probability</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">NIV &lt; 0.035</span>
-                  <span className="text-yellow-400 font-bold">45% recession probability</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">NIV ≥ 0.035</span>
-                  <span className="text-green-400 font-bold">5% recession probability</span>
-                </div>
-              </div>
-              <p className="text-gray-500 text-xs">Thresholds calibrated to achieve 0.85 AUC on 1970-2024 OOS tests</p>
             </div>
 
             {/* Test Descriptions */}

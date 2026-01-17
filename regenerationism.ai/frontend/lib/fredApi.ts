@@ -1,10 +1,5 @@
 /**
- * NIV Engine v6 - Vercel Edition
- *
- * ═══════════════════════════════════════════════════════════════════════════
- * THE GOLDEN LOGIC (OOS VERIFIED)
- * No Mock Data. No Min-Max Normalization. Pure Physics.
- * ═══════════════════════════════════════════════════════════════════════════
+ * NIV Engine
  *
  * Master Formula: NIV = (u × P²) / (X + F)^η
  *
@@ -20,7 +15,7 @@
 import { auditLog, logNIVCalculation, logFREDFetch } from './auditLog'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// IMMUTABLE CONSTANTS (OOS-Validated)
+// CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════
 const ETA = 1.5           // Nonlinearity (Crisis Sensitivity)
 const EPSILON = 0.001     // Safety Floor (Prevents zero-division)
@@ -168,7 +163,7 @@ export async function fetchAllFREDData(
   const results = new Map<string, FREDObservation[]>()
   let successCount = 0
 
-  console.log(`[NIV-v6] Fetching ${seriesList.length} FRED series from ${startDate} to ${endDate}`)
+  console.log(`[NIV] Fetching ${seriesList.length} FRED series from ${startDate} to ${endDate}`)
 
   for (let i = 0; i < seriesList.length; i++) {
     const [name, seriesId] = seriesList[i]
@@ -184,7 +179,7 @@ export async function fetchAllFREDData(
     }
   }
 
-  console.log(`[NIV-v6] FRED fetch complete: ${successCount} series with data`)
+  console.log(`[NIV] FRED fetch complete: ${successCount} series with data`)
   onProgress?.('Complete', 100)
 
   if (successCount === 0) {
@@ -262,7 +257,7 @@ function stdDev(arr: number[]): number {
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * THE CALCULATION ENGINE (OOS VERIFIED)
+ * THE CALCULATION ENGINE
  * ═══════════════════════════════════════════════════════════════════════════
  */
 export function calculateNIVComponents(
@@ -274,7 +269,7 @@ export function calculateNIVComponents(
   }
 ): NIVDataPoint[] {
   if (data.length < 13) {
-    console.warn('[NIV-v6] Need at least 13 months of data')
+    console.warn('[NIV] Need at least 13 months of data')
     return []
   }
 
@@ -369,16 +364,13 @@ export function calculateNIVComponents(
 
     // ═══════════════════════════════════════════════════════════════════
     // STEP D: PROBABILITY & STATUS
-    // Threshold mapping based on 2008/2020 data points
-    // Score > 0.05 => Safe
-    // Score < 0.01 => Crisis
     // ═══════════════════════════════════════════════════════════════════
 
     let probability: number
     if (niv <= 0) probability = 99
-    else if (niv < 0.015) probability = 85  // High Risk
-    else if (niv < 0.035) probability = 45  // Caution
-    else probability = 5  // Safe
+    else if (niv < 0.015) probability = 85
+    else if (niv < 0.035) probability = 45
+    else probability = 5
 
     let status: NIVDataPoint['status']
     if (probability > 80) status = 'CRISIS'
@@ -400,7 +392,7 @@ export function calculateNIVComponents(
       volatility,
     }
 
-    logNIVCalculation(thrust, efficiency, slack, drag, ETA, niv, 'NIV-v6')
+    logNIVCalculation(thrust, efficiency, slack, drag, ETA, niv, 'NIV')
 
     results.push({
       date: current.date,
@@ -486,7 +478,7 @@ export async function calculateNIVFromFRED(
   },
   onProgress?: (status: string, progress: number) => void
 ): Promise<NIVDataPoint[]> {
-  auditLog.logSystem('[NIV-v6] Calculation pipeline started', 'INFO', { startDate, endDate }, 'NIV-Pipeline')
+  auditLog.logSystem('[NIV] Calculation pipeline started', 'INFO', { startDate, endDate }, 'NIV-Pipeline')
 
   onProgress?.('Fetching FRED data...', 0)
   const seriesData = await fetchAllFREDData(apiKey, startDate, endDate, (series, progress) => {
@@ -502,7 +494,7 @@ export async function calculateNIVFromFRED(
   const recessionObs = seriesData.get('RECESSION') || []
   nivData = markRecessions(nivData, recessionObs)
 
-  auditLog.logSystem('[NIV-v6] Pipeline complete', 'INFO', { dataPoints: nivData.length }, 'NIV-Pipeline')
+  auditLog.logSystem('[NIV] Pipeline complete', 'INFO', { dataPoints: nivData.length }, 'NIV-Pipeline')
   onProgress?.('Complete', 100)
 
   return nivData
@@ -513,7 +505,7 @@ export async function calculateNIVFromFRED(
  */
 export function getNIVModelInfo() {
   return {
-    version: 'NIV-v6-OOS-Verified',
+    version: 'NIV Engine',
     formula: {
       master: 'NIV = (u × P²) / (X + F)^η',
       thrust: 'u = tanh(1.0*dG + 1.0*dA - 0.7*dr)',
@@ -525,12 +517,6 @@ export function getNIVModelInfo() {
       eta: ETA,
       epsilon: EPSILON,
       proxyMultiplier: PROXY_MULTIPLIER,
-    },
-    thresholds: {
-      crisis: 'NIV ≤ 0 → 99% probability',
-      highRisk: 'NIV < 0.015 → 85% probability',
-      caution: 'NIV < 0.035 → 45% probability',
-      safe: 'NIV ≥ 0.035 → 5% probability',
     },
   }
 }
