@@ -291,7 +291,7 @@ export function runRecessionPredictionTest(
   const prepared = data.map(d => ({
     date: d.date,
     niv: d.niv,
-    yieldSpread: d.drag, // Using drag as proxy for yield spread impact
+    yieldSpread: d.components.drag, // Using drag as proxy for yield spread impact
     isRecession: isInRecession(d.date) ? 1 : 0
   }))
 
@@ -474,8 +474,8 @@ export function runGDPForecastTest(
   const prepared = data.map(d => ({
     date: d.date,
     niv: d.niv,
-    yieldSpread: d.drag,
-    gdpGrowth: d.thrust // Investment growth as GDP proxy
+    yieldSpread: d.components.drag,
+    gdpGrowth: d.components.thrust // Investment growth as GDP proxy
   }))
 
   // Apply smoothing
