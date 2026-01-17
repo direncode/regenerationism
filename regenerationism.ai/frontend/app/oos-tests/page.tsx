@@ -65,15 +65,24 @@ export default function OOSTestsPage() {
   useEffect(() => {
     const checkServer = async () => {
       setCheckingServerKey(true)
-      const hasKey = await checkServerApiKey()
-      setHasServerKey(hasKey)
-      if (hasKey) {
-        setApiSettings({ useLiveData: true })
+      try {
+        const hasKey = await checkServerApiKey()
+        console.log('[OOS Tests] Server API key check:', hasKey)
+        setHasServerKey(hasKey)
+        if (hasKey) {
+          setApiSettings({ useLiveData: true })
+        } else {
+          setError('Server FRED API key not configured. Please contact administrator.')
+        }
+      } catch (err) {
+        console.error('[OOS Tests] Server API key check failed:', err)
+        setHasServerKey(false)
+        setError('Failed to check server API configuration.')
       }
       setCheckingServerKey(false)
     }
     checkServer()
-  }, [])
+  }, [setApiSettings])
 
   const canRunTests = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
 

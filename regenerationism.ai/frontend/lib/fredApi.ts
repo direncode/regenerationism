@@ -93,15 +93,28 @@ export async function checkServerApiKey(): Promise<boolean> {
   try {
     const proxyUrl = getProxyUrl()
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
-    const response = await fetch(new URL(proxyUrl, baseUrl).toString(), {
+    const fullUrl = new URL(proxyUrl, baseUrl).toString()
+    console.log('[checkServerApiKey] Checking:', fullUrl)
+
+    const response = await fetch(fullUrl, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     })
+
+    console.log('[checkServerApiKey] Response status:', response.status)
+
     if (response.ok) {
       const data = await response.json()
+      console.log('[checkServerApiKey] Response data:', data)
       return data.hasServerKey === true
     }
+
+    console.warn('[checkServerApiKey] Non-OK response:', response.status)
     return false
-  } catch {
+  } catch (err) {
+    console.error('[checkServerApiKey] Error:', err)
     return false
   }
 }
