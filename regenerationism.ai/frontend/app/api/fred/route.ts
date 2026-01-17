@@ -4,7 +4,8 @@ const FRED_API_BASE = 'https://api.stlouisfed.org/fred'
 
 // Server-side FRED API key from environment variable
 // This allows the app to work without users needing to input their own key
-const SERVER_FRED_API_KEY = process.env.FRED_API_KEY
+// Trim whitespace to prevent issues with env var formatting
+const SERVER_FRED_API_KEY = process.env.FRED_API_KEY?.trim()
 
 /**
  * Proxy endpoint for FRED API requests (v2)
