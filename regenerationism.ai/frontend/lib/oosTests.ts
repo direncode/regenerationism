@@ -4,6 +4,7 @@
  */
 
 import { NIVDataPoint } from './fredApi'
+import { auditLog, logModelEvaluation } from './auditLog'
 
 // NBER Recession Dates
 export const RECESSIONS = [
@@ -275,6 +276,15 @@ export function runRecessionPredictionTest(
   predictionLag = 12,
   onProgress?: (status: string, progress: number) => void
 ): RecessionTestResult {
+  const testStartTime = performance.now()
+
+  auditLog.logSystem(
+    'Recession Prediction Test started',
+    'INFO',
+    { dataPoints: data.length, smoothWindow, predictionLag },
+    'OOS-RecessionTest'
+  )
+
   onProgress?.('Preparing data...', 0)
 
   // Prepare data with recession labels
@@ -372,6 +382,66 @@ export function runRecessionPredictionTest(
   let winner: 'fed' | 'niv' | 'hybrid' = 'fed'
   if (aucNiv > aucFed && aucNiv >= aucHybrid) winner = 'niv'
   else if (aucHybrid > aucFed) winner = 'hybrid'
+
+  const testDuration = performance.now() - testStartTime
+
+  // Log model evaluation results
+  logModelEvaluation(
+    'Logistic Regression (Fed)',
+    { AUC: aucFed },
+    startIdx,
+    validData.length - startIdx,
+    'OOS-RecessionTest'
+  )
+
+  logModelEvaluation(
+    'Logistic Regression (NIV)',
+    { AUC: aucNiv },
+    startIdx,
+    validData.length - startIdx,
+    'OOS-RecessionTest'
+  )
+
+  logModelEvaluation(
+    'Logistic Regression (Hybrid)',
+    { AUC: aucHybrid },
+    startIdx,
+    validData.length - startIdx,
+    'OOS-RecessionTest'
+  )
+
+  auditLog.logModel(
+    `Recession Prediction Test complete - Winner: ${winner.toUpperCase()}`,
+    {
+      modelType: 'Walk-Forward Validation',
+      trainingSamples: startIdx,
+      testSamples: validData.length - startIdx,
+      metrics: {
+        aucFed,
+        aucNiv,
+        aucHybrid,
+        nivAdvantage: aucNiv - aucFed,
+        hybridAdvantage: aucHybrid - aucFed,
+      },
+      predictions: predsNiv,
+      actuals,
+    },
+    'INFO',
+    'OOS-RecessionTest'
+  )
+
+  auditLog.logSystem(
+    'Recession Prediction Test completed',
+    'INFO',
+    {
+      duration: `${testDuration.toFixed(2)}ms`,
+      winner,
+      aucFed: aucFed.toFixed(4),
+      aucNiv: aucNiv.toFixed(4),
+      aucHybrid: aucHybrid.toFixed(4),
+    },
+    'OOS-RecessionTest'
+  )
 
   onProgress?.('Complete', 100)
 

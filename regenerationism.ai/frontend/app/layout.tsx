@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
+import AuditLogButton from '@/components/AuditLogButton'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
@@ -39,6 +40,7 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
+        <AuditLogButton />
       </body>
     </html>
   )
