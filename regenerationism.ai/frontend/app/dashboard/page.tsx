@@ -103,8 +103,8 @@ export default function DashboardPage() {
         // Determine NIV signal
         const nivSignal = latest.probability < 30 ? 'EXPANSION' : latest.probability < 50 ? 'CAUTION' : 'CONTRACTION'
 
-        // Determine yield curve signal from drag spread component
-        const yieldCurveSignal = latest.components.dragSpread > 0 ? 'INVERTED' : 'NORMAL'
+        // Determine yield curve signal from yield penalty component
+        const yieldCurveSignal = latest.components.yieldPenalty > 0 ? 'INVERTED' : 'NORMAL'
 
         setData({
           date: latest.date,

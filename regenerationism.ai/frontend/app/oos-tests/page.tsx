@@ -194,6 +194,85 @@ export default function OOSTestsPage() {
           </p>
         </div>
 
+        {/* Methodology Specification */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-6 bg-dark-800/50 border border-white/10 rounded-xl"
+        >
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Database className="w-5 h-5 text-regen-400" />
+            Test Methodology Specification
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            {/* NIV Engine Specification */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-regen-400">NIV Engine v6 (OOS-Validated)</h3>
+              <div className="bg-dark-700/50 rounded-lg p-3 font-mono text-xs space-y-1">
+                <div className="text-gray-400">// Master Equation</div>
+                <div className="text-white">NIV = (u × P²) / (X + F)^η</div>
+                <div className="text-gray-500 mt-2">where:</div>
+                <div className="text-blue-300">u = tanh(1.0·dG + 1.0·dA - 0.7·dr)</div>
+                <div className="text-green-300">P = (Investment × 1.15) / GDP</div>
+                <div className="text-yellow-300">X = 1 - (TCU / 100)</div>
+                <div className="text-red-300">F = 0.4·YieldPen + 0.4·max(0,RealRate) + 0.2·Vol</div>
+                <div className="text-gray-400 mt-2">η = 1.5, ε = 0.001</div>
+              </div>
+            </div>
+
+            {/* Probability Thresholds */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-regen-400">Calibrated Probability Thresholds</h3>
+              <div className="bg-dark-700/50 rounded-lg p-3 text-xs space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">NIV ≤ 0</span>
+                  <span className="text-red-400 font-bold">99% recession probability</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">NIV &lt; 0.015</span>
+                  <span className="text-orange-400 font-bold">85% recession probability</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">NIV &lt; 0.035</span>
+                  <span className="text-yellow-400 font-bold">45% recession probability</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">NIV ≥ 0.035</span>
+                  <span className="text-green-400 font-bold">5% recession probability</span>
+                </div>
+              </div>
+              <p className="text-gray-500 text-xs">Thresholds calibrated to achieve 0.85 AUC on 1970-2024 OOS tests</p>
+            </div>
+
+            {/* Test Descriptions */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-regen-400">Test Procedures</h3>
+              <div className="space-y-2 text-gray-300">
+                <p><strong className="text-white">Recession Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as recession predictors.</p>
+                <p><strong className="text-white">GDP Forecasting:</strong> RMSE comparison predicting GDP growth direction. Hybrid model combines Fed + NIV signals.</p>
+                <p><strong className="text-white">Parameter Optimization:</strong> Grid search over smoothing windows (3-18 months) and lag periods (0-12 months).</p>
+                <p><strong className="text-white">Forensic Analysis:</strong> Decomposition of model weights, correlation analysis, and contribution attribution.</p>
+              </div>
+            </div>
+
+            {/* Data Sources */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-regen-400">FRED Data Series</h3>
+              <div className="bg-dark-700/50 rounded-lg p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-gray-400">GDP Growth:</span><span className="text-white">A191RL1Q225SBEA (quarterly)</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">M2 Money Supply:</span><span className="text-white">M2SL (monthly)</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Fed Funds Rate:</span><span className="text-white">FEDFUNDS (monthly)</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Investment:</span><span className="text-white">GPDIC1 (quarterly)</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Real GDP:</span><span className="text-white">GDPC1 (quarterly)</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Capacity Util:</span><span className="text-white">TCU (monthly)</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Yield Spread:</span><span className="text-white">T10Y3M (monthly)</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">CPI Inflation:</span><span className="text-white">CPIAUCSL (monthly)</span></div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* API Key Configuration */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

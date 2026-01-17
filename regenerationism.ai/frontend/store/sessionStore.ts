@@ -120,11 +120,18 @@ const DEFAULT_WEIGHTS: ComponentWeights = {
   drag: 1.0,
 }
 
+// Helper to get date 5 years ago for faster default loading
+const getFiveYearsAgo = (): string => {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 5)
+  return date.toISOString().split('T')[0]
+}
+
 const DEFAULT_PARAMS: SimulationParams = {
   eta: 1.5,
   weights: DEFAULT_WEIGHTS,
   smoothWindow: 12,
-  startDate: '2000-01-01',
+  startDate: getFiveYearsAgo(),  // 5 years back for faster loading (was 2000-01-01)
   endDate: new Date().toISOString().split('T')[0],
 }
 
