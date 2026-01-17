@@ -78,14 +78,13 @@ export default function OOSTestsPage() {
     setLoadingStatus('Fetching FRED data...')
 
     try {
-      // First fetch the NIV data
+      // First fetch the NIV data using OOS-validated engine
       const nivData = await calculateNIVFromFRED(
         apiSettings.fredApiKey,
         params.startDate,
         params.endDate,
         {
           eta: params.eta,
-          weights: params.weights,
           smoothWindow: params.smoothWindow,
         },
         (status, progress) => {

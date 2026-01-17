@@ -40,7 +40,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.regenerationism.
 interface SimulationResponse {
   params: {
     eta: number
-    weights: { thrust: number; efficiency: number; slack: number; drag: number }
     smooth_window: number
     start_date: string
     end_date: string
@@ -130,7 +129,6 @@ export default function SimulatorPage() {
           params.endDate,
           {
             eta: params.eta,
-            weights: params.weights,
             smoothWindow: params.smoothWindow,
           },
           (status, progress) => {
@@ -158,7 +156,6 @@ export default function SimulatorPage() {
         setSimulationData({
           params: {
             eta: params.eta,
-            weights: params.weights,
             smooth_window: params.smoothWindow,
             start_date: params.startDate,
             end_date: params.endDate,
@@ -238,7 +235,6 @@ export default function SimulatorPage() {
     setSimulationData({
       params: {
         eta: params.eta,
-        weights: params.weights,
         smooth_window: params.smoothWindow,
         start_date: params.startDate,
         end_date: params.endDate,
@@ -275,7 +271,6 @@ export default function SimulatorPage() {
           params.endDate,
           {
             eta: params.eta,
-            weights: params.weights,
             smoothWindow: params.smoothWindow,
           },
           (status, progress) => {
@@ -415,13 +410,11 @@ export default function SimulatorPage() {
       try {
         setLoadingStatus('Running sensitivity analysis with FRED data...')
 
-        // Define ranges for each component
+        // NIV Engine v6 uses OOS-validated coefficients
+        // Only eta and smoothWindow can be varied
         const ranges: Record<string, { min: number; max: number; baseline: number }> = {
           eta: { min: 0.5, max: 3.0, baseline: params.eta },
-          thrust: { min: 0.1, max: 2.0, baseline: params.weights.thrust },
-          efficiency: { min: 0.1, max: 2.0, baseline: params.weights.efficiency },
-          slack: { min: 0.1, max: 2.0, baseline: params.weights.slack },
-          drag: { min: 0.1, max: 2.0, baseline: params.weights.drag },
+          smoothWindow: { min: 1, max: 12, baseline: params.smoothWindow },
         }
 
         const range = ranges[component] || ranges.eta
@@ -434,7 +427,6 @@ export default function SimulatorPage() {
           params.endDate,
           {
             eta: params.eta,
-            weights: params.weights,
             smoothWindow: params.smoothWindow,
           },
           (status, progress) => {
@@ -453,15 +445,9 @@ export default function SimulatorPage() {
           const value = range.min + (i / steps) * (range.max - range.min)
           setLoadingStatus(`Testing ${component} = ${value.toFixed(2)} (${Math.round((i / steps) * 100)}%)`)
 
-          // Create modified params
-          const modifiedWeights = { ...params.weights }
-          let modifiedEta = params.eta
-
-          if (component === 'eta') {
-            modifiedEta = value
-          } else {
-            modifiedWeights[component as keyof typeof modifiedWeights] = value
-          }
+          // Create modified params (only eta or smoothWindow can be varied)
+          const modifiedEta = component === 'eta' ? value : params.eta
+          const modifiedSmooth = component === 'smoothWindow' ? Math.round(value) : params.smoothWindow
 
           try {
             const testData = await calculateNIVFromFRED(
@@ -470,8 +456,7 @@ export default function SimulatorPage() {
               params.endDate,
               {
                 eta: modifiedEta,
-                weights: modifiedWeights,
-                smoothWindow: params.smoothWindow,
+                smoothWindow: modifiedSmooth,
               }
             )
 
