@@ -292,17 +292,26 @@ export const useSessionStore = create<SessionState>()(
 
       // API Settings
       setApiSettings: (settings) => set((state) => ({
-        apiSettings: { ...state.apiSettings, ...settings },
-      })),
-
-      setFredApiKey: (fredApiKey) => set((state) => ({
-        // Auto-enable live data when API key is set, disable when cleared
         apiSettings: {
           ...state.apiSettings,
-          fredApiKey,
-          useLiveData: fredApiKey ? true : false,
+          ...settings,
+          // CRITICAL: Trim whitespace/tabs from API key to prevent 400 errors
+          fredApiKey: settings.fredApiKey ? settings.fredApiKey.trim() : state.apiSettings.fredApiKey,
         },
       })),
+
+      setFredApiKey: (fredApiKey) => {
+        // CRITICAL: Trim whitespace/tabs from API key to prevent 400 errors
+        const cleanKey = fredApiKey ? fredApiKey.trim() : ''
+        set((state) => ({
+          // Auto-enable live data when API key is set, disable when cleared
+          apiSettings: {
+            ...state.apiSettings,
+            fredApiKey: cleanKey,
+            useLiveData: cleanKey ? true : false,
+          },
+        }))
+      },
 
       toggleLiveData: () => set((state) => ({
         apiSettings: { ...state.apiSettings, useLiveData: !state.apiSettings.useLiveData },

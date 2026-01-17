@@ -101,9 +101,12 @@ async function fetchFREDSeries(
 ): Promise<FREDObservation[]> {
   const startTime = performance.now()
 
+  // CRITICAL: Trim whitespace/tabs from API key to prevent 400 errors
+  const cleanApiKey = apiKey.trim()
+
   const proxyUrl = new URL(getProxyUrl(), typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
   proxyUrl.searchParams.set('series_id', seriesId)
-  proxyUrl.searchParams.set('api_key', apiKey)
+  proxyUrl.searchParams.set('api_key', cleanApiKey)
   proxyUrl.searchParams.set('observation_start', startDate)
   proxyUrl.searchParams.set('observation_end', endDate)
   proxyUrl.searchParams.set('endpoint', 'observations')

@@ -35,12 +35,24 @@ const RECESSION_PERIODS = [
   { start: '2020-02', end: '2020-04', name: 'COVID Recession' },
 ]
 
+// Helper to get date 5 years ago for faster default loading
+const getDefaultStartDate = (): string => {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 5)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+const getDefaultEndDate = (): string => {
+  const date = new Date()
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 export default function ExplorerPage() {
   const { apiSettings, setApiSettings } = useSessionStore()
   const [data, setData] = useState<HistoricalDataPoint[]>([])
   const [allData, setAllData] = useState<HistoricalDataPoint[]>([])
-  const [startDate, setStartDate] = useState('2000-01')
-  const [endDate, setEndDate] = useState('2026-01')
+  const [startDate, setStartDate] = useState(getDefaultStartDate)  // 5 years back for faster loading
+  const [endDate, setEndDate] = useState(getDefaultEndDate)
   const [showRecessions, setShowRecessions] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
