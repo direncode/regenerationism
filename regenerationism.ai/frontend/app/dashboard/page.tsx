@@ -423,9 +423,6 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3 mb-3">
               <Key className="w-5 h-5 text-regen-400" />
               <span className="text-white font-medium">FRED API Key</span>
-              {apiSettings.fredApiKey && (
-                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
-              )}
             </div>
             <div className="flex gap-3">
               <div className="relative flex-1">

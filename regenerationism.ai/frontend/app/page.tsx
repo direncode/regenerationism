@@ -19,7 +19,7 @@ import RecessionGauge from '@/components/RecessionGauge'
 import CrashCam from '@/components/CrashCam'
 import RedAlertBanner from '@/components/RedAlertBanner'
 import { useSessionStore } from '@/store/sessionStore'
-import { calculateNIVFromFRED, NIVDataPoint } from '@/lib/fredApi'
+import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
 
 interface NIVData {
   date: string
@@ -35,29 +35,43 @@ interface NIVData {
 }
 
 export default function Home() {
-  const { apiSettings } = useSessionStore()
+  const { apiSettings, setApiSettings } = useSessionStore()
   const [data, setData] = useState<NIVData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
 
-  // Fetch latest data from FRED API when API key is available
+  // Check for server key and fetch data
   useEffect(() => {
-    const fetchData = async () => {
-      if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
+    const initAndFetch = async () => {
+      setLoading(true)
+
+      // Check if server has API key
+      const serverHasKey = await checkServerApiKey()
+      setHasServerKey(serverHasKey)
+
+      if (serverHasKey) {
+        setApiSettings({ useLiveData: true })
+      }
+
+      // Can fetch if server has key OR client has key
+      const canFetch = serverHasKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
+      if (!canFetch) {
+        setLoading(false)
         setData(null)
         return
       }
 
-      setLoading(true)
       setError(null)
 
       try {
-        // Get last 3 months of data to get the latest point
+        // Get last year of data to get the latest point
         const endDate = new Date().toISOString().split('T')[0]
         const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
+        const apiKeyToUse = serverHasKey ? '' : apiSettings.fredApiKey
         const nivData = await calculateNIVFromFRED(
-          apiSettings.fredApiKey,
+          apiKeyToUse,
           startDate,
           endDate,
           { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
@@ -85,11 +99,10 @@ export default function Home() {
         setLoading(false)
       }
     }
-    fetchData()
+    initAndFetch()
   }, [apiSettings.fredApiKey, apiSettings.useLiveData])
 
   const isHighRisk = data ? data.recession_probability > 50 : false
-  const hasApiKey = !!apiSettings.fredApiKey
 
   return (
     <div className="min-h-screen">
@@ -132,7 +145,7 @@ export default function Home() {
                   href="/dashboard"
                   className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
                 >
-                  {hasApiKey ? 'View Dashboard' : 'Get Started'}
+                  View Dashboard
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
@@ -144,7 +157,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* Right: Gauge or API Key Prompt */}
+            {/* Right: Gauge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -162,27 +175,9 @@ export default function Home() {
                   alertLevel={data.alert_level}
                 />
               ) : (
-                <div className="glass-card rounded-2xl p-8 max-w-md text-center">
-                  <div className="w-16 h-16 mx-auto mb-6 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <Key className="w-8 h-8 text-blue-400" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">Connect to Live Data</h3>
-                  <p className="text-gray-400 mb-6">
-                    Enter your free FRED API key in the Dashboard to see real-time recession probability from Federal Reserve data.
-                  </p>
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition"
-                  >
-                    <Key className="w-4 h-4" />
-                    Configure API Key
-                  </Link>
-                  <p className="text-xs text-gray-500 mt-4">
-                    Get a free API key at{' '}
-                    <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                      fred.stlouisfed.org
-                    </a>
-                  </p>
+                <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl">
+                  <Activity className="w-12 h-12 text-gray-500 mb-4" />
+                  <p className="text-gray-400">Unable to load data</p>
                 </div>
               )}
             </motion.div>
@@ -249,18 +244,14 @@ export default function Home() {
                 color={data.components.drag < 0.03 ? '#22c55e' : '#ef4444'}
               />
             </div>
+          ) : loading ? (
+            <div className="glass-card rounded-2xl p-8 text-center">
+              <Loader2 className="w-8 h-8 text-regen-400 animate-spin mx-auto mb-4" />
+              <p className="text-gray-400">Loading component data...</p>
+            </div>
           ) : (
             <div className="glass-card rounded-2xl p-8 text-center">
-              <p className="text-gray-400 mb-4">
-                Component values will appear here once you connect your FRED API key.
-              </p>
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition"
-              >
-                <Key className="w-4 h-4" />
-                Configure API Key
-              </Link>
+              <p className="text-gray-400">Component data unavailable</p>
             </div>
           )}
         </div>

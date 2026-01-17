@@ -9,7 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceArea,
   Brush,
 } from 'recharts'
 import { Calendar, Download, Key, Loader2, AlertCircle, RefreshCw, Eye, EyeOff, Settings, ChevronDown, ChevronUp } from 'lucide-react'
@@ -23,18 +22,6 @@ interface HistoricalDataPoint {
   probability: number
   isRecession: boolean
 }
-
-// Known NBER recession periods for reference areas
-const RECESSION_PERIODS = [
-  { start: '1969-12', end: '1970-11', name: '1970 Recession' },
-  { start: '1973-11', end: '1975-03', name: '1973-75 Recession' },
-  { start: '1980-01', end: '1980-07', name: '1980 Recession' },
-  { start: '1981-07', end: '1982-11', name: '1981-82 Recession' },
-  { start: '1990-07', end: '1991-03', name: '1990-91 Recession' },
-  { start: '2001-03', end: '2001-11', name: 'Dot-com Recession' },
-  { start: '2007-12', end: '2009-06', name: 'Great Recession' },
-  { start: '2020-02', end: '2020-04', name: 'COVID Recession' },
-]
 
 // Helper to get date 5 years ago for faster default loading
 const getDefaultStartDate = (): string => {
@@ -54,7 +41,6 @@ export default function ExplorerPage() {
   const [allData, setAllData] = useState<HistoricalDataPoint[]>([])
   const [startDate, setStartDate] = useState(getDefaultStartDate)  // 5 years back for faster loading
   const [endDate, setEndDate] = useState(getDefaultEndDate)
-  const [showRecessions, setShowRecessions] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
@@ -132,10 +118,6 @@ export default function ExplorerPage() {
       filterData(allData, startDate, endDate)
     }
   }, [startDate, endDate, allData])
-
-  const recessionPeriods = RECESSION_PERIODS.filter(r =>
-    r.start >= startDate && r.end <= endDate
-  )
 
   const exportCSV = () => {
     if (!data.length) return
@@ -373,9 +355,6 @@ export default function ExplorerPage() {
             <div className="flex items-center gap-3 mb-3">
               <Key className="w-5 h-5 text-regen-400" />
               <span className="text-white font-medium">FRED API Key</span>
-              {apiSettings.fredApiKey && (
-                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
-              )}
             </div>
             <div className="flex gap-3">
               <div className="relative flex-1">
@@ -439,16 +418,6 @@ export default function ExplorerPage() {
               />
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showRecessions}
-                onChange={(e) => setShowRecessions(e.target.checked)}
-                className="w-4 h-4 rounded"
-              />
-              <span className="text-sm text-gray-400">Show recession periods</span>
-            </label>
-
             <div className="flex gap-2 ml-auto">
               <button
                 onClick={() => { setStartDate('2020-01'); setEndDate('2026-01') }}
@@ -491,16 +460,6 @@ export default function ExplorerPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-
-                  {showRecessions && recessionPeriods.map((period, i) => (
-                    <ReferenceArea
-                      key={i}
-                      x1={period.start}
-                      x2={period.end}
-                      fill="#ef4444"
-                      fillOpacity={0.15}
-                    />
-                  ))}
 
                   <XAxis
                     dataKey="date"
@@ -556,16 +515,6 @@ export default function ExplorerPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-
-                  {showRecessions && recessionPeriods.map((period, i) => (
-                    <ReferenceArea
-                      key={i}
-                      x1={period.start}
-                      x2={period.end}
-                      fill="#ef4444"
-                      fillOpacity={0.15}
-                    />
-                  ))}
 
                   <XAxis
                     dataKey="date"
@@ -623,12 +572,6 @@ export default function ExplorerPage() {
               <div className="w-4 h-0.5 border-t-2 border-dashed border-gray-500" />
               <span className="text-sm text-gray-400">50% Threshold</span>
             </div>
-            {showRecessions && (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-500/20" />
-                <span className="text-sm text-gray-400">NBER Recession</span>
-              </div>
-            )}
           </div>
         </div>
       </div>
