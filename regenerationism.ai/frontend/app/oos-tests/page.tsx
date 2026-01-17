@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LineChart,
@@ -21,22 +21,16 @@ import {
   Loader2,
   FlaskConical,
   TrendingUp,
-  Target,
-  Zap,
   CheckCircle,
   XCircle,
   AlertTriangle,
   BarChart3,
-  Activity,
   Database,
   Settings,
   Award,
-  Key,
-  Eye,
-  EyeOff,
 } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
-import { calculateNIVFromFRED } from '@/lib/fredApi'
+import { calculateNIVFromFRED, checkServerApiKey } from '@/lib/fredApi'
 import {
   runRecessionPredictionTest,
   runGDPForecastTest,
@@ -58,8 +52,8 @@ export default function OOSTestsPage() {
   const [isRunning, setIsRunning] = useState(false)
   const [loadingStatus, setLoadingStatus] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
+  const [checkingServerKey, setCheckingServerKey] = useState(true)
 
   // Test results
   const [recessionResult, setRecessionResult] = useState<RecessionTestResult | null>(null)
@@ -67,9 +61,25 @@ export default function OOSTestsPage() {
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null)
   const [forensicResult, setForensicResult] = useState<ForensicResult | null>(null)
 
+  // Check if server has configured API key on mount
+  useEffect(() => {
+    const checkServer = async () => {
+      setCheckingServerKey(true)
+      const hasKey = await checkServerApiKey()
+      setHasServerKey(hasKey)
+      if (hasKey) {
+        setApiSettings({ useLiveData: true })
+      }
+      setCheckingServerKey(false)
+    }
+    checkServer()
+  }, [])
+
+  const canRunTests = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
+
   const runTest = useCallback(async (testType: TestType) => {
-    if (!apiSettings.fredApiKey) {
-      setError('Please enter your FRED API key above.')
+    if (!canRunTests) {
+      setError('Unable to run tests - no data source available.')
       return
     }
 
@@ -83,9 +93,12 @@ export default function OOSTestsPage() {
       const oosStartDate = '1970-01-01'
       const oosEndDate = new Date().toISOString().split('T')[0]
 
+      // Use server key (empty string) if available, otherwise client key
+      const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
+
       // First fetch the NIV data
       const nivData = await calculateNIVFromFRED(
-        apiSettings.fredApiKey,
+        apiKeyToUse,
         oosStartDate,
         oosEndDate,
         {
@@ -152,7 +165,7 @@ export default function OOSTestsPage() {
       setIsRunning(false)
       setLoadingStatus('')
     }
-  }, [apiSettings, params])
+  }, [canRunTests, hasServerKey, apiSettings, params])
 
   const tests = [
     {
@@ -257,59 +270,6 @@ export default function OOSTestsPage() {
           </div>
         </motion.div>
 
-        {/* API Key Configuration */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-dark-800 border border-white/10 rounded-xl"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <Key className="w-5 h-5 text-regen-400" />
-            <span className="text-white font-medium">FRED API Key</span>
-            {apiSettings.fredApiKey && apiSettings.useLiveData && (
-              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="Enter your FRED API key..."
-                className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-2 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-regen-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              >
-                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <button
-              onClick={() => {
-                setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
-              }}
-              disabled={!apiKeyInput}
-              className="px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Save
-            </button>
-          </div>
-          <p className="text-gray-500 text-sm mt-2">
-            Get a free API key from{' '}
-            <a
-              href="https://fred.stlouisfed.org/docs/api/api_key.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-regen-400 hover:underline"
-            >
-              FRED
-            </a>
-          </p>
-        </motion.div>
-
         {/* Error Banner */}
         <AnimatePresence>
           {error && (
@@ -362,13 +322,23 @@ export default function OOSTestsPage() {
         {/* Run Button */}
         <button
           onClick={() => runTest(activeTest)}
-          disabled={isRunning || !apiSettings.fredApiKey}
+          disabled={isRunning || checkingServerKey || !canRunTests}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold rounded-xl transition disabled:opacity-50 mb-8"
         >
-          {isRunning ? (
+          {checkingServerKey ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Initializing...
+            </>
+          ) : isRunning ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               {loadingStatus || 'Running Test...'}
+            </>
+          ) : !canRunTests ? (
+            <>
+              <AlertTriangle className="w-5 h-5" />
+              Unable to Load Data
             </>
           ) : (
             <>
