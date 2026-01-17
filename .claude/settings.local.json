@@ -9,7 +9,15 @@
       "Bash(npx vercel:*)",
       "Bash(git commit:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(xargs:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(fly deploy:*)",
+      "Bash(curl:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(gh pr create:*)"
     ]
   }
 }

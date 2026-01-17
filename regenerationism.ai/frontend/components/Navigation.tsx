@@ -9,7 +9,6 @@ const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/methodology', label: 'Methodology' },
-  { href: '/simulator', label: 'Simulator' },
   { href: '/explorer', label: 'Explorer' },
   { href: '/oos-tests', label: 'OOS Tests' },
   { href: '/api-docs', label: 'API' },

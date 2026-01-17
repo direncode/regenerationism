@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import {
   LineChart,
   Line,
@@ -13,7 +12,7 @@ import {
   ReferenceArea,
   Brush,
 } from 'recharts'
-import { Calendar, Download, Key, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { Calendar, Download, Key, Loader2, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED, NIVDataPoint } from '@/lib/fredApi'
 
@@ -37,7 +36,7 @@ const RECESSION_PERIODS = [
 ]
 
 export default function ExplorerPage() {
-  const { apiSettings } = useSessionStore()
+  const { apiSettings, setApiSettings } = useSessionStore()
   const [data, setData] = useState<HistoricalDataPoint[]>([])
   const [allData, setAllData] = useState<HistoricalDataPoint[]>([])
   const [startDate, setStartDate] = useState('2000-01')
@@ -45,6 +44,8 @@ export default function ExplorerPage() {
   const [showRecessions, setShowRecessions] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
+  const [showApiKey, setShowApiKey] = useState(false)
 
   // Fetch historical data
   const fetchData = async () => {
@@ -130,23 +131,44 @@ export default function ExplorerPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
             <div className="w-20 h-20 mx-auto mb-6 bg-blue-500/20 rounded-full flex items-center justify-center">
               <Key className="w-10 h-10 text-blue-400" />
             </div>
             <h2 className="text-2xl font-bold mb-4">Connect to Live FRED Data</h2>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto">
-              The Historical Explorer requires a FRED API key to fetch real economic data
-              from the Federal Reserve going back to the 1960s.
+            <p className="text-gray-400 mb-6">
+              Enter your FRED API key to explore 60+ years of historical economic data.
             </p>
-            <Link
-              href="/simulator"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition"
-            >
-              <Key className="w-5 h-5" />
-              Configure API Key in Simulator
-            </Link>
-            <p className="text-sm text-gray-500 mt-6">
+
+            <div className="flex gap-3 mb-4">
+              <div className="relative flex-1">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Enter your FRED API key..."
+                  className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
+                }}
+                disabled={!apiKeyInput}
+                className="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Connect
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500">
               Get a free API key at{' '}
               <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
                 fred.stlouisfed.org

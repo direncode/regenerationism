@@ -129,10 +129,10 @@ export default function Home() {
 
               <div className="flex flex-wrap gap-4">
                 <Link
-                  href="/simulator"
+                  href="/dashboard"
                   className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
                 >
-                  {hasApiKey ? 'Launch Simulator' : 'Get Started'}
+                  {hasApiKey ? 'View Dashboard' : 'Get Started'}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
@@ -168,10 +168,10 @@ export default function Home() {
                   </div>
                   <h3 className="text-xl font-bold mb-3">Connect to Live Data</h3>
                   <p className="text-gray-400 mb-6">
-                    Enter your free FRED API key in the Simulator to see real-time recession probability from Federal Reserve data.
+                    Enter your free FRED API key in the Dashboard to see real-time recession probability from Federal Reserve data.
                   </p>
                   <Link
-                    href="/simulator"
+                    href="/dashboard"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition"
                   >
                     <Key className="w-4 h-4" />
@@ -255,7 +255,7 @@ export default function Home() {
                 Component values will appear here once you connect your FRED API key.
               </p>
               <Link
-                href="/simulator"
+                href="/dashboard"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition"
               >
                 <Key className="w-4 h-4" />
