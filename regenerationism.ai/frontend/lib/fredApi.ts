@@ -11,6 +11,8 @@
  * - CPIAUCSL: Consumer Price Index (Drag - Inflation)
  */
 
+import { auditLog, logNIVCalculation, logFREDFetch } from './auditLog'
+
 export interface FREDObservation {
   date: string
   value: string
@@ -78,6 +80,8 @@ async function fetchFREDSeries(
   startDate: string,
   endDate: string
 ): Promise<FREDObservation[]> {
+  const startTime = performance.now()
+
   // Use our proxy to bypass CORS
   const proxyUrl = new URL(getProxyUrl(), typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
   proxyUrl.searchParams.set('series_id', seriesId)
@@ -86,29 +90,73 @@ async function fetchFREDSeries(
   proxyUrl.searchParams.set('observation_end', endDate)
   proxyUrl.searchParams.set('endpoint', 'observations')
 
-  console.log(`Fetching FRED series ${seriesId} via proxy...`)
+  auditLog.logDataFetch(
+    `Initiating FRED fetch: ${seriesId}`,
+    {
+      url: proxyUrl.toString().replace(apiKey, '[REDACTED]'),
+      method: 'GET',
+      requestParams: { series_id: seriesId, observation_start: startDate, observation_end: endDate },
+    },
+    'DEBUG',
+    'FRED-API'
+  )
 
   try {
     const response = await fetch(proxyUrl.toString())
+    const duration = performance.now() - startTime
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      console.error(`FRED API error for ${seriesId}:`, response.status, errorData)
+      auditLog.logDataFetch(
+        `FRED API error: ${seriesId} - ${response.status}`,
+        {
+          url: proxyUrl.toString().replace(apiKey, '[REDACTED]'),
+          method: 'GET',
+          responseStatus: response.status,
+          duration,
+        },
+        'ERROR',
+        'FRED-API'
+      )
       throw new Error(`FRED API error for ${seriesId}: ${response.status} ${errorData.error || response.statusText}`)
     }
 
     const data = await response.json()
-    console.log(`Got ${data.observations?.length || 0} observations for ${seriesId}`)
 
     // Handle FRED API error responses
     if (data.error_code || data.error_message || data.error) {
-      console.error(`FRED API returned error:`, data)
+      auditLog.logDataFetch(
+        `FRED API returned error: ${data.error_message || data.error}`,
+        {
+          url: proxyUrl.toString().replace(apiKey, '[REDACTED]'),
+          method: 'GET',
+          responseStatus: response.status,
+          duration,
+        },
+        'ERROR',
+        'FRED-API'
+      )
       throw new Error(`FRED API error: ${data.error_message || data.error || 'Unknown error'}`)
     }
 
-    return data.observations || []
+    const observations = data.observations || []
+
+    // Log successful fetch
+    logFREDFetch(seriesId, startDate, endDate, observations.length, duration, 'FRED-API')
+
+    return observations
   } catch (error) {
-    console.error(`Failed to fetch ${seriesId}:`, error)
+    const duration = performance.now() - startTime
+    auditLog.logDataFetch(
+      `FRED fetch failed: ${seriesId} - ${error instanceof Error ? error.message : 'Unknown error'}`,
+      {
+        url: proxyUrl.toString().replace(apiKey, '[REDACTED]'),
+        method: 'GET',
+        duration,
+      },
+      'ERROR',
+      'FRED-API'
+    )
     throw error
   }
 }
@@ -355,6 +403,17 @@ export function calculateNIVComponents(
     // This is a simplified sigmoid transformation
     const probability = 1 / (1 + Math.exp(niv * 2 - 1)) * 100
 
+    // Log detailed calculation for this data point
+    logNIVCalculation(
+      weightedThrust,
+      weightedEfficiency,
+      weightedSlack,
+      weightedDrag,
+      eta,
+      niv,
+      'NIV-Calculator'
+    )
+
     results.push({
       date: comp.date,
       thrust: comp.thrust,
@@ -459,6 +518,23 @@ export async function calculateNIVFromFRED(
   },
   onProgress?: (status: string, progress: number) => void
 ): Promise<NIVDataPoint[]> {
+  const pipelineStartTime = performance.now()
+
+  auditLog.logSystem(
+    'NIV calculation pipeline started',
+    'INFO',
+    {
+      startDate,
+      endDate,
+      params: {
+        eta: params.eta,
+        weights: params.weights,
+        smoothWindow: params.smoothWindow,
+      },
+    },
+    'NIV-Pipeline'
+  )
+
   onProgress?.('Fetching FRED data...', 0)
 
   // Fetch all series
@@ -466,10 +542,33 @@ export async function calculateNIVFromFRED(
     onProgress?.(`Fetching ${series}...`, progress * 0.6)
   })
 
+  auditLog.logSystem(
+    'FRED data fetch complete',
+    'INFO',
+    {
+      seriesCount: seriesData.size,
+      series: Array.from(seriesData.keys()),
+    },
+    'NIV-Pipeline'
+  )
+
   onProgress?.('Processing data...', 60)
 
   // Merge series
   const mergedData = mergeSeriesData(seriesData)
+
+  auditLog.logCalculation(
+    'Data series merged',
+    {
+      formula: 'merge(GPDIC1, M2SL, FEDFUNDS, GDPC1, TCU, T10Y3M, CPIAUCSL)',
+      inputs: {
+        seriesCount: seriesData.size,
+      },
+      output: mergedData.length,
+    },
+    'INFO',
+    'NIV-Pipeline'
+  )
 
   onProgress?.('Calculating NIV...', 80)
 
@@ -479,6 +578,23 @@ export async function calculateNIVFromFRED(
   // Mark recessions
   const recessionObs = seriesData.get('RECESSION') || []
   nivData = markRecessions(nivData, recessionObs)
+
+  const pipelineDuration = performance.now() - pipelineStartTime
+
+  auditLog.logSystem(
+    'NIV calculation pipeline complete',
+    'INFO',
+    {
+      dataPoints: nivData.length,
+      dateRange: nivData.length > 0 ? {
+        first: nivData[0].date,
+        last: nivData[nivData.length - 1].date,
+      } : null,
+      duration: `${pipelineDuration.toFixed(2)}ms`,
+      recessionPeriods: nivData.filter(d => d.isRecession).length,
+    },
+    'NIV-Pipeline'
+  )
 
   onProgress?.('Complete', 100)
 
