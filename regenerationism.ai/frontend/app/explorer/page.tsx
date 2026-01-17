@@ -11,8 +11,7 @@ import {
   ResponsiveContainer,
   Brush,
 } from 'recharts'
-import { Calendar, Download, Key, Loader2, AlertCircle, RefreshCw, Eye, EyeOff, Settings, ChevronDown, ChevronUp } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Calendar, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
 
@@ -43,9 +42,6 @@ export default function ExplorerPage() {
   const [endDate, setEndDate] = useState(getDefaultEndDate)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
   const [checkingServerKey, setCheckingServerKey] = useState(true)
 
@@ -168,49 +164,9 @@ export default function ExplorerPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
-            <div className="w-20 h-20 mx-auto mb-6 bg-blue-500/20 rounded-full flex items-center justify-center">
-              <Key className="w-10 h-10 text-blue-400" />
-            </div>
-            <h2 className="text-2xl font-bold mb-4">Connect to Live FRED Data</h2>
-            <p className="text-gray-400 mb-6">
-              Enter your FRED API key to explore 60+ years of historical economic data.
-            </p>
-
-            <div className="flex gap-3 mb-4">
-              <div className="relative flex-1">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder="Enter your FRED API key..."
-                  className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <button
-                onClick={() => {
-                  setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
-                }}
-                disabled={!apiKeyInput}
-                className="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Connect
-              </button>
-            </div>
-
-            <p className="text-sm text-gray-500">
-              Get a free API key at{' '}
-              <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                fred.stlouisfed.org
-              </a>
-            </p>
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-400">Unable to load data</p>
           </div>
         </div>
       </div>
@@ -239,7 +195,7 @@ export default function ExplorerPage() {
     )
   }
 
-  // Error state - show API key input to allow re-entry
+  // Error state
   if (error && data.length === 0) {
     return (
       <div className="min-h-screen py-8 px-6">
@@ -256,53 +212,12 @@ export default function ExplorerPage() {
             <h2 className="text-xl font-bold mb-2 text-red-400">Failed to Load Data</h2>
             <p className="text-gray-400 mb-6">{error}</p>
 
-            {/* API Key Re-entry */}
-            <div className="text-left mb-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Enter or update your FRED API key:
-              </label>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <input
-                    type={showApiKey ? 'text' : 'password'}
-                    value={apiKeyInput}
-                    onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder="Enter your FRED API key..."
-                    className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                  >
-                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <button
-                  onClick={() => {
-                    setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
-                    setError(null)
-                  }}
-                  disabled={!apiKeyInput}
-                  className="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save & Retry
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Get a free API key at{' '}
-                <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                  fred.stlouisfed.org
-                </a>
-              </p>
-            </div>
-
             <button
               onClick={fetchData}
               className="inline-flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
             >
               <RefreshCw className="w-4 h-4" />
-              Try Again with Current Key
+              Try Again
             </button>
           </div>
         </div>
@@ -325,78 +240,15 @@ export default function ExplorerPage() {
               {dataYears}+ years of NIV data ({allData[0]?.date || '---'} - present)
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
-            >
-              <Settings className="w-4 h-4" />
-              {showSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={exportCSV}
-              disabled={!data.length}
-              className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-          </div>
-        </div>
-
-        {/* Collapsible Settings Panel */}
-        {showSettings && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-6 p-4 bg-dark-800 border border-white/10 rounded-xl"
+          <button
+            onClick={exportCSV}
+            disabled={!data.length}
+            className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <Key className="w-5 h-5 text-regen-400" />
-              <span className="text-white font-medium">FRED API Key</span>
-            </div>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder="Enter your FRED API key..."
-                  className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-2 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-regen-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <button
-                onClick={() => {
-                  setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
-                  setShowSettings(false)
-                }}
-                disabled={!apiKeyInput}
-                className="px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save
-              </button>
-            </div>
-            <p className="text-gray-500 text-sm mt-2">
-              Get a free API key from{' '}
-              <a
-                href="https://fred.stlouisfed.org/docs/api/api_key.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-regen-400 hover:underline"
-              >
-                FRED
-              </a>
-            </p>
-          </motion.div>
-        )}
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+        </div>
 
         {/* Filters */}
         <div className="glass-card rounded-xl p-4 mb-6">
