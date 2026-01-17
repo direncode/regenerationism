@@ -15,6 +15,9 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Settings,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import RecessionGauge from '@/components/RecessionGauge'
 import { useSessionStore } from '@/store/sessionStore'
@@ -69,6 +72,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
   const [showApiKey, setShowApiKey] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   const fetchData = async () => {
     if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
@@ -287,7 +291,7 @@ export default function DashboardPage() {
     <div className="min-h-screen py-8 px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h1 className="text-3xl font-bold">NIV Dashboard</h1>
             <p className="text-gray-400">Real-time macro crisis detection</p>
@@ -296,6 +300,13 @@ export default function DashboardPage() {
             <span className="text-sm text-gray-500">
               Updated: {lastUpdate?.toLocaleTimeString() || 'Never'}
             </span>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
+            >
+              <Settings className="w-4 h-4" />
+              {showSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
             <button
               onClick={refresh}
               disabled={loading}
@@ -314,6 +325,63 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* Collapsible Settings Panel */}
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 p-4 bg-dark-800 border border-white/10 rounded-xl"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <Key className="w-5 h-5 text-regen-400" />
+              <span className="text-white font-medium">FRED API Key</span>
+              {apiSettings.fredApiKey && (
+                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Enter your FRED API key..."
+                  className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-2 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-regen-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
+                  setShowSettings(false)
+                }}
+                disabled={!apiKeyInput}
+                className="px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
+            </div>
+            <p className="text-gray-500 text-sm mt-2">
+              Get a free API key from{' '}
+              <a
+                href="https://fred.stlouisfed.org/docs/api/api_key.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-regen-400 hover:underline"
+              >
+                FRED
+              </a>
+            </p>
+          </motion.div>
+        )}
 
         {/* Main Grid */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">

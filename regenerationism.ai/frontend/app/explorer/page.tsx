@@ -12,7 +12,8 @@ import {
   ReferenceArea,
   Brush,
 } from 'recharts'
-import { Calendar, Download, Key, Loader2, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react'
+import { Calendar, Download, Key, Loader2, AlertCircle, RefreshCw, Eye, EyeOff, Settings, ChevronDown, ChevronUp } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED, NIVDataPoint } from '@/lib/fredApi'
 
@@ -58,6 +59,7 @@ export default function ExplorerPage() {
   const [error, setError] = useState<string | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
   const [showApiKey, setShowApiKey] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   // Fetch historical data
   const fetchData = async () => {
@@ -251,22 +253,88 @@ export default function ExplorerPage() {
     <div className="min-h-screen py-8 px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h1 className="text-3xl font-bold">Historical Explorer</h1>
             <p className="text-gray-400">
               {dataYears}+ years of NIV data ({allData[0]?.date || '---'} - present)
             </p>
           </div>
-          <button
-            onClick={exportCSV}
-            disabled={!data.length}
-            className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
+            >
+              <Settings className="w-4 h-4" />
+              {showSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={exportCSV}
+              disabled={!data.length}
+              className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
+
+        {/* Collapsible Settings Panel */}
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 p-4 bg-dark-800 border border-white/10 rounded-xl"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <Key className="w-5 h-5 text-regen-400" />
+              <span className="text-white font-medium">FRED API Key</span>
+              {apiSettings.fredApiKey && (
+                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Enter your FRED API key..."
+                  className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-2 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-regen-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
+                  setShowSettings(false)
+                }}
+                disabled={!apiKeyInput}
+                className="px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
+            </div>
+            <p className="text-gray-500 text-sm mt-2">
+              Get a free API key from{' '}
+              <a
+                href="https://fred.stlouisfed.org/docs/api/api_key.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-regen-400 hover:underline"
+              >
+                FRED
+              </a>
+            </p>
+          </motion.div>
+        )}
 
         {/* Filters */}
         <div className="glass-card rounded-xl p-4 mb-6">
