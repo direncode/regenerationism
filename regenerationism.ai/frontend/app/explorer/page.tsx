@@ -15,7 +15,7 @@ import {
 import { Calendar, Download, Key, Loader2, AlertCircle, RefreshCw, Eye, EyeOff, Settings, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useSessionStore } from '@/store/sessionStore'
-import { calculateNIVFromFRED, NIVDataPoint } from '@/lib/fredApi'
+import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
 
 interface HistoricalDataPoint {
   date: string
@@ -60,10 +60,27 @@ export default function ExplorerPage() {
   const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
   const [showApiKey, setShowApiKey] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
+  const [checkingServerKey, setCheckingServerKey] = useState(true)
+
+  // Check if server has configured API key on mount
+  useEffect(() => {
+    const checkServer = async () => {
+      setCheckingServerKey(true)
+      const hasKey = await checkServerApiKey()
+      setHasServerKey(hasKey)
+      if (hasKey) {
+        setApiSettings({ useLiveData: true })
+      }
+      setCheckingServerKey(false)
+    }
+    checkServer()
+  }, [])
 
   // Fetch historical data
   const fetchData = async () => {
-    if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
+    const canFetch = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
+    if (!canFetch) {
       setData([])
       setAllData([])
       return
@@ -74,8 +91,9 @@ export default function ExplorerPage() {
 
     try {
       // Fetch maximum historical data (FRED has data back to 1960s for most series)
+      const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
-        apiSettings.fredApiKey,
+        apiKeyToUse,
         '1960-01-01',
         new Date().toISOString().split('T')[0],
         { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
@@ -104,8 +122,10 @@ export default function ExplorerPage() {
   }
 
   useEffect(() => {
-    fetchData()
-  }, [apiSettings.fredApiKey, apiSettings.useLiveData])
+    if (!checkingServerKey) {
+      fetchData()
+    }
+  }, [apiSettings.fredApiKey, apiSettings.useLiveData, hasServerKey, checkingServerKey])
 
   useEffect(() => {
     if (allData.length > 0) {
@@ -133,8 +153,29 @@ export default function ExplorerPage() {
     a.click()
   }
 
-  // No API key configured
-  if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
+  // Still checking server key
+  if (checkingServerKey) {
+    return (
+      <div className="min-h-screen py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Historical Explorer</h1>
+              <p className="text-gray-400">60+ years of NIV data from FRED</p>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Initializing...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // No API key configured (and server doesn't have one)
+  if (!hasServerKey && (!apiSettings.fredApiKey || !apiSettings.useLiveData)) {
     return (
       <div className="min-h-screen py-8 px-6">
         <div className="max-w-7xl mx-auto">

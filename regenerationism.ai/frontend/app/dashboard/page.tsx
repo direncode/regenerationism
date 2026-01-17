@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import RecessionGauge from '@/components/RecessionGauge'
 import { useSessionStore } from '@/store/sessionStore'
-import { calculateNIVFromFRED, NIVDataPoint } from '@/lib/fredApi'
+import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
 import {
   AreaChart,
   Area,
@@ -73,9 +73,28 @@ export default function DashboardPage() {
   const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
   const [showApiKey, setShowApiKey] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
+  const [checkingServerKey, setCheckingServerKey] = useState(true)
+
+  // Check if server has configured API key on mount
+  useEffect(() => {
+    const checkServer = async () => {
+      setCheckingServerKey(true)
+      const hasKey = await checkServerApiKey()
+      setHasServerKey(hasKey)
+      if (hasKey) {
+        // Auto-enable live data if server has key
+        setApiSettings({ useLiveData: true })
+      }
+      setCheckingServerKey(false)
+    }
+    checkServer()
+  }, [])
 
   const fetchData = async () => {
-    if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
+    // If server has key, we don't need client key
+    const canFetch = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
+    if (!canFetch) {
       setData(null)
       setHistory([])
       return
@@ -89,8 +108,10 @@ export default function DashboardPage() {
       const endDate = new Date().toISOString().split('T')[0]
       const startDate = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
+      // Use server key (empty string) if available, otherwise client key
+      const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
-        apiSettings.fredApiKey,
+        apiKeyToUse,
         startDate,
         endDate,
         { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
@@ -151,8 +172,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    fetchData()
-  }, [apiSettings.fredApiKey, apiSettings.useLiveData])
+    if (!checkingServerKey) {
+      fetchData()
+    }
+  }, [apiSettings.fredApiKey, apiSettings.useLiveData, hasServerKey, checkingServerKey])
 
   const refresh = () => {
     fetchData()
@@ -174,8 +197,29 @@ export default function DashboardPage() {
     a.click()
   }
 
-  // No API key configured
-  if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
+  // Still checking server key
+  if (checkingServerKey) {
+    return (
+      <div className="min-h-screen py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">NIV Dashboard</h1>
+              <p className="text-gray-400">Real-time macro crisis detection</p>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Initializing...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // No API key configured (and server doesn't have one)
+  if (!hasServerKey && (!apiSettings.fredApiKey || !apiSettings.useLiveData)) {
     return (
       <div className="min-h-screen py-8 px-6">
         <div className="max-w-7xl mx-auto">

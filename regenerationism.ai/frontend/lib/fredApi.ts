@@ -86,7 +86,29 @@ const getProxyUrl = () => {
 }
 
 /**
+ * Check if server has a configured FRED API key
+ * Returns true if server-side key is available (users don't need to provide their own)
+ */
+export async function checkServerApiKey(): Promise<boolean> {
+  try {
+    const proxyUrl = getProxyUrl()
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+    const response = await fetch(new URL(proxyUrl, baseUrl).toString(), {
+      method: 'POST',
+    })
+    if (response.ok) {
+      const data = await response.json()
+      return data.hasServerKey === true
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
+/**
  * Fetch a single FRED series via our proxy
+ * If apiKey is empty/undefined, the server will use its configured key
  */
 async function fetchFREDSeries(
   seriesId: string,
@@ -97,11 +119,14 @@ async function fetchFREDSeries(
   const startTime = performance.now()
 
   // CRITICAL: Trim whitespace/tabs from API key to prevent 400 errors
-  const cleanApiKey = apiKey.trim()
+  const cleanApiKey = apiKey?.trim() || ''
 
   const proxyUrl = new URL(getProxyUrl(), typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
   proxyUrl.searchParams.set('series_id', seriesId)
-  proxyUrl.searchParams.set('api_key', cleanApiKey)
+  // Only set api_key if client provided one (server may have its own)
+  if (cleanApiKey) {
+    proxyUrl.searchParams.set('api_key', cleanApiKey)
+  }
   proxyUrl.searchParams.set('observation_start', startDate)
   proxyUrl.searchParams.set('observation_end', endDate)
   proxyUrl.searchParams.set('endpoint', 'observations')
