@@ -256,7 +256,7 @@ export default function DashboardPage() {
     )
   }
 
-  // Error state
+  // Error state - show API key input to allow re-entry
   if (error && !data) {
     return (
       <div className="min-h-screen py-8 px-6">
@@ -268,16 +268,58 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2 text-red-400">Failed to Load Data</h2>
             <p className="text-gray-400 mb-6">{error}</p>
+
+            {/* API Key Re-entry */}
+            <div className="text-left mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Enter or update your FRED API key:
+              </label>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    placeholder="Enter your FRED API key..."
+                    className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
+                    setError(null)
+                  }}
+                  disabled={!apiKeyInput}
+                  className="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save & Retry
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Get a free API key at{' '}
+                <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                  fred.stlouisfed.org
+                </a>
+              </p>
+            </div>
+
             <button
               onClick={refresh}
               className="inline-flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
             >
               <RefreshCw className="w-4 h-4" />
-              Try Again
+              Try Again with Current Key
             </button>
           </div>
         </div>
