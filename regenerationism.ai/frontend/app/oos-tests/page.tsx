@@ -78,11 +78,16 @@ export default function OOSTestsPage() {
     setLoadingStatus('Fetching FRED data...')
 
     try {
+      // OOS tests require multi-decade historical data to span multiple recessions
+      // Use hardcoded range from 1970 to present, ignoring the session store's 5-year default
+      const oosStartDate = '1970-01-01'
+      const oosEndDate = new Date().toISOString().split('T')[0]
+
       // First fetch the NIV data
       const nivData = await calculateNIVFromFRED(
         apiSettings.fredApiKey,
-        params.startDate,
-        params.endDate,
+        oosStartDate,
+        oosEndDate,
         {
           eta: params.eta,
           weights: params.weights,
@@ -258,7 +263,10 @@ export default function OOSTestsPage() {
 
             {/* Data Sources */}
             <div className="space-y-3">
-              <h3 className="font-semibold text-regen-400">FRED Data Series</h3>
+              <h3 className="font-semibold text-regen-400">FRED Data Series (1970-Present)</h3>
+              <p className="text-gray-500 text-xs mb-2">
+                OOS tests use full historical range (1970-present) to span multiple recession periods.
+              </p>
               <div className="bg-dark-700/50 rounded-lg p-3 text-xs space-y-1">
                 <div className="flex justify-between"><span className="text-gray-400">GDP Growth:</span><span className="text-white">A191RL1Q225SBEA (quarterly)</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">M2 Money Supply:</span><span className="text-white">M2SL (monthly)</span></div>
