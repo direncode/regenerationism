@@ -3,15 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --background: #000000;
-  --foreground: #f0f6fc;
-  --accent: #ff6600;
-  --accent-secondary: #ff9500;
-  --panel-bg: #0d1117;
-  --panel-border: #21262d;
-  --panel-highlight: #161b22;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --accent: #22c55e;
 }
 
 * {
@@ -28,119 +22,89 @@ body {
   color: var(--foreground);
 }
 
-/* Bloomberg Terminal Scrollbar */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: #1a1a1a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #30363d;
-  border-radius: 3px;
+  background: #333;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: #444;
 }
 
-/* Bloomberg Orange Gradient text */
+/* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #ff6600 0%, #ff9500 50%, #ffd60a 100%);
+  background: linear-gradient(135deg, #22c55e 0%, #4ade80 50%, #86efac 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Terminal Grid background */
+/* Grid background */
 .grid-background {
-  background-image:
-    linear-gradient(rgba(255, 102, 0, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 102, 0, 0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(rgba(34, 197, 94, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 197, 94, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
-/* Bloomberg Panel Card */
+/* Glassmorphism card */
 .glass-card {
-  background: #0d1117;
-  border: 1px solid #21262d;
-  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.03);
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Terminal Panel */
-.terminal-panel {
-  background: #0d1117;
-  border: 1px solid #21262d;
-  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.03);
-}
-
-.terminal-panel-header {
-  background: #161b22;
-  border-bottom: 1px solid #21262d;
-  padding: 0.5rem 1rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #ff6600;
-}
-
-/* Alert glow effects - Bloomberg style */
+/* Alert glow effects */
 .glow-normal {
-  box-shadow: 0 0 20px rgba(0, 210, 106, 0.3);
-  border-color: rgba(0, 210, 106, 0.5);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
 }
 
 .glow-elevated {
-  box-shadow: 0 0 20px rgba(255, 214, 10, 0.3);
-  border-color: rgba(255, 214, 10, 0.5);
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
 }
 
 .glow-warning {
-  box-shadow: 0 0 20px rgba(255, 149, 0, 0.4);
-  border-color: rgba(255, 149, 0, 0.5);
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
 }
 
 .glow-critical {
-  box-shadow: 0 0 30px rgba(255, 59, 48, 0.5);
-  border-color: rgba(255, 59, 48, 0.5);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
   animation: critical-pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes critical-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(255, 59, 48, 0.4); }
-  50% { box-shadow: 0 0 40px rgba(255, 59, 48, 0.7); }
+  0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.7); }
 }
 
 /* Recession band overlay */
 .recession-band {
-  background: rgba(255, 59, 48, 0.1);
-  border-left: 2px solid rgba(255, 59, 48, 0.3);
-  border-right: 2px solid rgba(255, 59, 48, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 2px solid rgba(239, 68, 68, 0.3);
+  border-right: 2px solid rgba(239, 68, 68, 0.3);
 }
 
-/* Bloomberg Number display */
+/* Number display */
 .big-number {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   font-size: 4rem;
   line-height: 1;
-  color: #ff6600;
 }
 
-/* Ticker Number */
-.ticker-number {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-/* Gauge styling - Bloomberg orange */
+/* Gauge styling */
 .gauge-track {
-  stroke: #21262d;
+  stroke: #2d2d2d;
   stroke-width: 12;
   fill: none;
 }
@@ -150,147 +114,4 @@ body {
   stroke-width: 12;
   fill: none;
   transition: stroke-dashoffset 0.5s ease-in-out;
-}
-
-/* Bloomberg Data Label */
-.data-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #8b949e;
-}
-
-/* Bloomberg Data Value */
-.data-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  color: #f0f6fc;
-}
-
-/* Status Indicators */
-.status-positive {
-  color: #00d26a;
-}
-
-.status-negative {
-  color: #ff3b30;
-}
-
-.status-neutral {
-  color: #8b949e;
-}
-
-/* Bloomberg Ticker Strip */
-.ticker-strip {
-  background: linear-gradient(90deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
-  border-top: 1px solid #21262d;
-  border-bottom: 1px solid #21262d;
-}
-
-/* Blinking Cursor */
-.blink-cursor::after {
-  content: '█';
-  animation: blink 1s step-end infinite;
-  color: #ff6600;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-/* Terminal Input */
-.terminal-input {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  font-family: 'JetBrains Mono', monospace;
-  color: #f0f6fc;
-}
-
-.terminal-input:focus {
-  border-color: #ff6600;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.2);
-}
-
-/* Bloomberg Button */
-.bb-button {
-  background: #ff6600;
-  color: #000000;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: all 0.15s ease;
-}
-
-.bb-button:hover {
-  background: #ff9500;
-}
-
-.bb-button-secondary {
-  background: transparent;
-  border: 1px solid #ff6600;
-  color: #ff6600;
-}
-
-.bb-button-secondary:hover {
-  background: rgba(255, 102, 0, 0.1);
-}
-
-/* Chart Tooltip */
-.chart-tooltip {
-  background: #161b22;
-  border: 1px solid #30363d;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-/* Table Styling */
-.bb-table {
-  border-collapse: collapse;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8125rem;
-}
-
-.bb-table th {
-  background: #161b22;
-  border-bottom: 2px solid #30363d;
-  text-align: left;
-  padding: 0.5rem 1rem;
-  font-weight: 600;
-  color: #8b949e;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.6875rem;
-}
-
-.bb-table td {
-  border-bottom: 1px solid #21262d;
-  padding: 0.5rem 1rem;
-}
-
-.bb-table tr:hover td {
-  background: #161b22;
-}
-
-/* Scanline effect for terminal feel */
-.scanline::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.1) 2px,
-    rgba(0, 0, 0, 0.1) 4px
-  );
-  pointer-events: none;
-  z-index: 1;
 }

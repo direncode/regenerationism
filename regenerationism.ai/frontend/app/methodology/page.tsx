@@ -295,7 +295,7 @@ export default function MethodologyPage() {
               </div>
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-red-500">
                 <div className="font-mono text-red-400 text-lg mb-2">F<sub>t</sub> = Drag</div>
-                <p className="text-gray-400 text-sm">Friction forces (real rates + yield curve inversion + inflation)</p>
+                <p className="text-gray-400 text-sm">Friction = negative of yield spread (T10Y3M). Inverted curve creates drag.</p>
               </div>
             </div>
 
@@ -527,10 +527,12 @@ function calculateNIVBreakdown(
     : 2.0
 
   const realRate = (current.fedFunds || 0) - inflationRate
-  const yieldCurveDrag = current.yieldSpread !== null
-    ? Math.max(0, -(current.yieldSpread || 0))
-    : 0
-  const dragRaw = Math.max(0, realRate) + yieldCurveDrag + inflationRate * 0.3
+
+  // Yield spread (T10Y3M) IS the drag component
+  // Negative spread = yield curve inversion = higher drag/friction
+  // Drag = negative of yield spread (aligns with OOS tests)
+  const yieldSpread = current.yieldSpread ?? 0
+  const dragRaw = -yieldSpread
 
   // Get min/max for normalization from all data
   const allInvestmentGrowth: number[] = []
@@ -552,11 +554,9 @@ function calculateNIVBreakdown(
     if (curr.capacity) {
       allSlack.push(100 - curr.capacity)
     }
-    if (curr.fedFunds !== null && curr.cpi && prev.cpi) {
-      const inf = ((curr.cpi - prev.cpi) / prev.cpi) * 100
-      const rr = curr.fedFunds - inf
-      const ycd = curr.yieldSpread !== null ? Math.max(0, -curr.yieldSpread) : 0
-      allDrag.push(Math.max(0, rr) + ycd + inf * 0.3)
+    // Drag = negative of yield spread (aligns with OOS tests)
+    if (curr.yieldSpread !== null) {
+      allDrag.push(-curr.yieldSpread)
     }
   }
 
@@ -743,53 +743,27 @@ function calculateNIVBreakdown(
       steps: [
         {
           id: 'drag-1',
-          name: 'Inflation Rate (YoY)',
-          formula: '(CPI_t - CPI_{t-12}) / CPI_{t-12} × 100',
-          description: 'Year-over-year CPI change',
+          name: 'Yield Spread (T10Y3M)',
+          formula: '10-Year Treasury - 3-Month Treasury',
+          description: 'Treasury yield curve spread from FRED',
           inputs: {
-            'CPI_t': current.cpi || 0,
-            'CPI_{t-12}': yearAgo.cpi || 0,
+            'T10Y3M': yieldSpread,
           },
-          output: inflationRate,
+          output: yieldSpread,
           unit: '%',
         },
         {
           id: 'drag-2',
-          name: 'Real Interest Rate',
-          formula: 'Fed_Funds - Inflation',
-          description: 'Nominal rate adjusted for inflation',
+          name: 'Calculate Drag',
+          formula: 'Drag = -Yield_Spread',
+          description: 'Inverted curve (negative spread) creates positive drag',
           inputs: {
-            Fed_Funds: current.fedFunds || 0,
-            Inflation: inflationRate,
-          },
-          output: realRate,
-          unit: '%',
-        },
-        {
-          id: 'drag-3',
-          name: 'Yield Curve Drag',
-          formula: 'max(0, -Yield_Spread)',
-          description: 'Penalty for yield curve inversion',
-          inputs: {
-            Yield_Spread: current.yieldSpread || 0,
-          },
-          output: yieldCurveDrag,
-          unit: '%',
-        },
-        {
-          id: 'drag-4',
-          name: 'Total Drag',
-          formula: 'max(0, Real_Rate) + YC_Drag + Inflation × 0.3',
-          description: 'Combined friction forces',
-          inputs: {
-            Real_Rate: realRate,
-            YC_Drag: yieldCurveDrag,
-            Inflation: inflationRate,
+            Yield_Spread: yieldSpread,
           },
           output: dragRaw,
         },
         {
-          id: 'drag-5',
+          id: 'drag-3',
           name: 'Normalize & Weight',
           formula: `normalize(value) × ${params.weights.drag}`,
           description: 'Normalize and apply weight',

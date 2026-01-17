@@ -30,29 +30,29 @@ export default function AuditLogButton() {
     <>
       <motion.button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 bg-terminal-panel border border-terminal-border hover:border-bb-orange transition group"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-dark-800 border border-white/10 rounded-full shadow-lg hover:bg-dark-700 transition group"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         title="View Audit Log"
       >
         <div className="relative">
-          <FileText className="w-4 h-4 text-bb-orange" />
+          <FileText className="w-5 h-5 text-regen-400" />
           {hasNewEntries && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-2 h-2 bg-bb-green rounded-full"
+              className="absolute -top-1 -right-1 w-2 h-2 bg-regen-400 rounded-full"
             />
           )}
         </div>
-        <span className="text-xs font-mono text-bb-gray group-hover:text-bb-white transition">
-          AUDIT LOG
+        <span className="text-sm text-gray-300 group-hover:text-white transition">
+          Audit Log
         </span>
-        <span className="text-xxs font-mono bg-terminal-highlight px-1.5 py-0.5 text-bb-orange">
+        <span className="text-xs font-mono bg-dark-600 px-2 py-0.5 rounded-full text-gray-400">
           {entryCount}
         </span>
         {hasNewEntries && (
-          <Activity className="w-3 h-3 text-bb-green animate-pulse" />
+          <Activity className="w-4 h-4 text-regen-400 animate-pulse" />
         )}
       </motion.button>
 

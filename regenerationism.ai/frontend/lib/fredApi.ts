@@ -346,19 +346,18 @@ export function calculateNIVComponents(
     // Slack: Capacity utilization gap (100 - actual = slack)
     const slack = 100 - current.capacity
 
-    // Drag: Combination of interest rates and inflation
+    // Calculate inflation and real rate for reference
     const inflationRate = calculateYoYChange(current.cpi, yearAgo.cpi)
     const realRate = current.fedFunds - inflationRate
 
-    // Raw yield spread (T10Y3M) - kept separate for OOS tests
+    // Yield spread (T10Y3M) - this IS the drag component
+    // Negative spread = yield curve inversion = higher drag/friction
+    // This aligns with OOS tests which use yieldSpread directly for Fed comparison
     const yieldSpread = current.yieldSpread ?? 0
 
-    // Drag increases with higher real rates and yield curve inversion
-    const yieldCurveDrag = current.yieldSpread !== null
-      ? Math.max(0, -current.yieldSpread) // Negative spread = inversion = drag
-      : 0
-
-    const drag = Math.max(0, realRate) + yieldCurveDrag + inflationRate * 0.3
+    // Drag = negative of yield spread (inverted curve = positive drag)
+    // When yield curve inverts (negative spread), drag increases
+    const drag = -yieldSpread
 
     rawComponents.push({
       date: current.date,
