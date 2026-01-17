@@ -284,7 +284,40 @@ function normalize(value: number, min: number, max: number): number {
 }
 
 /**
+ * NIV Engine v6 - Production Kernel
+ *
+ * Master Equation: NIV = (u × P²) / (X + F + ε)^η
+ *
+ * Where:
+ * - u (Thrust): tanh(Norm(Investment_Growth) + Norm(M2_Growth) - Norm(Fed_Rate_Change))
+ * - P (Efficiency): (Investment) / GDP - capital productivity (SQUARED in formula)
+ * - X (Slack): 1 - (TCU / 100) - economic headroom
+ * - F (Drag): max(0, Real_Rates) + YieldCurve_Penalty + (Inflation × 0.3)
+ * - η (eta): 1.5 - nonlinearity exponent (validated in OOS testing)
+ * - ε (epsilon): 0.001 - safety floor for division
+ *
+ * Key Behaviors (OOS Validated):
+ * - 2020 Miracle: M2 explosion drives Thrust spike even with zero rates
+ * - 2008 Warning: Low Efficiency (Investment/GDP) collapses NIV despite GDP growth
+ * - 2022 Handling: max(0, real_rates) prevents false boom signals during high inflation
+ */
+
+// Default NIV parameters (OOS validated)
+export const NIV_DEFAULTS = {
+  eta: 1.5,           // Nonlinearity exponent (OOS validated, whitepaper said 1.0)
+  epsilon: 0.001,     // Safety floor for division
+  weights: {
+    thrust: 1.0,
+    efficiency: 1.0,
+    slack: 1.0,
+    drag: 1.0,
+  },
+  smoothWindow: 3,    // 3-month rolling smooth
+}
+
+/**
  * Calculate NIV components from economic data
+ * Implements the OOS-validated NIV Engine v6 kernel
  */
 export function calculateNIVComponents(
   data: EconomicData[],
@@ -300,8 +333,39 @@ export function calculateNIVComponents(
   }
 
   const results: NIVDataPoint[] = []
+  const epsilon = NIV_DEFAULTS.epsilon // Safety floor
 
-  // Calculate raw components with YoY changes
+  // First pass: Calculate all raw values for normalization
+  const allInvestmentGrowth: number[] = []
+  const allM2Growth: number[] = []
+  const allFedRateChange: number[] = []
+
+  for (let i = 12; i < data.length; i++) {
+    const current = data[i]
+    const yearAgo = data[i - 12]
+    const monthAgo = data[i - 1]
+
+    if (current.investment !== null && yearAgo.investment !== null) {
+      allInvestmentGrowth.push(calculateYoYChange(current.investment, yearAgo.investment))
+    }
+    if (current.m2 !== null && yearAgo.m2 !== null) {
+      allM2Growth.push(calculateYoYChange(current.m2, yearAgo.m2))
+    }
+    if (current.fedFunds !== null && monthAgo?.fedFunds !== null) {
+      // Monthly rate change (annualized)
+      allFedRateChange.push(current.fedFunds - monthAgo.fedFunds)
+    }
+  }
+
+  // Get min/max for normalization
+  const invMin = Math.min(...allInvestmentGrowth)
+  const invMax = Math.max(...allInvestmentGrowth)
+  const m2Min = Math.min(...allM2Growth)
+  const m2Max = Math.max(...allM2Growth)
+  const fedMin = Math.min(...allFedRateChange)
+  const fedMax = Math.max(...allFedRateChange)
+
+  // Calculate raw components with the OOS-validated formulas
   const rawComponents: Array<{
     date: string
     thrust: number
@@ -316,6 +380,7 @@ export function calculateNIVComponents(
   for (let i = 12; i < data.length; i++) {
     const current = data[i]
     const yearAgo = data[i - 12]
+    const monthAgo = data[i - 1]
 
     // Skip if missing critical data
     if (
@@ -326,42 +391,54 @@ export function calculateNIVComponents(
       current.capacity === null ||
       current.fedFunds === null ||
       current.cpi === null ||
-      yearAgo.cpi === null
+      yearAgo.cpi === null ||
+      current.gdp === null
     ) {
       continue
     }
 
-    // Thrust: Investment growth rate (positive = expansionary)
+    // === THRUST (u) ===
+    // Formula: tanh(Norm(Investment_Growth) + Norm(M2_Growth) - Norm(Fed_Rate_Change))
+    // M2 Growth is critical - this caught the 2020 crash when rates hit 0%
     const investmentGrowth = calculateYoYChange(current.investment, yearAgo.investment)
-
-    // Efficiency: M2 velocity proxy (M2 growth relative to GDP growth)
     const m2Growth = calculateYoYChange(current.m2, yearAgo.m2)
-    const gdpGrowth = current.gdp && yearAgo.gdp
-      ? calculateYoYChange(current.gdp, yearAgo.gdp)
-      : 2.0 // Default assumption
+    const fedRateChange = monthAgo?.fedFunds !== null
+      ? current.fedFunds - monthAgo.fedFunds
+      : 0
 
-    // Efficiency = how effectively money translates to growth
-    const efficiency = gdpGrowth - m2Growth * 0.5 // Adjusted velocity proxy
+    const normInvGrowth = normalize(investmentGrowth, invMin, invMax)
+    const normM2Growth = normalize(m2Growth, m2Min, m2Max)
+    const normFedChange = normalize(fedRateChange, fedMin, fedMax)
 
-    // Slack: Capacity utilization gap (100 - actual = slack)
-    const slack = 100 - current.capacity
+    // tanh allows M2 liquidity impulse to override lack of rate signal (2020 Miracle)
+    const thrust = Math.tanh(normInvGrowth + normM2Growth - normFedChange)
 
-    // Calculate inflation and real rate for reference
+    // === EFFICIENCY (P) ===
+    // Formula: Investment / GDP - capital productivity
+    // This is SQUARED in the master equation - punishes "hollow growth"
+    // In 2007, GDP was rising but Investment/GDP slowed = NIV collapsed (2008 Warning)
+    const efficiency = current.investment / current.gdp
+
+    // === SLACK (X) ===
+    // Formula: 1 - (TCU / 100) - economic headroom
+    const slack = 1 - (current.capacity / 100)
+
+    // === DRAG (F) ===
+    // Formula: max(0, Real_Rates) + Yield_Curve_Penalty + (Inflation × 0.3)
+    // max(0, x) handles negative real rates (2022 Confusion)
     const inflationRate = calculateYoYChange(current.cpi, yearAgo.cpi)
     const realRate = current.fedFunds - inflationRate
-
-    // Yield spread (T10Y3M) - this IS the drag component
-    // Negative spread = yield curve inversion = higher drag/friction
-    // This aligns with OOS tests which use yieldSpread directly for Fed comparison
     const yieldSpread = current.yieldSpread ?? 0
 
-    // Drag = negative of yield spread (inverted curve = positive drag)
-    // When yield curve inverts (negative spread), drag increases
-    const drag = -yieldSpread
+    // Yield curve penalty: inversion adds to drag
+    const yieldCurvePenalty = yieldSpread < 0 ? Math.abs(yieldSpread) : 0
+
+    // Combined drag with max(0, realRate) to handle negative real rates correctly
+    const drag = Math.max(0, realRate) + yieldCurvePenalty + (inflationRate * 0.3)
 
     rawComponents.push({
       date: current.date,
-      thrust: investmentGrowth,
+      thrust,
       efficiency,
       slack,
       drag,
@@ -373,14 +450,11 @@ export function calculateNIVComponents(
 
   if (rawComponents.length === 0) return []
 
-  // Calculate min/max for normalization
-  const thrustValues = rawComponents.map((c) => c.thrust)
+  // Calculate min/max for efficiency and drag normalization
   const efficiencyValues = rawComponents.map((c) => c.efficiency)
   const slackValues = rawComponents.map((c) => c.slack)
   const dragValues = rawComponents.map((c) => c.drag)
 
-  const thrustMin = Math.min(...thrustValues)
-  const thrustMax = Math.max(...thrustValues)
   const efficiencyMin = Math.min(...efficiencyValues)
   const efficiencyMax = Math.max(...efficiencyValues)
   const slackMin = Math.min(...slackValues)
@@ -388,31 +462,36 @@ export function calculateNIVComponents(
   const dragMin = Math.min(...dragValues)
   const dragMax = Math.max(...dragValues)
 
-  // Calculate NIV for each point
+  // Calculate NIV for each point using the Master Equation
   for (const comp of rawComponents) {
-    // Normalize to 0-1 range
-    const normThrust = normalize(comp.thrust, thrustMin, thrustMax)
+    const { weights, eta } = params
+
+    // Thrust is already normalized via tanh [-1, 1], shift to [0, 1]
+    const normThrust = (comp.thrust + 1) / 2
+
+    // Normalize other components to [0, 1]
     const normEfficiency = normalize(comp.efficiency, efficiencyMin, efficiencyMax)
     const normSlack = normalize(comp.slack, slackMin, slackMax)
     const normDrag = normalize(comp.drag, dragMin, dragMax)
 
     // Apply weights
-    const { weights, eta } = params
     const weightedThrust = weights.thrust * normThrust
     const weightedEfficiency = weights.efficiency * normEfficiency
     const weightedSlack = weights.slack * normSlack
     const weightedDrag = weights.drag * normDrag
 
-    // NIV Formula: (Thrust × Efficiency²) / (Slack + Drag)^η
+    // === MASTER EQUATION ===
+    // NIV = (u × P²) / (X + F + ε)^η
+    // P is SQUARED to punish hollow growth (critical for 2008 detection)
     const numerator = weightedThrust * Math.pow(weightedEfficiency, 2)
-    const denominator = Math.pow(weightedSlack + weightedDrag + 0.01, eta) // 0.01 to avoid div by zero
+    const denominator = Math.pow(weightedSlack + weightedDrag + epsilon, eta)
 
     const niv = numerator / denominator
 
-    // Convert NIV to recession probability (inverse relationship)
+    // Convert NIV to recession probability using logit transform
+    // P(recession) = 1 / (1 + e^NIV) × 100
     // Lower NIV = higher recession probability
-    // This is a simplified sigmoid transformation
-    const probability = 1 / (1 + Math.exp(niv * 2 - 1)) * 100
+    const probability = (1 / (1 + Math.exp(niv))) * 100
 
     // Log detailed calculation for this data point
     logNIVCalculation(

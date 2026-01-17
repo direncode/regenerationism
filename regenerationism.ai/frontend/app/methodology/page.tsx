@@ -283,25 +283,31 @@ export default function MethodologyPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-blue-500">
                 <div className="font-mono text-blue-400 text-lg mb-2">u<sub>t</sub> = Thrust</div>
-                <p className="text-gray-400 text-sm">Investment growth rate (YoY % change in GPDIC1)</p>
+                <p className="text-gray-400 text-sm">tanh(Norm(Investment Growth) + Norm(M2 Growth) - Norm(Fed Rate Change)). The tanh allows M2 liquidity impulse to override rate signals.</p>
               </div>
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-green-500">
                 <div className="font-mono text-green-400 text-lg mb-2">P<sub>t</sub> = Efficiency</div>
-                <p className="text-gray-400 text-sm">Capital productivity (GDP growth - 0.5 &times; M2 growth)</p>
+                <p className="text-gray-400 text-sm">Capital productivity = Investment / GDP. This is SQUARED in the master equation to punish "hollow growth" (2008 effect).</p>
               </div>
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-yellow-500">
                 <div className="font-mono text-yellow-400 text-lg mb-2">X<sub>t</sub> = Slack</div>
-                <p className="text-gray-400 text-sm">Economic headroom (100 - Capacity Utilization)</p>
+                <p className="text-gray-400 text-sm">Economic headroom = 1 - (Capacity Utilization / 100). Room for expansion without overheating.</p>
               </div>
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-red-500">
                 <div className="font-mono text-red-400 text-lg mb-2">F<sub>t</sub> = Drag</div>
-                <p className="text-gray-400 text-sm">Friction = negative of yield spread (T10Y3M). Inverted curve creates drag.</p>
+                <p className="text-gray-400 text-sm">max(0, Real Rate) + Yield Curve Penalty + (Inflation &times; 0.3). Negative real rates don't add to drag (2022 handling).</p>
               </div>
             </div>
 
-            <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-purple-500">
-              <div className="font-mono text-purple-400 text-lg mb-2">&eta; = {params.eta}</div>
-              <p className="text-gray-400 text-sm">Nonlinearity exponent - captures the disproportionate impact of friction on capital flow</p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-purple-500">
+                <div className="font-mono text-purple-400 text-lg mb-2">&eta; = {params.eta}</div>
+                <p className="text-gray-400 text-sm">Nonlinearity exponent (OOS validated = 1.5). Captures the disproportionate impact of friction on capital flow.</p>
+              </div>
+              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-gray-500">
+                <div className="font-mono text-gray-400 text-lg mb-2">&epsilon; = 0.001</div>
+                <p className="text-gray-400 text-sm">Safety floor for division stability. Prevents divide-by-zero edge cases.</p>
+              </div>
             </div>
           </div>
         </CollapsibleSection>
@@ -498,14 +504,18 @@ export default function MethodologyPage() {
   )
 }
 
-// Helper function to calculate the full breakdown
+// NIV Engine v6 - Safety floor for division
+const EPSILON = 0.001
+
+// Helper function to calculate the full breakdown (NIV Engine v6)
 function calculateNIVBreakdown(
   current: EconomicData,
   yearAgo: EconomicData,
   allData: EconomicData[],
-  params: { eta: number; weights: { thrust: number; efficiency: number; slack: number; drag: number } }
+  params: { eta: number; weights: { thrust: number; efficiency: number; slack: number; drag: number } },
+  monthAgo?: EconomicData
 ): NIVBreakdown {
-  // Calculate raw values
+  // === THRUST COMPONENTS ===
   const investmentGrowth = current.investment && yearAgo.investment
     ? ((current.investment - yearAgo.investment) / yearAgo.investment) * 100
     : 0
@@ -514,28 +524,35 @@ function calculateNIVBreakdown(
     ? ((current.m2 - yearAgo.m2) / yearAgo.m2) * 100
     : 0
 
-  const gdpGrowth = current.gdp && yearAgo.gdp
-    ? ((current.gdp - yearAgo.gdp) / yearAgo.gdp) * 100
-    : 2.0
+  const fedRateChange = monthAgo?.fedFunds !== undefined && current.fedFunds !== null
+    ? current.fedFunds - (monthAgo.fedFunds || 0)
+    : 0
 
-  const efficiencyRaw = gdpGrowth - m2Growth * 0.5
+  // === EFFICIENCY (P) ===
+  // Formula: Investment / GDP - capital productivity (SQUARED in master equation)
+  const efficiencyRaw = current.investment && current.gdp
+    ? current.investment / current.gdp
+    : 0.15
 
-  const slackRaw = current.capacity ? 100 - current.capacity : 20
+  // === SLACK (X) ===
+  // Formula: 1 - (TCU / 100) - economic headroom
+  const slackRaw = current.capacity ? 1 - (current.capacity / 100) : 0.2
 
+  // === DRAG (F) ===
+  // Formula: max(0, Real_Rates) + Yield_Curve_Penalty + (Inflation × 0.3)
   const inflationRate = current.cpi && yearAgo.cpi
     ? ((current.cpi - yearAgo.cpi) / yearAgo.cpi) * 100
     : 2.0
 
   const realRate = (current.fedFunds || 0) - inflationRate
-
-  // Yield spread (T10Y3M) IS the drag component
-  // Negative spread = yield curve inversion = higher drag/friction
-  // Drag = negative of yield spread (aligns with OOS tests)
   const yieldSpread = current.yieldSpread ?? 0
-  const dragRaw = -yieldSpread
+  const yieldCurvePenalty = yieldSpread < 0 ? Math.abs(yieldSpread) : 0
+  const dragRaw = Math.max(0, realRate) + yieldCurvePenalty + (inflationRate * 0.3)
 
   // Get min/max for normalization from all data
   const allInvestmentGrowth: number[] = []
+  const allM2Growth: number[] = []
+  const allFedRateChange: number[] = []
   const allEfficiency: number[] = []
   const allSlack: number[] = []
   const allDrag: number[] = []
@@ -543,31 +560,48 @@ function calculateNIVBreakdown(
   for (let i = 12; i < allData.length; i++) {
     const curr = allData[i]
     const prev = allData[i - 12]
+    const prevMonth = allData[i - 1]
+
     if (curr.investment && prev.investment) {
       allInvestmentGrowth.push(((curr.investment - prev.investment) / prev.investment) * 100)
     }
-    if (curr.m2 && prev.m2 && curr.gdp && prev.gdp) {
-      const m2g = ((curr.m2 - prev.m2) / prev.m2) * 100
-      const gdpg = ((curr.gdp - prev.gdp) / prev.gdp) * 100
-      allEfficiency.push(gdpg - m2g * 0.5)
+    if (curr.m2 && prev.m2) {
+      allM2Growth.push(((curr.m2 - prev.m2) / prev.m2) * 100)
+    }
+    if (curr.fedFunds !== null && prevMonth?.fedFunds !== null) {
+      allFedRateChange.push(curr.fedFunds - prevMonth.fedFunds)
+    }
+    if (curr.investment && curr.gdp) {
+      allEfficiency.push(curr.investment / curr.gdp)
     }
     if (curr.capacity) {
-      allSlack.push(100 - curr.capacity)
+      allSlack.push(1 - curr.capacity / 100)
     }
-    // Drag = negative of yield spread (aligns with OOS tests)
-    if (curr.yieldSpread !== null) {
-      allDrag.push(-curr.yieldSpread)
+    if (curr.cpi && prev.cpi && curr.fedFunds !== null) {
+      const inf = ((curr.cpi - prev.cpi) / prev.cpi) * 100
+      const rr = curr.fedFunds - inf
+      const ycp = (curr.yieldSpread ?? 0) < 0 ? Math.abs(curr.yieldSpread ?? 0) : 0
+      allDrag.push(Math.max(0, rr) + ycp + inf * 0.3)
     }
   }
 
   const normalize = (value: number, arr: number[]) => {
+    if (arr.length === 0) return 0.5
     const min = Math.min(...arr)
     const max = Math.max(...arr)
     if (max === min) return 0.5
     return Math.max(0, Math.min(1, (value - min) / (max - min)))
   }
 
-  const thrustNorm = normalize(investmentGrowth, allInvestmentGrowth)
+  // Normalize thrust components for tanh
+  const normInvGrowth = normalize(investmentGrowth, allInvestmentGrowth)
+  const normM2Growth = normalize(m2Growth, allM2Growth)
+  const normFedChange = normalize(fedRateChange, allFedRateChange)
+
+  // THRUST: tanh(Norm(Inv) + Norm(M2) - Norm(FedChange))
+  const thrustRaw = Math.tanh(normInvGrowth + normM2Growth - normFedChange)
+  const thrustNorm = (thrustRaw + 1) / 2 // Shift tanh [-1,1] to [0,1]
+
   const efficiencyNorm = normalize(efficiencyRaw, allEfficiency)
   const slackNorm = normalize(slackRaw, allSlack)
   const dragNorm = normalize(dragRaw, allDrag)
@@ -577,10 +611,11 @@ function calculateNIVBreakdown(
   const slackWeighted = params.weights.slack * slackNorm
   const dragWeighted = params.weights.drag * dragNorm
 
+  // MASTER EQUATION: NIV = (u × P²) / (X + F + ε)^η
   const numerator = thrustWeighted * Math.pow(efficiencyWeighted, 2)
-  const denominator = Math.pow(slackWeighted + dragWeighted + 0.01, params.eta)
+  const denominator = Math.pow(slackWeighted + dragWeighted + EPSILON, params.eta)
   const niv = numerator / denominator
-  const probability = (1 / (1 + Math.exp(niv * 2 - 1))) * 100
+  const probability = (1 / (1 + Math.exp(niv))) * 100
 
   return {
     date: current.date,
@@ -589,7 +624,7 @@ function calculateNIVBreakdown(
       symbol: 'u',
       icon: <Zap className="w-4 h-4" />,
       color: 'blue',
-      rawValue: investmentGrowth,
+      rawValue: thrustRaw,
       normalizedValue: thrustNorm,
       weightedValue: thrustWeighted,
       steps: [
@@ -607,23 +642,47 @@ function calculateNIVBreakdown(
         },
         {
           id: 'thrust-2',
-          name: 'Normalize to [0,1]',
-          formula: '(value - min) / (max - min)',
-          description: 'Min-max normalization across historical range',
+          name: 'M2 Growth (YoY)',
+          formula: '(M2_t - M2_{t-12}) / M2_{t-12} × 100',
+          description: 'Year-over-year change in M2 Money Stock (critical for 2020 detection)',
           inputs: {
-            value: investmentGrowth,
-            min: Math.min(...allInvestmentGrowth),
-            max: Math.max(...allInvestmentGrowth),
+            'M2_t': current.m2 || 0,
+            'M2_{t-12}': yearAgo.m2 || 0,
           },
-          output: thrustNorm,
+          output: m2Growth,
+          unit: '%',
         },
         {
           id: 'thrust-3',
-          name: 'Apply Weight',
-          formula: `normalized × weight (${params.weights.thrust})`,
-          description: 'Apply component weight',
+          name: 'Fed Rate Change',
+          formula: 'Fed_Funds_t - Fed_Funds_{t-1}',
+          description: 'Monthly change in Federal Funds Rate',
           inputs: {
-            normalized: thrustNorm,
+            'Fed_Funds_t': current.fedFunds || 0,
+            'Fed_Funds_{t-1}': monthAgo?.fedFunds || 0,
+          },
+          output: fedRateChange,
+          unit: '%',
+        },
+        {
+          id: 'thrust-4',
+          name: 'Combine with tanh',
+          formula: 'tanh(Norm(Inv) + Norm(M2) - Norm(Fed))',
+          description: 'tanh allows M2 liquidity impulse to override lack of rate signal',
+          inputs: {
+            normInvGrowth,
+            normM2Growth,
+            normFedChange,
+          },
+          output: thrustRaw,
+        },
+        {
+          id: 'thrust-5',
+          name: 'Shift to [0,1] & Weight',
+          formula: `((tanh + 1) / 2) × ${params.weights.thrust}`,
+          description: 'Shift tanh output from [-1,1] to [0,1] and apply weight',
+          inputs: {
+            tanh_output: thrustRaw,
             weight: params.weights.thrust,
           },
           output: thrustWeighted,
@@ -641,42 +700,28 @@ function calculateNIVBreakdown(
       steps: [
         {
           id: 'eff-1',
-          name: 'GDP Growth (YoY)',
-          formula: '(GDP_t - GDP_{t-12}) / GDP_{t-12} × 100',
-          description: 'Year-over-year change in Real GDP',
+          name: 'Capital Productivity',
+          formula: 'Investment / GDP',
+          description: 'How much investment per unit of output (SQUARED in master equation)',
           inputs: {
-            'GDP_t': current.gdp || 0,
-            'GDP_{t-12}': yearAgo.gdp || 0,
+            'Investment': current.investment || 0,
+            'GDP': current.gdp || 0,
           },
-          output: gdpGrowth,
-          unit: '%',
+          output: efficiencyRaw,
         },
         {
           id: 'eff-2',
-          name: 'M2 Growth (YoY)',
-          formula: '(M2_t - M2_{t-12}) / M2_{t-12} × 100',
-          description: 'Year-over-year change in M2 Money Stock',
+          name: 'Why Squared?',
+          formula: 'P² punishes hollow growth',
+          description: 'In 2007, GDP rose but Investment/GDP slowed - NIV collapsed (2008 Warning)',
           inputs: {
-            'M2_t': current.m2 || 0,
-            'M2_{t-12}': yearAgo.m2 || 0,
+            P: efficiencyNorm,
+            'P²': Math.pow(efficiencyNorm, 2),
           },
-          output: m2Growth,
-          unit: '%',
+          output: Math.pow(efficiencyNorm, 2),
         },
         {
           id: 'eff-3',
-          name: 'Efficiency (Velocity Proxy)',
-          formula: 'GDP_growth - 0.5 × M2_growth',
-          description: 'How effectively money translates to real output',
-          inputs: {
-            GDP_growth: gdpGrowth,
-            M2_growth: m2Growth,
-          },
-          output: efficiencyRaw,
-          unit: '%',
-        },
-        {
-          id: 'eff-4',
           name: 'Normalize & Weight',
           formula: `normalize(value) × ${params.weights.efficiency}`,
           description: 'Normalize and apply weight',
@@ -711,13 +756,12 @@ function calculateNIVBreakdown(
         {
           id: 'slack-2',
           name: 'Calculate Slack',
-          formula: '100 - Capacity_Utilization',
-          description: 'Unused capacity = economic headroom',
+          formula: '1 - (TCU / 100)',
+          description: 'Economic headroom (higher = more room to grow)',
           inputs: {
             capacity: current.capacity || 0,
           },
           output: slackRaw,
-          unit: '%',
         },
         {
           id: 'slack-3',
@@ -743,27 +787,53 @@ function calculateNIVBreakdown(
       steps: [
         {
           id: 'drag-1',
-          name: 'Yield Spread (T10Y3M)',
-          formula: '10-Year Treasury - 3-Month Treasury',
-          description: 'Treasury yield curve spread from FRED',
+          name: 'Inflation Rate (YoY)',
+          formula: '(CPI_t - CPI_{t-12}) / CPI_{t-12} × 100',
+          description: 'Year-over-year CPI change',
           inputs: {
-            'T10Y3M': yieldSpread,
+            'CPI_t': current.cpi || 0,
+            'CPI_{t-12}': yearAgo.cpi || 0,
           },
-          output: yieldSpread,
+          output: inflationRate,
           unit: '%',
         },
         {
           id: 'drag-2',
-          name: 'Calculate Drag',
-          formula: 'Drag = -Yield_Spread',
-          description: 'Inverted curve (negative spread) creates positive drag',
+          name: 'Real Interest Rate',
+          formula: 'Fed_Funds - Inflation',
+          description: 'Nominal rate adjusted for inflation',
           inputs: {
-            Yield_Spread: yieldSpread,
+            Fed_Funds: current.fedFunds || 0,
+            Inflation: inflationRate,
+          },
+          output: realRate,
+          unit: '%',
+        },
+        {
+          id: 'drag-3',
+          name: 'Yield Curve Penalty',
+          formula: 'if (T10Y3M < 0) then |T10Y3M| else 0',
+          description: 'Inversion adds friction (2022 Handling)',
+          inputs: {
+            T10Y3M: yieldSpread,
+          },
+          output: yieldCurvePenalty,
+          unit: '%',
+        },
+        {
+          id: 'drag-4',
+          name: 'Total Drag',
+          formula: 'max(0, Real_Rate) + YC_Penalty + (Inflation × 0.3)',
+          description: 'max(0, x) handles negative real rates correctly',
+          inputs: {
+            Real_Rate: realRate,
+            YC_Penalty: yieldCurvePenalty,
+            Inflation: inflationRate,
           },
           output: dragRaw,
         },
         {
-          id: 'drag-3',
+          id: 'drag-5',
           name: 'Normalize & Weight',
           formula: `normalize(value) × ${params.weights.drag}`,
           description: 'Normalize and apply weight',
