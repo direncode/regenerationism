@@ -31,6 +31,9 @@ import {
   Database,
   Settings,
   Award,
+  Key,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED } from '@/lib/fredApi'
@@ -49,12 +52,14 @@ import {
 type TestType = 'recession' | 'gdp' | 'optimization' | 'forensic'
 
 export default function OOSTestsPage() {
-  const { params, apiSettings } = useSessionStore()
+  const { params, apiSettings, setApiSettings } = useSessionStore()
 
   const [activeTest, setActiveTest] = useState<TestType>('recession')
   const [isRunning, setIsRunning] = useState(false)
   const [loadingStatus, setLoadingStatus] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
 
   // Test results
   const [recessionResult, setRecessionResult] = useState<RecessionTestResult | null>(null)
@@ -63,8 +68,8 @@ export default function OOSTestsPage() {
   const [forensicResult, setForensicResult] = useState<ForensicResult | null>(null)
 
   const runTest = useCallback(async (testType: TestType) => {
-    if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
-      setError('Please configure your FRED API key and enable live data mode first.')
+    if (!apiSettings.fredApiKey) {
+      setError('Please enter your FRED API key above.')
       return
     }
 
@@ -189,22 +194,58 @@ export default function OOSTestsPage() {
           </p>
         </div>
 
-        {/* API Key Warning */}
-        {(!apiSettings.fredApiKey || !apiSettings.useLiveData) && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl flex items-center gap-3"
-          >
-            <AlertTriangle className="w-5 h-5 text-yellow-400" />
-            <div>
-              <span className="text-yellow-200 font-medium">FRED API Key Required</span>
-              <p className="text-yellow-200/70 text-sm">
-                Go to the Simulator page to configure your API key and enable live data mode.
-              </p>
+        {/* API Key Configuration */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 bg-dark-800 border border-white/10 rounded-xl"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <Key className="w-5 h-5 text-regen-400" />
+            <span className="text-white font-medium">FRED API Key</span>
+            {apiSettings.fredApiKey && apiSettings.useLiveData && (
+              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="Enter your FRED API key..."
+                className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-2 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-regen-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
-          </motion.div>
-        )}
+            <button
+              onClick={() => {
+                setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })
+              }}
+              disabled={!apiKeyInput}
+              className="px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save
+            </button>
+          </div>
+          <p className="text-gray-500 text-sm mt-2">
+            Get a free API key from{' '}
+            <a
+              href="https://fred.stlouisfed.org/docs/api/api_key.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-regen-400 hover:underline"
+            >
+              FRED
+            </a>
+          </p>
+        </motion.div>
 
         {/* Error Banner */}
         <AnimatePresence>
@@ -258,7 +299,7 @@ export default function OOSTestsPage() {
         {/* Run Button */}
         <button
           onClick={() => runTest(activeTest)}
-          disabled={isRunning || !apiSettings.fredApiKey || !apiSettings.useLiveData}
+          disabled={isRunning || !apiSettings.fredApiKey}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold rounded-xl transition disabled:opacity-50 mb-8"
         >
           {isRunning ? (
