@@ -288,10 +288,11 @@ export function runRecessionPredictionTest(
   onProgress?.('Preparing data...', 0)
 
   // Prepare data with recession labels
+  // Using actual yieldSpread (T10Y3M) for fair comparison with Fed model
   const prepared = data.map(d => ({
     date: d.date,
     niv: d.niv,
-    yieldSpread: d.drag, // Using drag as proxy for yield spread impact
+    yieldSpread: d.yieldSpread, // Raw T10Y3M value from FRED
     isRecession: isInRecession(d.date) ? 1 : 0
   }))
 
@@ -471,10 +472,11 @@ export function runGDPForecastTest(
   onProgress?.('Preparing GDP forecast data...', 0)
 
   // Use efficiency as GDP growth proxy (or thrust for investment growth)
+  // Using actual yieldSpread (T10Y3M) for fair comparison with Fed model
   const prepared = data.map(d => ({
     date: d.date,
     niv: d.niv,
-    yieldSpread: d.drag,
+    yieldSpread: d.yieldSpread, // Raw T10Y3M value from FRED
     gdpGrowth: d.thrust // Investment growth as GDP proxy
   }))
 

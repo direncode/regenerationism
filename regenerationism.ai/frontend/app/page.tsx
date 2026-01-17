@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { 
-  AlertTriangle, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
   Activity,
   ArrowRight,
   Shield,
   Zap,
-  BarChart3
+  BarChart3,
+  Terminal,
+  Database,
+  Clock,
 } from 'lucide-react'
 import RecessionGauge from '@/components/RecessionGauge'
 import CrashCam from '@/components/CrashCam'
@@ -23,7 +26,7 @@ const mockLatest = {
   niv_score: 12.4,
   recession_probability: 32,
   alert_level: 'elevated',
-  alert_color: '#eab308',
+  alert_color: '#ff9500',
   components: {
     thrust: 0.234,
     efficiency: 0.018,
@@ -35,7 +38,7 @@ const mockLatest = {
 export default function Home() {
   const [data, setData] = useState(mockLatest)
   const [loading, setLoading] = useState(false)
-  
+
   // Fetch latest data
   useEffect(() => {
     const fetchData = async () => {
@@ -51,20 +54,20 @@ export default function Home() {
     }
     fetchData()
   }, [])
-  
+
   const isHighRisk = data.recession_probability > 50
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-terminal-bg">
       {/* Red Alert Banner */}
       {isHighRisk && <RedAlertBanner probability={data.recession_probability} />}
-      
+
       {/* Hero Section */}
-      <section className="relative py-20 px-6 overflow-hidden">
+      <section className="relative py-16 px-4 overflow-hidden">
         {/* Background */}
-        <div className="absolute inset-0 grid-background opacity-50" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-dark-900/50 to-dark-900" />
-        
+        <div className="absolute inset-0 grid-background opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-terminal-bg/50 to-terminal-bg" />
+
         <div className="relative max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left: Text */}
@@ -73,40 +76,40 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-regen-500/10 border border-regen-500/20 mb-6">
-                <Activity className="w-4 h-4 text-regen-400" />
-                <span className="text-sm text-regen-400">Live Economic Intelligence</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 border border-bb-orange/30 bg-bb-orange/10 mb-6">
+                <div className="w-2 h-2 rounded-full bg-bb-green animate-pulse" />
+                <span className="text-xs font-mono text-bb-orange tracking-wide">LIVE ECONOMIC INTELLIGENCE</span>
               </div>
-              
-              <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-                <span className="gradient-text">Predict Crises</span>
+
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight font-mono">
+                <span className="text-bb-orange">PREDICT CRISES</span>
                 <br />
-                <span className="text-white">Before They Hit</span>
+                <span className="text-bb-white">BEFORE THEY HIT</span>
               </h1>
-              
-              <p className="text-xl text-gray-400 mb-8 max-w-xl">
-                The National Impact Velocity (NIV) detects liquidity shocks and recessions 
-                <strong className="text-white"> 6 months before the Fed Yield Curve</strong>. 
-                Proven 0.85 AUC on out-of-sample data.
+
+              <p className="text-base text-bb-gray mb-8 max-w-xl font-mono leading-relaxed">
+                THE NATIONAL IMPACT VELOCITY (NIV) DETECTS LIQUIDITY SHOCKS AND RECESSIONS
+                <span className="text-bb-orange"> 6 MONTHS BEFORE THE FED YIELD CURVE</span>.
+                PROVEN 0.85 AUC ON OUT-OF-SAMPLE DATA.
               </p>
-              
-              <div className="flex flex-wrap gap-4">
-                <Link 
+
+              <div className="flex flex-wrap gap-3">
+                <Link
                   href="/dashboard"
-                  className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
+                  className="px-6 py-3 bg-bb-orange text-black font-mono font-bold text-sm tracking-wide hover:bg-bb-amber transition flex items-center gap-2"
                 >
-                  View Dashboard
-                  <ArrowRight className="w-5 h-5" />
+                  VIEW DASHBOARD
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link 
+                <Link
                   href="/api-docs"
-                  className="px-8 py-4 border border-gray-700 text-white font-bold rounded-lg hover:border-regen-500 hover:bg-regen-500/10 transition"
+                  className="px-6 py-3 border border-bb-orange text-bb-orange font-mono font-bold text-sm tracking-wide hover:bg-bb-orange/10 transition"
                 >
-                  API Access
+                  API ACCESS
                 </Link>
               </div>
             </motion.div>
-            
+
             {/* Right: Gauge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -114,140 +117,145 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="flex justify-center"
             >
-              <RecessionGauge 
-                probability={data.recession_probability} 
+              <RecessionGauge
+                probability={data.recession_probability}
                 alertLevel={data.alert_level}
               />
             </motion.div>
           </div>
         </div>
       </section>
-      
+
       {/* Crash Cam Section */}
-      <section className="py-16 px-6 bg-dark-800">
+      <section className="py-12 px-4 bg-terminal-panel border-y border-terminal-border">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              The <span className="gradient-text">Crash Cam</span>
-            </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              NIV vs Fed Yield Curve recession probability. Watch how NIV detected 
-              2008 and 2020 months before traditional indicators.
-            </p>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="terminal-panel-header inline-block px-3 py-1">
+              CRASH CAM
+            </div>
+            <span className="text-xs font-mono text-bb-muted">
+              NIV VS FED YIELD CURVE PERFORMANCE
+            </span>
           </div>
-          
+
           <CrashCam />
         </div>
       </section>
-      
+
       {/* Components Section */}
-      <section className="py-16 px-6">
+      <section className="py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Inside the NIV Engine</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              Four components measure the economy's kinetic throughput — the speed at 
-              which capital regenerates vs. friction losses.
-            </p>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="terminal-panel-header inline-block px-3 py-1">
+              NIV ENGINE
+            </div>
+            <span className="text-xs font-mono text-bb-muted">
+              FOUR COMPONENTS MEASURING ECONOMIC KINETIC THROUGHPUT
+            </span>
           </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <ComponentCard
-              title="Thrust (u)"
+              title="THRUST"
+              symbol="u"
               value={data.components.thrust}
-              description="Fiscal + Monetary impulse minus rate drag"
-              icon={<Zap className="w-6 h-6" />}
-              color={data.components.thrust > 0 ? '#22c55e' : '#ef4444'}
+              description="FISCAL + MONETARY IMPULSE MINUS RATE DRAG"
+              icon={<Zap className="w-5 h-5" />}
+              positive={data.components.thrust > 0}
             />
             <ComponentCard
-              title="Efficiency (P)"
+              title="EFFICIENCY"
+              symbol="P"
               value={data.components.efficiency}
-              description="Investment productivity, squared to punish hollow growth"
-              icon={<TrendingUp className="w-6 h-6" />}
-              color={data.components.efficiency > 0.01 ? '#22c55e' : '#eab308'}
+              description="INVESTMENT PRODUCTIVITY, SQUARED TO PUNISH HOLLOW GROWTH"
+              icon={<TrendingUp className="w-5 h-5" />}
+              positive={data.components.efficiency > 0.01}
             />
             <ComponentCard
-              title="Slack (X)"
+              title="SLACK"
+              symbol="X"
               value={data.components.slack}
-              description="Unused capacity = economic headroom"
-              icon={<BarChart3 className="w-6 h-6" />}
-              color={data.components.slack < 0.2 ? '#22c55e' : '#f97316'}
+              description="UNUSED CAPACITY = ECONOMIC HEADROOM"
+              icon={<BarChart3 className="w-5 h-5" />}
+              positive={data.components.slack < 0.2}
             />
             <ComponentCard
-              title="Drag (F)"
+              title="DRAG"
+              symbol="F"
               value={data.components.drag}
-              description="Friction from spreads, rates, and volatility"
-              icon={<TrendingDown className="w-6 h-6" />}
-              color={data.components.drag < 0.03 ? '#22c55e' : '#ef4444'}
+              description="FRICTION FROM SPREADS, RATES, AND VOLATILITY"
+              icon={<TrendingDown className="w-5 h-5" />}
+              positive={data.components.drag < 0.03}
             />
           </div>
         </div>
       </section>
-      
+
       {/* Formula Section */}
-      <section className="py-16 px-6 bg-dark-800">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-8">The Master Formula</h2>
-          
-          <div className="glass-card rounded-2xl p-8 mb-8">
-            <div className="font-mono text-2xl md:text-4xl text-regen-400 mb-6">
-              NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
+      <section className="py-12 px-4 bg-terminal-panel border-y border-terminal-border">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="terminal-panel-header inline-block px-3 py-1">
+              MASTER FORMULA
             </div>
-            
-            <p className="text-gray-400">
-              Where η = 1.5, capturing the nonlinear impact of friction on capital flow.
+          </div>
+
+          <div className="terminal-panel p-6 mb-8">
+            <div className="font-mono text-2xl md:text-4xl text-bb-orange text-center mb-4">
+              NIV<sub className="text-bb-gray">t</sub> = (u<sub className="text-bb-gray">t</sub> &middot; P<sub className="text-bb-gray">t</sub><sup>2</sup>) / (X<sub className="text-bb-gray">t</sub> + F<sub className="text-bb-gray">t</sub>)<sup>&eta;</sup>
+            </div>
+
+            <p className="text-center text-xs font-mono text-bb-muted">
+              WHERE &eta; = 1.5, CAPTURING THE NONLINEAR IMPACT OF FRICTION ON CAPITAL FLOW
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-6 text-left">
-            <div className="glass-card rounded-xl p-6">
-              <Shield className="w-8 h-8 text-regen-400 mb-4" />
-              <h3 className="font-bold mb-2">0.85 AUC</h3>
-              <p className="text-sm text-gray-400">
-                Out-of-sample recession prediction accuracy, beating the Fed Yield Curve.
-              </p>
-            </div>
-            <div className="glass-card rounded-xl p-6">
-              <Zap className="w-8 h-8 text-regen-400 mb-4" />
-              <h3 className="font-bold mb-2">6-Month Lead</h3>
-              <p className="text-sm text-gray-400">
-                NIV signals liquidity stress months before traditional indicators.
-              </p>
-            </div>
-            <div className="glass-card rounded-xl p-6">
-              <Activity className="w-8 h-8 text-regen-400 mb-4" />
-              <h3 className="font-bold mb-2">Real-Time</h3>
-              <p className="text-sm text-gray-400">
-                Updated monthly from FRED data. API access for quants and researchers.
-              </p>
-            </div>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            <StatCard
+              icon={<Shield className="w-6 h-6" />}
+              value="0.85"
+              label="AUC"
+              description="OUT-OF-SAMPLE RECESSION PREDICTION ACCURACY"
+            />
+            <StatCard
+              icon={<Clock className="w-6 h-6" />}
+              value="6"
+              label="MONTHS"
+              description="LEAD TIME OVER FED YIELD CURVE SIGNALS"
+            />
+            <StatCard
+              icon={<Database className="w-6 h-6" />}
+              value="60+"
+              label="YEARS"
+              description="HISTORICAL DATA FROM FRED"
+            />
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section */}
-      <section className="py-20 px-6">
+      <section className="py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">
-            Stop Reacting. <span className="gradient-text">Start Predicting.</span>
+          <h2 className="text-3xl font-mono font-bold mb-4 text-bb-white">
+            STOP REACTING. <span className="text-bb-orange">START PREDICTING.</span>
           </h2>
-          <p className="text-xl text-gray-400 mb-8">
-            Join hedge funds and policymakers using NIV for crisis alpha.
+          <p className="text-sm font-mono text-bb-gray mb-8">
+            JOIN HEDGE FUNDS AND POLICYMAKERS USING NIV FOR CRISIS ALPHA.
           </p>
-          
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link 
+
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link
               href="/dashboard"
-              className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
+              className="px-6 py-3 bg-bb-orange text-black font-mono font-bold text-sm tracking-wide hover:bg-bb-amber transition flex items-center gap-2"
             >
-              Launch Dashboard
-              <ArrowRight className="w-5 h-5" />
+              LAUNCH DASHBOARD
+              <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link 
+            <Link
               href="/explorer"
-              className="px-8 py-4 border border-gray-700 text-white font-bold rounded-lg hover:border-regen-500 transition"
+              className="px-6 py-3 border border-terminal-border text-bb-gray font-mono font-bold text-sm tracking-wide hover:border-bb-orange hover:text-bb-orange transition"
             >
-              Explore 60 Years of Data
+              EXPLORE 60 YEARS OF DATA
             </Link>
           </div>
         </div>
@@ -257,32 +265,60 @@ export default function Home() {
 }
 
 // Component Card
-function ComponentCard({ 
-  title, 
-  value, 
-  description, 
-  icon, 
-  color 
+function ComponentCard({
+  title,
+  symbol,
+  value,
+  description,
+  icon,
+  positive,
 }: {
   title: string
+  symbol: string
   value: number
   description: string
   icon: React.ReactNode
-  color: string
+  positive: boolean
 }) {
   return (
-    <div className="glass-card rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div style={{ color }}>{icon}</div>
-        <span 
-          className="font-mono text-2xl font-bold"
-          style={{ color }}
+    <div className="terminal-panel p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className={positive ? 'text-bb-green' : 'text-bb-red'}>{icon}</span>
+          <span className="font-mono text-xs text-bb-gray">{title}</span>
+          <span className="font-mono text-xs text-bb-muted">({symbol})</span>
+        </div>
+        <span
+          className={`font-mono text-lg font-bold ${positive ? 'text-bb-green' : 'text-bb-red'}`}
         >
           {value.toFixed(3)}
         </span>
       </div>
-      <h3 className="font-bold mb-2">{title}</h3>
-      <p className="text-sm text-gray-400">{description}</p>
+      <p className="text-xxs font-mono text-bb-muted leading-relaxed">{description}</p>
+    </div>
+  )
+}
+
+// Stat Card
+function StatCard({
+  icon,
+  value,
+  label,
+  description,
+}: {
+  icon: React.ReactNode
+  value: string
+  label: string
+  description: string
+}) {
+  return (
+    <div className="terminal-panel p-4 text-center">
+      <div className="text-bb-orange mb-3 flex justify-center">{icon}</div>
+      <div className="font-mono">
+        <span className="text-3xl font-bold text-bb-orange">{value}</span>
+        <span className="text-sm text-bb-gray ml-1">{label}</span>
+      </div>
+      <p className="text-xxs font-mono text-bb-muted mt-2">{description}</p>
     </div>
   )
 }

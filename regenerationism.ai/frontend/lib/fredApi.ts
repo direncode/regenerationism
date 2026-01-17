@@ -39,6 +39,9 @@ export interface NIVDataPoint {
   efficiency: number
   slack: number
   drag: number
+  yieldSpread: number   // Raw T10Y3M value for OOS tests
+  inflationRate: number // YoY CPI change
+  realRate: number      // Fed Funds - Inflation
   niv: number
   probability: number
   isRecession: boolean
@@ -305,6 +308,9 @@ export function calculateNIVComponents(
     efficiency: number
     slack: number
     drag: number
+    yieldSpread: number
+    inflationRate: number
+    realRate: number
   }> = []
 
   for (let i = 12; i < data.length; i++) {
@@ -344,6 +350,9 @@ export function calculateNIVComponents(
     const inflationRate = calculateYoYChange(current.cpi, yearAgo.cpi)
     const realRate = current.fedFunds - inflationRate
 
+    // Raw yield spread (T10Y3M) - kept separate for OOS tests
+    const yieldSpread = current.yieldSpread ?? 0
+
     // Drag increases with higher real rates and yield curve inversion
     const yieldCurveDrag = current.yieldSpread !== null
       ? Math.max(0, -current.yieldSpread) // Negative spread = inversion = drag
@@ -357,6 +366,9 @@ export function calculateNIVComponents(
       efficiency,
       slack,
       drag,
+      yieldSpread,
+      inflationRate,
+      realRate,
     })
   }
 
@@ -420,6 +432,9 @@ export function calculateNIVComponents(
       efficiency: comp.efficiency,
       slack: comp.slack,
       drag: comp.drag,
+      yieldSpread: comp.yieldSpread,
+      inflationRate: comp.inflationRate,
+      realRate: comp.realRate,
       niv,
       probability,
       isRecession: false, // Will be filled from USREC data
