@@ -2,76 +2,263 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
   TrendingUp,
   TrendingDown,
   Activity,
   Zap,
   BarChart3,
-  AlertTriangle,
   RefreshCw,
   Download,
+  Key,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import RecessionGauge from '@/components/RecessionGauge'
+import { useSessionStore } from '@/store/sessionStore'
+import { calculateNIVFromFRED, NIVDataPoint } from '@/lib/fredApi'
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
 } from 'recharts'
 
-// Mock latest data
-const mockData = {
-  date: '2026-01-15',
-  niv_score: 12.4,
-  recession_probability: 32,
-  alert_level: 'elevated',
+interface DashboardData {
+  date: string
+  niv_score: number
+  recession_probability: number
+  alert_level: string
   components: {
-    thrust: 0.234,
-    efficiency: 0.018,
-    slack: 0.215,
-    drag: 0.028,
+    thrust: number
+    efficiency: number
+    slack: number
+    drag: number
     interpretation: {
-      thrust_status: 'Moderate growth impulse',
-      efficiency_status: 'Healthy investment levels',
-      slack_status: 'Elevated slack',
-      drag_status: 'Normal friction levels',
+      thrust_status: string
+      efficiency_status: string
+      slack_status: string
+      drag_status: string
     }
-  },
+  }
   vs_fed: {
-    niv_signal: 'EXPANSION',
-    yield_curve_signal: 'NORMAL',
-    agreement: true,
-    niv_lead_months: 6,
+    niv_signal: string
+    yield_curve_signal: string
+    agreement: boolean
+    niv_lead_months: number
   }
 }
 
-// Mock historical for sparklines
-const mockHistory = Array.from({ length: 24 }, (_, i) => ({
-  date: `2024-${(i % 12 + 1).toString().padStart(2, '0')}`,
-  niv: 10 + Math.random() * 20 + (i > 18 ? 10 : 0),
-  prob: 20 + Math.random() * 20 + (i > 18 ? 15 : 0),
-}))
+interface HistoryPoint {
+  date: string
+  niv: number
+  prob: number
+}
 
 export default function DashboardPage() {
-  const [data, setData] = useState(mockData)
-  const [history, setHistory] = useState(mockHistory)
+  const { apiSettings } = useSessionStore()
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [history, setHistory] = useState<HistoryPoint[]>([])
   const [loading, setLoading] = useState(false)
-  const [lastUpdate, setLastUpdate] = useState(new Date())
-  
-  const refresh = async () => {
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = async () => {
+    if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
+      setData(null)
+      setHistory([])
+      return
+    }
+
     setLoading(true)
-    // In production, fetch from API
-    await new Promise(r => setTimeout(r, 500))
-    setLastUpdate(new Date())
-    setLoading(false)
+    setError(null)
+
+    try {
+      // Fetch 2 years of data for historical chart
+      const endDate = new Date().toISOString().split('T')[0]
+      const startDate = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+      const nivData = await calculateNIVFromFRED(
+        apiSettings.fredApiKey,
+        startDate,
+        endDate,
+        { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
+      )
+
+      if (nivData.length > 0) {
+        const latest = nivData[nivData.length - 1]
+
+        // Interpret component values
+        const getInterpretation = (point: NIVDataPoint) => ({
+          thrust_status: point.components.thrust > 0.2 ? 'Strong growth impulse' : point.components.thrust > 0 ? 'Moderate growth impulse' : 'Negative impulse',
+          efficiency_status: point.components.efficiency > 0.015 ? 'Healthy investment levels' : 'Below-average investment',
+          slack_status: point.components.slack > 0.25 ? 'Elevated slack' : 'Tight capacity',
+          drag_status: point.components.drag < 0.02 ? 'Low friction levels' : point.components.drag < 0.04 ? 'Normal friction levels' : 'High friction',
+        })
+
+        // Determine NIV signal
+        const nivSignal = latest.probability < 30 ? 'EXPANSION' : latest.probability < 50 ? 'CAUTION' : 'CONTRACTION'
+
+        // Determine yield curve signal from drag spread component
+        const yieldCurveSignal = latest.components.dragSpread > 0 ? 'INVERTED' : 'NORMAL'
+
+        setData({
+          date: latest.date,
+          niv_score: latest.niv * 100,
+          recession_probability: latest.probability,
+          alert_level: latest.probability > 70 ? 'critical' : latest.probability > 50 ? 'warning' : latest.probability > 30 ? 'elevated' : 'normal',
+          components: {
+            thrust: latest.components.thrust,
+            efficiency: latest.components.efficiency,
+            slack: latest.components.slack,
+            drag: latest.components.drag,
+            interpretation: getInterpretation(latest),
+          },
+          vs_fed: {
+            niv_signal: nivSignal,
+            yield_curve_signal: yieldCurveSignal,
+            agreement: (nivSignal === 'EXPANSION' && yieldCurveSignal === 'NORMAL') || (nivSignal === 'CONTRACTION' && yieldCurveSignal === 'INVERTED'),
+            niv_lead_months: 6,
+          }
+        })
+
+        // Transform for chart
+        setHistory(nivData.slice(-24).map(point => ({
+          date: point.date.substring(0, 7),
+          niv: point.niv * 100,
+          prob: point.probability,
+        })))
+
+        setLastUpdate(new Date())
+      }
+    } catch (e) {
+      console.error('Failed to fetch FRED data:', e)
+      setError(e instanceof Error ? e.message : 'Failed to fetch data')
+    } finally {
+      setLoading(false)
+    }
   }
-  
+
+  useEffect(() => {
+    fetchData()
+  }, [apiSettings.fredApiKey, apiSettings.useLiveData])
+
+  const refresh = () => {
+    fetchData()
+  }
+
+  const exportCSV = () => {
+    if (!history.length) return
+
+    const csv = [
+      'date,niv_score,recession_probability',
+      ...history.map(d => `${d.date},${d.niv.toFixed(2)},${d.prob.toFixed(2)}`)
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `niv_data_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+  }
+
+  // No API key configured
+  if (!apiSettings.fredApiKey || !apiSettings.useLiveData) {
+    return (
+      <div className="min-h-screen py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">NIV Dashboard</h1>
+              <p className="text-gray-400">Real-time macro crisis detection</p>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 bg-blue-500/20 rounded-full flex items-center justify-center">
+              <Key className="w-10 h-10 text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold mb-4">Connect to Live FRED Data</h2>
+            <p className="text-gray-400 mb-8 max-w-md mx-auto">
+              The Dashboard requires a FRED API key to display real-time economic data
+              from the Federal Reserve.
+            </p>
+            <Link
+              href="/simulator"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-400 transition"
+            >
+              <Key className="w-5 h-5" />
+              Configure API Key in Simulator
+            </Link>
+            <p className="text-sm text-gray-500 mt-6">
+              Get a free API key at{' '}
+              <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                fred.stlouisfed.org
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Loading state
+  if (loading && !data) {
+    return (
+      <div className="min-h-screen py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">NIV Dashboard</h1>
+              <p className="text-gray-400">Real-time macro crisis detection</p>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Loading live FRED data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error && !data) {
+    return (
+      <div className="min-h-screen py-8 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">NIV Dashboard</h1>
+              <p className="text-gray-400">Real-time macro crisis detection</p>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2 text-red-400">Failed to Load Data</h2>
+            <p className="text-gray-400 mb-6">{error}</p>
+            <button
+              onClick={refresh}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) return null
+
   return (
     <div className="min-h-screen py-8 px-6">
       <div className="max-w-7xl mx-auto">
@@ -83,7 +270,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500">
-              Updated: {lastUpdate.toLocaleTimeString()}
+              Updated: {lastUpdate?.toLocaleTimeString() || 'Never'}
             </span>
             <button
               onClick={refresh}
@@ -93,13 +280,17 @@ export default function DashboardPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition">
+            <button
+              onClick={exportCSV}
+              disabled={!history.length}
+              className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
+            >
               <Download className="w-4 h-4" />
               Export
             </button>
           </div>
         </div>
-        
+
         {/* Main Grid */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           {/* Gauge - Takes 1 column */}
@@ -112,7 +303,7 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-400">As of {data.date}</p>
             </div>
           </div>
-          
+
           {/* NIV Score + Trend - Takes 2 columns */}
           <div className="lg:col-span-2 glass-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
@@ -129,7 +320,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={history}>
@@ -157,7 +348,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Components Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <ComponentCard
@@ -189,18 +380,18 @@ export default function DashboardPage() {
             trend={data.components.drag < 0.03 ? 'up' : 'down'}
           />
         </div>
-        
+
         {/* NIV vs Fed Comparison */}
         <div className="glass-card rounded-2xl p-6">
           <h3 className="text-lg font-bold mb-6">NIV vs Fed Yield Curve</h3>
-          
+
           <div className="grid md:grid-cols-2 gap-8">
             {/* NIV Signal */}
             <div className="text-center p-6 bg-dark-700 rounded-xl">
               <Activity className="w-10 h-10 text-regen-400 mx-auto mb-4" />
               <h4 className="font-bold mb-2">NIV Signal</h4>
               <div className={`text-2xl font-bold ${
-                data.vs_fed.niv_signal === 'EXPANSION' ? 'text-regen-400' : 'text-red-400'
+                data.vs_fed.niv_signal === 'EXPANSION' ? 'text-regen-400' : data.vs_fed.niv_signal === 'CAUTION' ? 'text-yellow-400' : 'text-red-400'
               }`}>
                 {data.vs_fed.niv_signal}
               </div>
@@ -208,7 +399,7 @@ export default function DashboardPage() {
                 Leads by ~{data.vs_fed.niv_lead_months} months
               </p>
             </div>
-            
+
             {/* Fed Signal */}
             <div className="text-center p-6 bg-dark-700 rounded-xl">
               <BarChart3 className="w-10 h-10 text-blue-400 mx-auto mb-4" />
@@ -223,18 +414,18 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
-          
+
           {/* Agreement Status */}
           <div className={`mt-6 p-4 rounded-lg text-center ${
             data.vs_fed.agreement ? 'bg-regen-500/10' : 'bg-yellow-500/10'
           }`}>
             {data.vs_fed.agreement ? (
               <p className="text-regen-400">
-                ✓ NIV and Fed Yield Curve are in agreement
+                NIV and Fed Yield Curve are in agreement
               </p>
             ) : (
               <p className="text-yellow-400">
-                ⚠ NIV and Fed Yield Curve are diverging — watch closely
+                NIV and Fed Yield Curve are diverging — watch closely
               </p>
             )}
           </div>
@@ -258,7 +449,7 @@ function ComponentCard({
   trend: 'up' | 'down'
 }) {
   const color = trend === 'up' ? '#22c55e' : '#ef4444'
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
