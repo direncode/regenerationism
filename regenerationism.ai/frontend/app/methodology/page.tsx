@@ -630,7 +630,8 @@ function calculateNIVBreakdown(
 
   // 3. SLACK (X)
   // Formula: 1 - (TCU / 100)
-  const slack = 1.0 - ((current.capacity || 77) / 100.0)
+  // Note: If capacity is null, calculation should be skipped (handled upstream)
+  const slack = 1.0 - ((current.capacity ?? 77) / 100.0)
 
   // 4. DRAG (F)
   // Formula: 0.4*Penalty + 0.4*RealRate + 0.2*Vol
@@ -660,10 +661,13 @@ function calculateNIVBreakdown(
   // ═══════════════════════════════════════════════════════════════════
   // STEP C: THE MASTER EQUATION
   // NIV = (u * P^2) / (X + F)^eta
+  // SAFETY: Ensure base is positive before applying fractional exponent
+  // Math.pow(negative, 1.5) returns NaN - we floor at EPSILON
   // ═══════════════════════════════════════════════════════════════════
   const numerator = thrust * efficiencySquared
   const denominatorBase = slack + drag
-  const denominator = Math.max(Math.pow(denominatorBase, ETA), EPSILON)
+  const safeBase = Math.max(denominatorBase, EPSILON)
+  const denominator = Math.pow(safeBase, ETA)
   const niv = numerator / denominator
 
   return {

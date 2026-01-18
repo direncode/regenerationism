@@ -82,7 +82,13 @@ const getProxyUrl = () => {
   if (typeof window !== 'undefined') {
     return '/api/fred'
   }
-  return `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/fred`
+  // Server-side: require explicit SITE_URL configuration
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  if (!siteUrl) {
+    console.warn('[NIV] NEXT_PUBLIC_SITE_URL not configured, using relative path')
+    return '/api/fred'
+  }
+  return `${siteUrl}/api/fred`
 }
 
 /**
@@ -393,11 +399,19 @@ export function calculateNIVComponents(
     // ═══════════════════════════════════════════════════════════════════
     // STEP C: THE MASTER EQUATION
     // NIV = (u * P^2) / (X + F)^eta
+    //
+    // SAFETY: When eta > 1 and base is fractional (0 < base < 1):
+    // - Math.pow(0.5, 1.5) = 0.354 (valid, smaller than base)
+    // - If base <= 0, Math.pow returns NaN for non-integer eta
+    // We ensure base >= EPSILON to avoid mathematical undefined behavior
     // ═══════════════════════════════════════════════════════════════════
 
     const numerator = thrust * efficiencySquared
     const denominatorBase = slack + drag
-    const denominator = Math.max(Math.pow(denominatorBase, ETA), EPSILON)
+    // Ensure base is positive before applying fractional exponent
+    // This prevents NaN from Math.pow(negative, 1.5)
+    const safeBase = Math.max(denominatorBase, EPSILON)
+    const denominator = Math.pow(safeBase, ETA)
     const niv = numerator / denominator
 
     // ═══════════════════════════════════════════════════════════════════

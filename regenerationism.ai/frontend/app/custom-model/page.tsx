@@ -188,9 +188,12 @@ function calculateCustomNIV(
     const drag = (weights.w_s * yieldPenalty) + (weights.w_real * realRate) + (weights.w_vol * volatility)
 
     // STEP C: Master equation with custom eta
+    // SAFETY: Ensure base is positive before applying fractional exponent
+    // Math.pow(negative, 1.5) returns NaN - we floor at EPSILON
     const numerator = thrust * efficiencySquared
     const denominatorBase = slack + drag
-    const denominator = Math.max(Math.pow(denominatorBase, weights.eta), EPSILON)
+    const safeBase = Math.max(denominatorBase, EPSILON)
+    const denominator = Math.pow(safeBase, weights.eta)
     const niv = numerator / denominator
 
     results.push({

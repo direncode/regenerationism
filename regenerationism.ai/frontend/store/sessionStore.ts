@@ -343,7 +343,8 @@ export const useSessionStore = create<SessionState>()(
         scenarios: state.scenarios,
         activeScenarioId: state.activeScenarioId,
         monteCarloConfig: state.monteCarloConfig,
-        apiSettings: state.apiSettings,
+        // SECURITY: Don't persist API key to localStorage - only persist useLiveData flag
+        apiSettings: { fredApiKey: '', useLiveData: state.apiSettings.useLiveData },
         showAdvancedParams: state.showAdvancedParams,
       }),
     }

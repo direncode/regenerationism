@@ -208,6 +208,8 @@ export async function GET(request: NextRequest) {
       headers: {
         ...corsHeaders,
         'X-RateLimit-Remaining': String(rateLimit.remaining),
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, max-age=300',
       },
     })
   } catch (error) {
