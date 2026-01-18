@@ -1,12 +1,8 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AuditLogButton from '@/components/AuditLogButton'
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
   title: 'Regenerationism | NIV Macro Crisis Detection',
@@ -33,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
-      <body className="bg-white text-slate-900 min-h-screen flex flex-col antialiased">
+    <html lang="en">
+      <body className="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col antialiased font-serif">
         <Navigation />
         <main className="flex-1">
           {children}

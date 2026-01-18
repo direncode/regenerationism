@@ -26,7 +26,7 @@ const DEMO_COMPONENTS = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-neutral-950">
       {/* Hero Section */}
       <section className="relative py-24 lg:py-32 px-6 overflow-hidden hero-gradient">
         <div className="absolute inset-0 grid-background opacity-30" />
@@ -37,20 +37,20 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent-50 border border-accent-200 mb-8">
-              <Sparkles className="w-4 h-4 text-accent-500" />
-              <span className="text-sm font-medium text-accent-700">Economic Intelligence Platform</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent-500/10 border border-accent-500/20 mb-8">
+              <Sparkles className="w-4 h-4 text-accent-400" />
+              <span className="text-sm font-medium text-accent-300">Economic Intelligence Platform</span>
             </div>
 
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">
-              <span className="text-slate-900">Predict crises for</span>
+              <span className="text-neutral-100">Predict crises for</span>
               <br />
               <span className="gradient-text">researchers & quants</span>
             </h1>
 
-            <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed">
               The National Impact Velocity (NIV) detects liquidity shocks and recessions{' '}
-              <strong className="text-slate-900">6 months before the Fed Yield Curve</strong>.
+              <strong className="text-neutral-100">6 months before the Fed Yield Curve</strong>.
               Proven 0.85 AUC on out-of-sample data.
             </p>
 
@@ -64,7 +64,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/methodology"
-                className="px-8 py-4 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:border-slate-300 hover:bg-slate-50 transition shadow-soft"
+                className="px-8 py-4 bg-neutral-900 border border-neutral-700 text-neutral-200 font-semibold rounded-xl hover:border-neutral-600 hover:bg-neutral-800 transition shadow-soft"
               >
                 Learn Methodology
               </Link>
@@ -74,7 +74,7 @@ export default function Home() {
       </section>
 
       {/* Features Grid - Tinker style */}
-      <section className="py-20 px-6 bg-slate-50">
+      <section className="py-20 px-6 bg-neutral-900">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -82,10 +82,10 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-100 mb-4">
               Your economic insight in four components
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
               Four components measure the economy's kinetic throughput — the speed at
               which capital regenerates vs. friction losses.
             </p>
@@ -129,7 +129,7 @@ export default function Home() {
       </section>
 
       {/* Crash Cam Section */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-6 bg-neutral-950">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -137,14 +137,14 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-50 border border-accent-100 mb-6">
-              <LineChart className="w-4 h-4 text-accent-500" />
-              <span className="text-sm font-medium text-accent-700">Live Visualization</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-500/10 border border-accent-500/20 mb-6">
+              <LineChart className="w-4 h-4 text-accent-400" />
+              <span className="text-sm font-medium text-accent-300">Live Visualization</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-100 mb-4">
               The Crash Cam
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
               Watch NIV vs Fed Yield Curve recession probability animate in real-time
               as data streams from FRED.
             </p>
@@ -155,7 +155,7 @@ export default function Home() {
       </section>
 
       {/* Formula Section */}
-      <section className="py-20 px-6 bg-slate-50">
+      <section className="py-20 px-6 bg-neutral-900">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -163,16 +163,16 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-100 mb-4">
               The Master Formula
             </h2>
           </motion.div>
 
           <div className="card p-8 md:p-12 mb-12 text-center">
-            <div className="font-mono text-2xl md:text-4xl text-accent-600 mb-6">
+            <div className="font-mono text-2xl md:text-4xl text-accent-400 mb-6">
               NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
             </div>
-            <p className="text-slate-600">
+            <p className="text-neutral-400">
               Where η = 1.5, capturing the nonlinear impact of friction on capital flow.
             </p>
           </div>
@@ -201,7 +201,7 @@ export default function Home() {
       </section>
 
       {/* Use Cases / Testimonials Style */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-6 bg-neutral-950">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -209,10 +209,10 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-100 mb-4">
               Built for serious research
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
               Tools designed for hedge funds, policymakers, and academic researchers.
             </p>
           </motion.div>
@@ -244,7 +244,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-6 bg-gradient-to-br from-accent-500 to-accent-600">
+      <section className="py-24 px-6 bg-gradient-to-br from-accent-600 to-accent-700">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -268,7 +268,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/explorer"
-                className="px-8 py-4 bg-accent-400/20 text-white border border-white/30 font-semibold rounded-xl hover:bg-accent-400/30 transition"
+                className="px-8 py-4 bg-accent-500/20 text-white border border-white/30 font-semibold rounded-xl hover:bg-accent-500/30 transition"
               >
                 Explore 60 Years of Data
               </Link>
@@ -280,7 +280,7 @@ export default function Home() {
   )
 }
 
-// Feature Card - Tinker style
+// Feature Card - Dark theme
 function FeatureCard({
   icon,
   title,
@@ -297,10 +297,10 @@ function FeatureCard({
   color: 'emerald' | 'blue' | 'amber' | 'rose'
 }) {
   const colorClasses = {
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    blue: 'bg-blue-50 text-blue-600 border-blue-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    rose: 'bg-rose-50 text-rose-600 border-rose-100',
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
   }
 
   return (
@@ -314,16 +314,16 @@ function FeatureCard({
         {icon}
       </div>
       <div className="flex items-baseline justify-between mb-2">
-        <h3 className="font-mono text-lg font-semibold text-slate-900">{title}</h3>
-        <span className="font-mono text-sm text-slate-400">{value.toFixed(3)}</span>
+        <h3 className="font-mono text-lg font-semibold text-neutral-100">{title}</h3>
+        <span className="font-mono text-sm text-neutral-500">{value.toFixed(3)}</span>
       </div>
-      <p className="text-sm font-medium text-slate-700 mb-1">{subtitle}</p>
-      <p className="text-sm text-slate-500">{description}</p>
+      <p className="text-sm font-medium text-neutral-300 mb-1">{subtitle}</p>
+      <p className="text-sm text-neutral-500">{description}</p>
     </motion.div>
   )
 }
 
-// Stat Card
+// Stat Card - Dark theme
 function StatCard({
   icon,
   value,
@@ -342,17 +342,17 @@ function StatCard({
       viewport={{ once: true }}
       className="card p-6 text-center"
     >
-      <div className="w-12 h-12 rounded-xl bg-accent-50 text-accent-600 border border-accent-100 flex items-center justify-center mx-auto mb-4">
+      <div className="w-12 h-12 rounded-xl bg-accent-500/10 text-accent-400 border border-accent-500/20 flex items-center justify-center mx-auto mb-4">
         {icon}
       </div>
-      <div className="text-3xl font-bold text-slate-900 mb-1">{value}</div>
-      <div className="text-sm font-semibold text-slate-700 mb-2">{label}</div>
-      <p className="text-sm text-slate-500">{description}</p>
+      <div className="text-3xl font-bold text-neutral-100 mb-1">{value}</div>
+      <div className="text-sm font-semibold text-neutral-300 mb-2">{label}</div>
+      <p className="text-sm text-neutral-500">{description}</p>
     </motion.div>
   )
 }
 
-// Use Case Card
+// Use Case Card - Dark theme
 function UseCaseCard({
   icon,
   title,
@@ -373,14 +373,14 @@ function UseCaseCard({
       viewport={{ once: true }}
       className="card p-8"
     >
-      <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center mb-6">
+      <div className="w-14 h-14 rounded-2xl bg-neutral-800 text-neutral-400 flex items-center justify-center mb-6">
         {icon}
       </div>
-      <h3 className="text-xl font-semibold text-slate-900 mb-3">{title}</h3>
-      <p className="text-slate-600 mb-6">{description}</p>
+      <h3 className="text-xl font-semibold text-neutral-100 mb-3">{title}</h3>
+      <p className="text-neutral-400 mb-6">{description}</p>
       <Link
         href={link}
-        className="inline-flex items-center gap-2 text-accent-600 font-medium hover:text-accent-700 transition"
+        className="inline-flex items-center gap-2 text-accent-400 font-medium hover:text-accent-300 transition"
       >
         {linkText}
         <ArrowRight className="w-4 h-4" />

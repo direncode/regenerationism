@@ -156,9 +156,9 @@ export default function CrashCam() {
     return (
       <div className="card p-8">
         <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="w-10 h-10 text-accent-500 animate-spin mb-4" />
-          <p className="text-slate-600 font-medium mb-2">Loading Live FRED Data</p>
-          <p className="text-sm text-slate-400">{loadingStatus}</p>
+          <Loader2 className="w-10 h-10 text-accent-400 animate-spin mb-4" />
+          <p className="text-neutral-300 font-medium mb-2">Loading Live FRED Data</p>
+          <p className="text-sm text-neutral-500">{loadingStatus}</p>
         </div>
       </div>
     )
@@ -169,8 +169,8 @@ export default function CrashCam() {
     return (
       <div className="card p-8">
         <div className="flex flex-col items-center justify-center py-16">
-          <p className="text-red-500 font-medium mb-2">Failed to load data</p>
-          <p className="text-sm text-slate-500">{error}</p>
+          <p className="text-red-400 font-medium mb-2">Failed to load data</p>
+          <p className="text-sm text-neutral-500">{error}</p>
         </div>
       </div>
     )
@@ -180,8 +180,8 @@ export default function CrashCam() {
     <div className="card p-6 md:p-8">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-xl font-bold text-slate-900">NIV vs Fed Yield Curve</h3>
-          <p className="text-sm text-slate-500">
+          <h3 className="text-xl font-bold text-neutral-100">NIV vs Fed Yield Curve</h3>
+          <p className="text-sm text-neutral-500">
             Live recession probability from FRED data ({allData[0]?.date} - {allData[allData.length - 1]?.date})
           </p>
         </div>
@@ -210,7 +210,7 @@ export default function CrashCam() {
           </button>
           <button
             onClick={resetAnimation}
-            className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition"
+            className="p-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition"
             title="Reset to full view"
           >
             <RotateCcw className="w-4 h-4" />
@@ -221,11 +221,11 @@ export default function CrashCam() {
       {/* Animation Progress */}
       {(isAnimating || animationIndex < allData.length) && (
         <div className="mb-6">
-          <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
+          <div className="flex items-center justify-between text-sm text-neutral-500 mb-2">
             <span>Calculating...</span>
             <span className="font-mono">{displayData[displayData.length - 1]?.date || '---'}</span>
           </div>
-          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-accent-500 to-accent-600 transition-all duration-100"
               style={{ width: `${(animationIndex / allData.length) * 100}%` }}
@@ -237,28 +237,29 @@ export default function CrashCam() {
       <div className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={displayData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
             <XAxis
               dataKey="date"
-              stroke="#94a3b8"
-              tick={{ fill: '#64748b', fontSize: 12 }}
+              stroke="#525252"
+              tick={{ fill: '#737373', fontSize: 12 }}
               tickFormatter={(v) => v.split('-')[1] === '01' ? v.split('-')[0] : ''}
             />
             <YAxis
-              stroke="#94a3b8"
-              tick={{ fill: '#64748b', fontSize: 12 }}
+              stroke="#525252"
+              tick={{ fill: '#737373', fontSize: 12 }}
               domain={[0, 100]}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e2e8f0',
+                backgroundColor: '#171717',
+                border: '1px solid #262626',
                 borderRadius: '12px',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)'
               }}
+              labelStyle={{ color: '#fafafa', fontWeight: 600 }}
+              itemStyle={{ color: '#a3a3a3' }}
               formatter={(value: number, name: string) => [`${value.toFixed(1)}%`, name === 'niv' ? 'NIV' : 'Fed Yield Curve']}
-              labelStyle={{ color: '#0f172a', fontWeight: 600 }}
             />
             {/* Recession shading */}
             {RECESSIONS.map((r, i) => (
@@ -266,14 +267,14 @@ export default function CrashCam() {
                 key={i}
                 x1={r.start}
                 x2={r.end}
-                fill="#fecaca"
-                fillOpacity={0.5}
+                fill="#ef4444"
+                fillOpacity={0.15}
               />
             ))}
             <Line
               type="monotone"
               dataKey="niv"
-              stroke="#6366f1"
+              stroke="#818cf8"
               strokeWidth={2.5}
               dot={false}
               isAnimationActive={false}
@@ -281,7 +282,7 @@ export default function CrashCam() {
             <Line
               type="monotone"
               dataKey="fed"
-              stroke="#94a3b8"
+              stroke="#525252"
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={false}
@@ -291,18 +292,18 @@ export default function CrashCam() {
         </ResponsiveContainer>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-6 mt-6 pt-6 border-t border-slate-100">
+      <div className="flex flex-wrap items-center justify-center gap-6 mt-6 pt-6 border-t border-neutral-800">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-1 bg-accent-500 rounded-full" />
-          <span className="text-sm text-slate-600">NIV (Leads ~6mo)</span>
+          <div className="w-6 h-1 bg-accent-400 rounded-full" />
+          <span className="text-sm text-neutral-400">NIV (Leads ~6mo)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-0.5 bg-slate-400 rounded-full" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #94a3b8, #94a3b8 4px, transparent 4px, transparent 8px)' }} />
-          <span className="text-sm text-slate-600">Fed Yield Curve</span>
+          <div className="w-6 h-0.5 bg-neutral-500 rounded-full" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #525252, #525252 4px, transparent 4px, transparent 8px)' }} />
+          <span className="text-sm text-neutral-400">Fed Yield Curve</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-3 bg-red-200 rounded" />
-          <span className="text-sm text-slate-600">Recession Periods</span>
+          <div className="w-6 h-3 bg-red-500/20 rounded" />
+          <span className="text-sm text-neutral-400">Recession Periods</span>
         </div>
       </div>
     </div>
