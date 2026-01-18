@@ -248,37 +248,160 @@ export default function MethodologyPage() {
           color="regen"
         >
           <div className="space-y-6">
-            <div className="text-center p-6 bg-dark-700 rounded-xl">
+            {/* Master Equation */}
+            <div className="text-center p-6 bg-dark-700 rounded-xl border border-regen-500/30">
               <div className="font-mono text-3xl md:text-4xl text-regen-400 mb-4">
-                NIV<sub>t</sub> = (u<sub>t</sub> &middot; P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>&eta;</sup>
+                NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
               </div>
               <p className="text-gray-400 text-sm">
-                National Impact Velocity at time t
+                National Impact Velocity — measures economic momentum vs. friction
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            {/* Component Formulas with Clear Signs */}
+            <div className="space-y-4">
+              <h4 className="text-white font-bold text-lg">Component Definitions</h4>
+
+              {/* Thrust */}
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-blue-500">
-                <div className="font-mono text-blue-400 text-lg mb-2">u<sub>t</sub> = Thrust</div>
-                <p className="text-gray-400 text-sm">Investment growth rate (YoY % change in GPDIC1)</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-5 h-5 text-blue-400" />
+                  <span className="font-bold text-blue-400 text-lg">Thrust (u)</span>
+                  <span className="text-gray-500">— Kinetic Impulse</span>
+                </div>
+                <div className="font-mono text-blue-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                  u = tanh(<span className="text-green-400">+1.0·ΔG</span> <span className="text-green-400">+ 1.0·ΔA</span> <span className="text-red-400">− 0.7·Δr</span>)
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-green-400 font-mono">+ΔG</span>
+                    <span className="text-gray-400"> = Investment YoY growth</span>
+                    <div className="text-gray-500 text-xs">(positive = expansion)</div>
+                  </div>
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-green-400 font-mono">+ΔA</span>
+                    <span className="text-gray-400"> = M2 money YoY growth</span>
+                    <div className="text-gray-500 text-xs">(positive = liquidity)</div>
+                  </div>
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-red-400 font-mono">−Δr</span>
+                    <span className="text-gray-400"> = Fed Funds rate Δ</span>
+                    <div className="text-gray-500 text-xs">(hikes subtract thrust)</div>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-xs mt-2">Range: [−1, +1] via tanh. Positive = expansion impulse, Negative = contraction impulse.</p>
               </div>
+
+              {/* Efficiency */}
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-green-500">
-                <div className="font-mono text-green-400 text-lg mb-2">P<sub>t</sub> = Efficiency</div>
-                <p className="text-gray-400 text-sm">Capital productivity (GDP growth - 0.5 &times; M2 growth)</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-5 h-5 text-green-400" />
+                  <span className="font-bold text-green-400 text-lg">Efficiency (P)</span>
+                  <span className="text-gray-500">— Capital Productivity</span>
+                </div>
+                <div className="font-mono text-green-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                  P = (Investment × 1.15) / GDP
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-gray-400">Investment = </span>
+                    <span className="text-white font-mono">GPDIC1</span>
+                    <div className="text-gray-500 text-xs">Real Private Domestic Investment</div>
+                  </div>
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-gray-400">1.15 = </span>
+                    <span className="text-gray-500">R&D/Education proxy multiplier</span>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-xs mt-2"><strong>Squared in formula (P²)</strong> to reward productive capital allocation and punish hollow growth.</p>
               </div>
+
+              {/* Slack */}
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-yellow-500">
-                <div className="font-mono text-yellow-400 text-lg mb-2">X<sub>t</sub> = Slack</div>
-                <p className="text-gray-400 text-sm">Economic headroom (100 - Capacity Utilization)</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-5 h-5 text-yellow-400" />
+                  <span className="font-bold text-yellow-400 text-lg">Slack (X)</span>
+                  <span className="text-gray-500">— Economic Headroom</span>
+                </div>
+                <div className="font-mono text-yellow-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                  X = 1 − (TCU / 100)
+                </div>
+                <div className="bg-dark-800 p-2 rounded text-sm">
+                  <span className="text-gray-400">TCU = </span>
+                  <span className="text-white font-mono">Total Capacity Utilization</span>
+                  <span className="text-gray-500"> (typically 70-85%)</span>
+                </div>
+                <p className="text-gray-500 text-xs mt-2">Range: [0, 1]. High slack = room to grow. Low slack = economy near capacity limits.</p>
               </div>
+
+              {/* Drag */}
               <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-red-500">
-                <div className="font-mono text-red-400 text-lg mb-2">F<sub>t</sub> = Drag</div>
-                <p className="text-gray-400 text-sm">Friction forces (real rates + yield curve inversion + inflation)</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingDown className="w-5 h-5 text-red-400" />
+                  <span className="font-bold text-red-400 text-lg">Drag (F)</span>
+                  <span className="text-gray-500">— Friction Forces</span>
+                </div>
+                <div className="font-mono text-red-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                  F = <span className="text-red-400">0.4·s</span> + <span className="text-red-400">0.4·max(0, r−π)</span> + <span className="text-red-400">0.2·σ</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-red-400 font-mono">s</span>
+                    <span className="text-gray-400"> = Yield inversion penalty</span>
+                    <div className="text-gray-500 text-xs">|T10Y3M|/100 if inverted</div>
+                  </div>
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-red-400 font-mono">r−π</span>
+                    <span className="text-gray-400"> = Real interest rate</span>
+                    <div className="text-gray-500 text-xs">FedFunds/100 − Inflation</div>
+                  </div>
+                  <div className="bg-dark-800 p-2 rounded">
+                    <span className="text-red-400 font-mono">σ</span>
+                    <span className="text-gray-400"> = Rate volatility</span>
+                    <div className="text-gray-500 text-xs">12-mo rolling StdDev/100</div>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-xs mt-2">All components add friction that slows capital circulation. Higher F = more economic drag.</p>
+              </div>
+
+              {/* Eta */}
+              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-purple-500">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-bold text-purple-400 text-lg">Nonlinearity (η = {params.eta})</span>
+                  <span className="text-gray-500">— Crisis Sensitivity</span>
+                </div>
+                <p className="text-gray-400 text-sm">
+                  The exponent η = 1.5 captures the <strong className="text-white">nonlinear impact</strong> of friction on capital flow.
+                  Small increases in drag have disproportionately large effects when the economy is already stressed.
+                </p>
               </div>
             </div>
 
-            <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-purple-500">
-              <div className="font-mono text-purple-400 text-lg mb-2">&eta; = {params.eta}</div>
-              <p className="text-gray-400 text-sm">Nonlinearity exponent - captures the disproportionate impact of friction on capital flow</p>
+            {/* Probability Mapping */}
+            <div className="p-4 bg-dark-700 rounded-lg border border-white/10">
+              <h4 className="font-bold text-white mb-3">Recession Probability Thresholds</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="bg-red-500/20 p-3 rounded text-center border border-red-500/30">
+                  <div className="font-mono text-red-400">NIV ≤ 0</div>
+                  <div className="text-white font-bold">99%</div>
+                  <div className="text-gray-400 text-xs">CRISIS</div>
+                </div>
+                <div className="bg-orange-500/20 p-3 rounded text-center border border-orange-500/30">
+                  <div className="font-mono text-orange-400">0 &lt; NIV &lt; 0.015</div>
+                  <div className="text-white font-bold">85%</div>
+                  <div className="text-gray-400 text-xs">HIGH RISK</div>
+                </div>
+                <div className="bg-yellow-500/20 p-3 rounded text-center border border-yellow-500/30">
+                  <div className="font-mono text-yellow-400">0.015 ≤ NIV &lt; 0.035</div>
+                  <div className="text-white font-bold">45%</div>
+                  <div className="text-gray-400 text-xs">CAUTION</div>
+                </div>
+                <div className="bg-green-500/20 p-3 rounded text-center border border-green-500/30">
+                  <div className="font-mono text-green-400">NIV ≥ 0.035</div>
+                  <div className="text-white font-bold">5%</div>
+                  <div className="text-gray-400 text-xs">EXPANSION</div>
+                </div>
+              </div>
             </div>
           </div>
         </CollapsibleSection>

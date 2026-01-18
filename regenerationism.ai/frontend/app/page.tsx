@@ -156,7 +156,7 @@ export default function Home() {
 
       {/* Formula Section */}
       <section className="py-20 px-6 bg-neutral-900">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -168,13 +168,53 @@ export default function Home() {
             </h2>
           </motion.div>
 
-          <div className="card p-8 md:p-12 mb-12 text-center">
+          {/* Main Formula */}
+          <div className="card p-8 md:p-12 mb-8 text-center border border-accent-500/30">
             <div className="font-mono text-2xl md:text-4xl text-accent-400 mb-6">
               NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
             </div>
-            <p className="text-neutral-400">
-              Where η = 1.5, capturing the nonlinear impact of friction on capital flow.
+            <p className="text-neutral-400 mb-6">
+              National Impact Velocity — measures economic momentum vs. friction
             </p>
+            <div className="text-sm text-neutral-500">
+              Where η = 1.5 captures nonlinear crisis sensitivity
+            </div>
+          </div>
+
+          {/* Component Formulas Grid */}
+          <div className="grid md:grid-cols-2 gap-4 mb-12">
+            <div className="card p-5 border-l-4 border-blue-500">
+              <div className="font-mono text-blue-400 text-lg mb-2">
+                u = tanh(<span className="text-green-400">+ΔG</span> <span className="text-green-400">+ΔA</span> <span className="text-red-400">−0.7Δr</span>)
+              </div>
+              <p className="text-neutral-500 text-sm">
+                <strong className="text-neutral-300">Thrust:</strong> Investment growth + M2 growth − rate hikes
+              </p>
+            </div>
+            <div className="card p-5 border-l-4 border-green-500">
+              <div className="font-mono text-green-400 text-lg mb-2">
+                P = (Investment × 1.15) / GDP
+              </div>
+              <p className="text-neutral-500 text-sm">
+                <strong className="text-neutral-300">Efficiency:</strong> Capital productivity (squared in formula)
+              </p>
+            </div>
+            <div className="card p-5 border-l-4 border-yellow-500">
+              <div className="font-mono text-yellow-400 text-lg mb-2">
+                X = 1 − (TCU / 100)
+              </div>
+              <p className="text-neutral-500 text-sm">
+                <strong className="text-neutral-300">Slack:</strong> Economic headroom before overheating
+              </p>
+            </div>
+            <div className="card p-5 border-l-4 border-red-500">
+              <div className="font-mono text-red-400 text-lg mb-2">
+                F = 0.4s + 0.4(r−π) + 0.2σ
+              </div>
+              <p className="text-neutral-500 text-sm">
+                <strong className="text-neutral-300">Drag:</strong> Yield penalty + real rates + volatility
+              </p>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
