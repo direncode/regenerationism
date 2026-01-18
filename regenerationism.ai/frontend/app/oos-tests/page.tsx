@@ -229,7 +229,6 @@ export default function OOSTestsPage() {
               <h3 className="font-semibold text-regen-400">Test Procedures</h3>
               <div className="space-y-2 text-gray-300">
                 <p><strong className="text-white">Recession Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as recession predictors.</p>
-                <p><strong className="text-white">GDP Forecasting:</strong> RMSE comparison predicting GDP growth direction. Hybrid model combines Fed + NIV signals.</p>
                 <p><strong className="text-white">Parameter Optimization:</strong> Grid search over smoothing windows (3-18 months) and lag periods (0-12 months).</p>
                 <p><strong className="text-white">Forensic Analysis:</strong> Decomposition of model weights, correlation analysis, and contribution attribution.</p>
               </div>
@@ -271,7 +270,7 @@ export default function OOSTestsPage() {
         </AnimatePresence>
 
         {/* Test Selection Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {tests.map((test) => {
             const Icon = test.icon
             const isActive = activeTest === test.id
@@ -308,7 +307,7 @@ export default function OOSTestsPage() {
         <button
           onClick={() => runTest(activeTest)}
           disabled={isRunning || checkingServerKey || !canRunTests}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold rounded-xl transition disabled:opacity-50 mb-8"
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold rounded-xl transition disabled:opacity-50 mb-4"
         >
           {checkingServerKey ? (
             <>
@@ -332,6 +331,41 @@ export default function OOSTestsPage() {
             </>
           )}
         </button>
+
+        {/* Loading Progress Indicator */}
+        <AnimatePresence>
+          {isRunning && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-8 p-6 bg-dark-800/80 border border-blue-500/30 rounded-xl"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative">
+                  <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                  <div className="absolute inset-0 w-8 h-8 border-2 border-blue-400/20 rounded-full" />
+                </div>
+                <div>
+                  <div className="text-white font-medium">{loadingStatus || 'Processing...'}</div>
+                  <div className="text-gray-500 text-sm">This may take 30-60 seconds for 50+ years of data</div>
+                </div>
+              </div>
+              {/* Animated progress bar */}
+              <div className="h-2 bg-dark-600 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-blue-600 to-blue-400"
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 45, ease: 'linear' }}
+                />
+              </div>
+              <div className="mt-3 text-xs text-gray-500 text-center">
+                Fetching FRED data, computing NIV scores, and running walk-forward analysis...
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Results Display */}
         <div className="space-y-6">
