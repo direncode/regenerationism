@@ -442,14 +442,18 @@ export function calculateNIVComponents(
     })
   }
 
-  // Apply smoothing if requested
+  // Apply smoothing if requested (using original values, not already-smoothed)
   if (params.smoothWindow > 1 && results.length > params.smoothWindow) {
+    // Store original values first
+    const originalProbs = results.map(r => r.probability)
+    const originalNivs = results.map(r => r.niv)
+
     for (let i = params.smoothWindow - 1; i < results.length; i++) {
       let sumProb = 0
       let sumNiv = 0
       for (let j = 0; j < params.smoothWindow; j++) {
-        sumProb += results[i - j].probability
-        sumNiv += results[i - j].niv
+        sumProb += originalProbs[i - j]
+        sumNiv += originalNivs[i - j]
       }
       results[i] = {
         ...results[i],
