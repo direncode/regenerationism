@@ -20,10 +20,10 @@ interface HistoricalDataPoint {
   niv: number
 }
 
-// Helper to get date 5 years ago for faster default loading
-const getDefaultStartDate = (): string => {
+// Helper to get date N years ago
+const getYearsAgo = (years: number): string => {
   const date = new Date()
-  date.setFullYear(date.getFullYear() - 5)
+  date.setFullYear(date.getFullYear() - years)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
@@ -31,9 +31,6 @@ const getDefaultEndDate = (): string => {
   const date = new Date()
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
-
-// Convert YYYY-MM to YYYY-MM-DD for API
-const toApiDate = (monthStr: string): string => `${monthStr}-01`
 
 // Get start date for FRED fetch (need 13 months before display start for YoY calc)
 const getFetchStartDate = (displayStart: string): string => {
@@ -45,13 +42,14 @@ const getFetchStartDate = (displayStart: string): string => {
 export default function ExplorerPage() {
   const { apiSettings, setApiSettings } = useSessionStore()
   const [data, setData] = useState<HistoricalDataPoint[]>([])
-  const [startDate, setStartDate] = useState(getDefaultStartDate)
+  const [allCachedData, setAllCachedData] = useState<HistoricalDataPoint[]>([])
+  const [startDate, setStartDate] = useState('1961-01')
   const [endDate, setEndDate] = useState(getDefaultEndDate)
   const [loading, setLoading] = useState(false)
+  const [loadingProgress, setLoadingProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
   const [checkingServerKey, setCheckingServerKey] = useState(true)
-  const [dataRange, setDataRange] = useState<{ start: string; end: string } | null>(null)
 
   // Check if server has configured API key on mount
   useEffect(() => {
@@ -67,8 +65,8 @@ export default function ExplorerPage() {
     checkServer()
   }, [])
 
-  // Fetch data for the selected date range only
-  const fetchData = useCallback(async (fetchStart: string, fetchEnd: string) => {
+  // Load all 60+ years of data
+  const loadAllData = useCallback(async () => {
     const canFetch = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
     if (!canFetch) {
       setData([])
@@ -76,12 +74,14 @@ export default function ExplorerPage() {
     }
 
     setLoading(true)
+    setLoadingProgress('Fetching 60+ years of economic data from FRED...')
     setError(null)
 
     try {
-      // Fetch data with buffer for YoY calculations
+      const fetchStart = '1961-01'
+      const fetchEnd = getDefaultEndDate()
       const apiStartDate = getFetchStartDate(fetchStart)
-      const apiEndDate = `${fetchEnd}-28` // End of month
+      const apiEndDate = `${fetchEnd}-28`
 
       const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
@@ -91,46 +91,46 @@ export default function ExplorerPage() {
         { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 1 }
       )
 
-      const historicalData: HistoricalDataPoint[] = nivData
+      const historicalData = nivData
         .map(point => ({
           date: point.date.substring(0, 7),
           niv: point.niv * 100,
         }))
         .filter(d => d.date >= fetchStart && d.date <= fetchEnd)
 
+      setAllCachedData(historicalData)
       setData(historicalData)
-      setDataRange({ start: fetchStart, end: fetchEnd })
+      setStartDate(fetchStart)
+      setEndDate(fetchEnd)
     } catch (e) {
       console.error('Failed to fetch historical FRED data:', e)
       setError(e instanceof Error ? e.message : 'Failed to fetch data')
     } finally {
       setLoading(false)
+      setLoadingProgress(null)
     }
   }, [hasServerKey, apiSettings.fredApiKey, apiSettings.useLiveData])
 
-  // Initial fetch with default range
+  // Initial fetch
   useEffect(() => {
     if (!checkingServerKey) {
-      fetchData(startDate, endDate)
+      loadAllData()
     }
-  }, [hasServerKey, checkingServerKey])
+  }, [hasServerKey, checkingServerKey, loadAllData])
 
-  // Refetch when date range changes (with debounce to avoid rapid fetches)
+  // Filter displayed data when date range changes
   useEffect(() => {
-    if (checkingServerKey || !dataRange) return
-
-    // Only refetch if range expanded beyond cached data
-    const needsFetch = startDate < dataRange.start || endDate > dataRange.end
-    if (needsFetch) {
-      const timer = setTimeout(() => {
-        fetchData(startDate, endDate)
-      }, 300)
-      return () => clearTimeout(timer)
-    } else {
-      // Filter existing data for narrower range (instant)
-      setData(prev => prev.filter(d => d.date >= startDate && d.date <= endDate))
+    if (allCachedData.length > 0) {
+      const filtered = allCachedData.filter(d => d.date >= startDate && d.date <= endDate)
+      setData(filtered)
     }
-  }, [startDate, endDate, dataRange, checkingServerKey, fetchData])
+  }, [startDate, endDate, allCachedData])
+
+  // Handle "All" button click
+  const handleShowAll = useCallback(() => {
+    setStartDate('1961-01')
+    setEndDate(getDefaultEndDate())
+  }, [])
 
   const exportCSV = () => {
     if (!data.length) return
@@ -204,7 +204,7 @@ export default function ExplorerPage() {
 
           <div className="glass-card rounded-2xl p-12 text-center">
             <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Loading historical FRED data...</p>
+            <p className="text-gray-400">{loadingProgress || 'Loading historical FRED data...'}</p>
             <p className="text-sm text-gray-500 mt-2">This may take a moment for 60+ years of data</p>
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function ExplorerPage() {
             <p className="text-gray-400 mb-6">{error}</p>
 
             <button
-              onClick={() => fetchData(startDate, endDate)}
+              onClick={loadAllData}
               className="inline-flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
             >
               <RefreshCw className="w-4 h-4" />
@@ -241,6 +241,8 @@ export default function ExplorerPage() {
       </div>
     )
   }
+
+  const isShowingAll = startDate === '1961-01' && endDate === getDefaultEndDate()
 
   return (
     <div className="min-h-screen py-8 px-6">
@@ -283,29 +285,17 @@ export default function ExplorerPage() {
               />
             </div>
 
-            <div className="flex gap-2 ml-auto">
+            <div className="flex gap-2 ml-auto items-center">
               <button
-                onClick={() => { setStartDate('2020-01'); setEndDate('2026-01') }}
-                className="px-3 py-1 text-sm bg-dark-600 rounded-lg hover:bg-dark-500"
+                onClick={handleShowAll}
+                disabled={loading}
+                className={`px-3 py-1 text-sm rounded-lg transition flex items-center gap-1.5 ${
+                  isShowingAll
+                    ? 'bg-regen-500/20 text-regen-400 border border-regen-500/30'
+                    : 'bg-dark-600 hover:bg-dark-500'
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                5Y
-              </button>
-              <button
-                onClick={() => { setStartDate('2015-01'); setEndDate('2026-01') }}
-                className="px-3 py-1 text-sm bg-dark-600 rounded-lg hover:bg-dark-500"
-              >
-                10Y
-              </button>
-              <button
-                onClick={() => { setStartDate('2000-01'); setEndDate('2026-01') }}
-                className="px-3 py-1 text-sm bg-dark-600 rounded-lg hover:bg-dark-500"
-              >
-                25Y
-              </button>
-              <button
-                onClick={() => { setStartDate('1961-01'); setEndDate(getDefaultEndDate()) }}
-                className="px-3 py-1 text-sm bg-dark-600 rounded-lg hover:bg-dark-500"
-              >
+                {loading && <Loader2 className="w-3 h-3 animate-spin" />}
                 All (60Y)
               </button>
             </div>

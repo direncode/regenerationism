@@ -17,7 +17,15 @@
       "Bash(curl:*)",
       "Bash(git checkout:*)",
       "Bash(git pull:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(npm run dev:*)",
+      "Bash(start http://localhost:3001/explorer)",
+      "Bash(if exist \"regenerationism.ai\\\\analysis\" rmdir /s /q \"regenerationism.ai\\\\analysis\")",
+      "Bash(dir \"C:\\\\Users\\\\diren\\\\.claude-worktrees\\\\regenerationism-ai-complete\\\\exciting-poincare\")",
+      "Bash(ls -la \"C:\\\\Users\\\\diren\\\\.claude-worktrees\\\\regenerationism-ai-complete\\\\exciting-poincare\\\\regenerationism.ai\\\\frontend\\\\app\"\" | grep -E \".css)",
+      "Bash(globals \")",
+      "Bash(npm audit:*)"
     ]
   }
 }
