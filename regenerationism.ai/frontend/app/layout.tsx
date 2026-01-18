@@ -34,7 +34,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
-      <body className="bg-dark-900 text-white min-h-screen flex flex-col">
+      <body className="bg-white text-slate-900 min-h-screen flex flex-col antialiased">
         <Navigation />
         <main className="flex-1">
           {children}

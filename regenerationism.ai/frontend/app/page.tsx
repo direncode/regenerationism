@@ -10,6 +10,9 @@ import {
   BarChart3,
   TrendingUp,
   TrendingDown,
+  Sparkles,
+  LineChart,
+  FlaskConical,
 } from 'lucide-react'
 import CrashCam from '@/components/CrashCam'
 
@@ -23,47 +26,45 @@ const DEMO_COMPONENTS = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative py-20 px-6 overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 grid-background opacity-50" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-dark-900/50 to-dark-900" />
+      <section className="relative py-24 lg:py-32 px-6 overflow-hidden hero-gradient">
+        <div className="absolute inset-0 grid-background opacity-30" />
 
-        <div className="relative max-w-4xl mx-auto text-center">
+        <div className="relative max-w-5xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-regen-500/10 border border-regen-500/20 mb-6">
-              <Activity className="w-4 h-4 text-regen-400" />
-              <span className="text-sm text-regen-400">Economic Intelligence</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent-50 border border-accent-200 mb-8">
+              <Sparkles className="w-4 h-4 text-accent-500" />
+              <span className="text-sm font-medium text-accent-700">Economic Intelligence Platform</span>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-              <span className="gradient-text">Predict Crises</span>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">
+              <span className="text-slate-900">Predict crises for</span>
               <br />
-              <span className="text-white">Before They Hit</span>
+              <span className="gradient-text">researchers & quants</span>
             </h1>
 
-            <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
-              The National Impact Velocity (NIV) detects liquidity shocks and recessions
-              <strong className="text-white"> 6 months before the Fed Yield Curve</strong>.
+            <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+              The National Impact Velocity (NIV) detects liquidity shocks and recessions{' '}
+              <strong className="text-slate-900">6 months before the Fed Yield Curve</strong>.
               Proven 0.85 AUC on out-of-sample data.
             </p>
 
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 href="/dashboard"
-                className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
+                className="px-8 py-4 bg-gradient-to-r from-accent-500 to-accent-600 text-white font-semibold rounded-xl hover:from-accent-600 hover:to-accent-700 transition shadow-medium flex items-center gap-2"
               >
                 View Live Dashboard
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
                 href="/methodology"
-                className="px-8 py-4 border border-gray-700 text-white font-bold rounded-lg hover:border-regen-500 hover:bg-regen-500/10 transition"
+                className="px-8 py-4 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:border-slate-300 hover:bg-slate-50 transition shadow-soft"
               >
                 Learn Methodology
               </Link>
@@ -72,166 +73,318 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Crash Cam Section */}
-      <section className="py-16 px-6 bg-dark-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              The <span className="gradient-text">Crash Cam</span>
+      {/* Features Grid - Tinker style */}
+      <section className="py-20 px-6 bg-slate-50">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Your economic insight in four components
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              Live NIV vs Fed Yield Curve recession probability. Watch the calculation
-              animate in real-time as data streams from FRED.
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Four components measure the economy's kinetic throughput — the speed at
+              which capital regenerates vs. friction losses.
             </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <FeatureCard
+              icon={<Zap className="w-6 h-6" />}
+              title="thrust"
+              subtitle="Fiscal + Monetary impulse"
+              description="Net policy stimulus driving economic acceleration"
+              value={DEMO_COMPONENTS.thrust}
+              color="emerald"
+            />
+            <FeatureCard
+              icon={<TrendingUp className="w-6 h-6" />}
+              title="efficiency"
+              subtitle="Investment productivity"
+              description="Squared to punish hollow growth patterns"
+              value={DEMO_COMPONENTS.efficiency}
+              color="blue"
+            />
+            <FeatureCard
+              icon={<BarChart3 className="w-6 h-6" />}
+              title="slack"
+              subtitle="Unused capacity"
+              description="Economic headroom before overheating"
+              value={DEMO_COMPONENTS.slack}
+              color="amber"
+            />
+            <FeatureCard
+              icon={<TrendingDown className="w-6 h-6" />}
+              title="drag"
+              subtitle="System friction"
+              description="Spreads, rates, and volatility resistance"
+              value={DEMO_COMPONENTS.drag}
+              color="rose"
+            />
           </div>
+        </div>
+      </section>
+
+      {/* Crash Cam Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-50 border border-accent-100 mb-6">
+              <LineChart className="w-4 h-4 text-accent-500" />
+              <span className="text-sm font-medium text-accent-700">Live Visualization</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              The Crash Cam
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Watch NIV vs Fed Yield Curve recession probability animate in real-time
+              as data streams from FRED.
+            </p>
+          </motion.div>
 
           <CrashCam />
         </div>
       </section>
 
-      {/* Components Section */}
-      <section className="py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Inside the NIV Engine</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              Four components measure the economy's kinetic throughput — the speed at
-              which capital regenerates vs. friction losses.
+      {/* Formula Section */}
+      <section className="py-20 px-6 bg-slate-50">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              The Master Formula
+            </h2>
+          </motion.div>
+
+          <div className="card p-8 md:p-12 mb-12 text-center">
+            <div className="font-mono text-2xl md:text-4xl text-accent-600 mb-6">
+              NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
+            </div>
+            <p className="text-slate-600">
+              Where η = 1.5, capturing the nonlinear impact of friction on capital flow.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <ComponentCard
-              title="Thrust (u)"
-              value={DEMO_COMPONENTS.thrust}
-              description="Fiscal + Monetary impulse minus rate drag"
+          <div className="grid md:grid-cols-3 gap-6">
+            <StatCard
+              icon={<Shield className="w-6 h-6" />}
+              value="0.85"
+              label="AUC Score"
+              description="Out-of-sample recession prediction accuracy"
+            />
+            <StatCard
               icon={<Zap className="w-6 h-6" />}
-              color={DEMO_COMPONENTS.thrust > 0 ? '#22c55e' : '#ef4444'}
+              value="6mo"
+              label="Lead Time"
+              description="Signals stress before traditional indicators"
             />
-            <ComponentCard
-              title="Efficiency (P)"
-              value={DEMO_COMPONENTS.efficiency}
-              description="Investment productivity, squared to punish hollow growth"
-              icon={<TrendingUp className="w-6 h-6" />}
-              color={DEMO_COMPONENTS.efficiency > 0.01 ? '#22c55e' : '#eab308'}
-            />
-            <ComponentCard
-              title="Slack (X)"
-              value={DEMO_COMPONENTS.slack}
-              description="Unused capacity = economic headroom"
-              icon={<BarChart3 className="w-6 h-6" />}
-              color={DEMO_COMPONENTS.slack < 0.2 ? '#22c55e' : '#f97316'}
-            />
-            <ComponentCard
-              title="Drag (F)"
-              value={DEMO_COMPONENTS.drag}
-              description="Friction from spreads, rates, and volatility"
-              icon={<TrendingDown className="w-6 h-6" />}
-              color={DEMO_COMPONENTS.drag < 0.03 ? '#22c55e' : '#ef4444'}
+            <StatCard
+              icon={<Activity className="w-6 h-6" />}
+              value="Live"
+              label="Real-Time"
+              description="Updated monthly from FRED data"
             />
           </div>
         </div>
       </section>
 
-      {/* Formula Section */}
-      <section className="py-16 px-6 bg-dark-800">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-8">The Master Formula</h2>
-
-          <div className="glass-card rounded-2xl p-8 mb-8">
-            <div className="font-mono text-2xl md:text-4xl text-regen-400 mb-6">
-              NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
-            </div>
-
-            <p className="text-gray-400">
-              Where η = 1.5, capturing the nonlinear impact of friction on capital flow.
+      {/* Use Cases / Testimonials Style */}
+      <section className="py-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Built for serious research
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Tools designed for hedge funds, policymakers, and academic researchers.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6 text-left">
-            <div className="glass-card rounded-xl p-6">
-              <Shield className="w-8 h-8 text-regen-400 mb-4" />
-              <h3 className="font-bold mb-2">0.85 AUC</h3>
-              <p className="text-sm text-gray-400">
-                Out-of-sample recession prediction accuracy, beating the Fed Yield Curve.
-              </p>
-            </div>
-            <div className="glass-card rounded-xl p-6">
-              <Zap className="w-8 h-8 text-regen-400 mb-4" />
-              <h3 className="font-bold mb-2">6-Month Lead</h3>
-              <p className="text-sm text-gray-400">
-                NIV signals liquidity stress months before traditional indicators.
-              </p>
-            </div>
-            <div className="glass-card rounded-xl p-6">
-              <Activity className="w-8 h-8 text-regen-400 mb-4" />
-              <h3 className="font-bold mb-2">Real-Time</h3>
-              <p className="text-sm text-gray-400">
-                Updated monthly from FRED data. API access for quants and researchers.
-              </p>
-            </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            <UseCaseCard
+              icon={<FlaskConical className="w-8 h-8" />}
+              title="Out-of-Sample Testing"
+              description="Run rigorous backtests across 60+ years of economic data with proper train/test splits."
+              link="/oos-tests"
+              linkText="Run Tests"
+            />
+            <UseCaseCard
+              icon={<LineChart className="w-8 h-8" />}
+              title="Historical Explorer"
+              description="Dive deep into NIV components across recessions, crises, and recoveries."
+              link="/explorer"
+              linkText="Explore Data"
+            />
+            <UseCaseCard
+              icon={<Activity className="w-8 h-8" />}
+              title="API Access"
+              description="Integrate NIV calculations into your models with our REST API."
+              link="/api-docs"
+              linkText="View Docs"
+            />
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6">
+      <section className="py-24 px-6 bg-gradient-to-br from-accent-500 to-accent-600">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">
-            Stop Reacting. <span className="gradient-text">Start Predicting.</span>
-          </h2>
-          <p className="text-xl text-gray-400 mb-8">
-            Join hedge funds and policymakers using NIV for crisis alpha.
-          </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              Stop reacting. Start predicting.
+            </h2>
+            <p className="text-xl text-accent-100 mb-10 max-w-2xl mx-auto">
+              Join researchers and institutions using NIV for economic foresight.
+            </p>
 
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              href="/dashboard"
-              className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
-            >
-              Launch Dashboard
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/explorer"
-              className="px-8 py-4 border border-gray-700 text-white font-bold rounded-lg hover:border-regen-500 transition"
-            >
-              Explore 60 Years of Data
-            </Link>
-          </div>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link
+                href="/dashboard"
+                className="px-8 py-4 bg-white text-accent-600 font-semibold rounded-xl hover:bg-accent-50 transition shadow-medium flex items-center gap-2"
+              >
+                Launch Dashboard
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/explorer"
+                className="px-8 py-4 bg-accent-400/20 text-white border border-white/30 font-semibold rounded-xl hover:bg-accent-400/30 transition"
+              >
+                Explore 60 Years of Data
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
     </div>
   )
 }
 
-// Component Card
-function ComponentCard({
-  title,
-  value,
-  description,
+// Feature Card - Tinker style
+function FeatureCard({
   icon,
+  title,
+  subtitle,
+  description,
+  value,
   color
 }: {
-  title: string
-  value: number
-  description: string
   icon: React.ReactNode
-  color: string
+  title: string
+  subtitle: string
+  description: string
+  value: number
+  color: 'emerald' | 'blue' | 'amber' | 'rose'
+}) {
+  const colorClasses = {
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    blue: 'bg-blue-50 text-blue-600 border-blue-100',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100',
+    rose: 'bg-rose-50 text-rose-600 border-rose-100',
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="card p-6 hover:shadow-medium"
+    >
+      <div className={`w-12 h-12 rounded-xl ${colorClasses[color]} border flex items-center justify-center mb-4`}>
+        {icon}
+      </div>
+      <div className="flex items-baseline justify-between mb-2">
+        <h3 className="font-mono text-lg font-semibold text-slate-900">{title}</h3>
+        <span className="font-mono text-sm text-slate-400">{value.toFixed(3)}</span>
+      </div>
+      <p className="text-sm font-medium text-slate-700 mb-1">{subtitle}</p>
+      <p className="text-sm text-slate-500">{description}</p>
+    </motion.div>
+  )
+}
+
+// Stat Card
+function StatCard({
+  icon,
+  value,
+  label,
+  description
+}: {
+  icon: React.ReactNode
+  value: string
+  label: string
+  description: string
 }) {
   return (
-    <div className="glass-card rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div style={{ color }}>{icon}</div>
-        <span
-          className="font-mono text-2xl font-bold"
-          style={{ color }}
-        >
-          {value.toFixed(3)}
-        </span>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="card p-6 text-center"
+    >
+      <div className="w-12 h-12 rounded-xl bg-accent-50 text-accent-600 border border-accent-100 flex items-center justify-center mx-auto mb-4">
+        {icon}
       </div>
-      <h3 className="font-bold mb-2">{title}</h3>
-      <p className="text-sm text-gray-400">{description}</p>
-    </div>
+      <div className="text-3xl font-bold text-slate-900 mb-1">{value}</div>
+      <div className="text-sm font-semibold text-slate-700 mb-2">{label}</div>
+      <p className="text-sm text-slate-500">{description}</p>
+    </motion.div>
+  )
+}
+
+// Use Case Card
+function UseCaseCard({
+  icon,
+  title,
+  description,
+  link,
+  linkText
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  link: string
+  linkText: string
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="card p-8"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center mb-6">
+        {icon}
+      </div>
+      <h3 className="text-xl font-semibold text-slate-900 mb-3">{title}</h3>
+      <p className="text-slate-600 mb-6">{description}</p>
+      <Link
+        href={link}
+        className="inline-flex items-center gap-2 text-accent-600 font-medium hover:text-accent-700 transition"
+      >
+        {linkText}
+        <ArrowRight className="w-4 h-4" />
+      </Link>
+    </motion.div>
   )
 }
