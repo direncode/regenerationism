@@ -52,10 +52,10 @@ module.exports = {
         }
       },
       fontFamily: {
-        // Times New Roman as primary font
-        serif: ['"Times New Roman"', 'Times', 'Georgia', 'serif'],
-        sans: ['"Times New Roman"', 'Times', 'Georgia', 'serif'],
-        mono: ['"Times New Roman"', 'Times', 'Georgia', 'serif'],
+        // System default fonts
+        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        serif: ['ui-serif', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
