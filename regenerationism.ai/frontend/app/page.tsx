@@ -50,7 +50,7 @@ export default function Home() {
             <p className="text-xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed">
               The National Impact Velocity (NIV) is a{' '}
               <strong className="text-neutral-100">novel systematic stress detector</strong>{' '}
-              based on regeneration theory — measuring how efficiently capital flows through the economy.
+              based on regeneration theory.
             </p>
 
             <div className="flex flex-wrap justify-center gap-4">
