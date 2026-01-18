@@ -925,7 +925,7 @@ function AdjustTab({
                   latestResult.niv > 0.015 ? 'text-yellow-400' :
                   latestResult.niv > 0 ? 'text-orange-400' : 'text-red-400'
                 }`}>
-                  {latestResult.niv.toFixed(4)}
+                  {(latestResult.niv * 100).toFixed(1)}
                 </div>
                 <div className="text-sm text-gray-400 mt-1">Adjusted NIV</div>
               </div>
@@ -934,7 +934,7 @@ function AdjustTab({
                 <>
                   <div className="text-center p-4 bg-dark-700 rounded-xl">
                     <div className="text-4xl font-mono font-bold text-gray-400">
-                      {impactComparison.originalNIV.toFixed(4)}
+                      {(impactComparison.originalNIV * 100).toFixed(1)}
                     </div>
                     <div className="text-sm text-gray-400 mt-1">Original NIV</div>
                   </div>
@@ -1560,7 +1560,7 @@ function CompareTab({ originalResults, adjustedResults, customWeights }: Compare
         <div className="grid md:grid-cols-2 gap-6">
           <div className="glass-card rounded-xl p-6">
             <h4 className="text-sm text-gray-400 mb-2">Default Weights NIV</h4>
-            <div className="text-4xl font-mono font-bold text-gray-400">{latestOriginal.niv.toFixed(4)}</div>
+            <div className="text-4xl font-mono font-bold text-gray-400">{(latestOriginal.niv * 100).toFixed(1)}</div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
               <div className="p-2 bg-dark-700 rounded">
                 <span className="text-gray-500">Thrust:</span> <span className="text-white font-mono">{latestOriginal.thrust.toFixed(4)}</span>
@@ -1582,7 +1582,7 @@ function CompareTab({ originalResults, adjustedResults, customWeights }: Compare
             <div className={`text-4xl font-mono font-bold ${
               latestAdjusted.niv > latestOriginal.niv ? 'text-green-400' : 'text-red-400'
             }`}>
-              {latestAdjusted.niv.toFixed(4)}
+              {(latestAdjusted.niv * 100).toFixed(1)}
               <span className="text-lg ml-2">
                 ({latestAdjusted.niv > latestOriginal.niv ? '+' : ''}
                 {((latestAdjusted.niv - latestOriginal.niv) / Math.abs(latestOriginal.niv) * 100).toFixed(1)}%)

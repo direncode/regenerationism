@@ -33,7 +33,7 @@ const endpoints = [
     response: `{
   "count": 240,
   "start_date": "2004-01-01",
-  "end_date": "2024-01-01",
+  "end_date": "2026-01-01",
   "data": [
     {
       "date": "2004-01-01",
@@ -68,7 +68,7 @@ const endpoints = [
     description: 'NIV vs Fed Yield Curve comparison data',
     response: `[
   {
-    "date": "2024-01-01",
+    "date": "2026-01-01",
     "niv_probability": 28.5,
     "fed_probability": 22.1,
     "is_recession": false

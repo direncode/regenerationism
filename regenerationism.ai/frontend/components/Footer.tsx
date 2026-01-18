@@ -69,7 +69,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-neutral-800 flex flex-wrap items-center justify-between gap-4 text-sm text-neutral-500">
-          <p>© 2025 Regenerationism. MIT License.</p>
+          <p>© 2026 Regenerationism. MIT License.</p>
           <p>Data sourced from Federal Reserve (FRED)</p>
         </div>
       </div>

@@ -435,7 +435,7 @@ export default function DashboardPage() {
                 {data.vs_fed.niv_signal}
               </div>
               <p className="text-sm text-gray-400 mt-2">
-                Leads by ~{data.vs_fed.niv_lead_months} months
+                Regeneration-based indicator
               </p>
             </div>
 
