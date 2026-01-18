@@ -48,9 +48,9 @@ export default function Home() {
             </h1>
 
             <p className="text-xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-              The National Impact Velocity (NIV) detects liquidity shocks and recessions{' '}
-              <strong className="text-neutral-100">6 months before the Fed Yield Curve</strong>.
-              Proven 0.85 AUC on out-of-sample data.
+              The National Impact Velocity (NIV) is a{' '}
+              <strong className="text-neutral-100">novel systematic stress detector</strong>{' '}
+              based on regeneration theory — measuring how efficiently capital flows through the economy.
             </p>
 
             <div className="flex flex-wrap justify-center gap-4">
@@ -193,15 +193,15 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-6">
             <StatCard
               icon={<Shield className="w-6 h-6" />}
-              value="0.85"
-              label="AUC Score"
-              description="Out-of-sample recession prediction accuracy"
+              value="4"
+              label="Components"
+              description="Thrust, efficiency, slack, and drag forces"
             />
             <StatCard
               icon={<Zap className="w-6 h-6" />}
-              value="6mo"
-              label="Lead Time"
-              description="Signals stress before traditional indicators"
+              value="60+"
+              label="Years of Data"
+              description="Historical analysis back to 1960"
             />
             <StatCard
               icon={<Activity className="w-6 h-6" />}
