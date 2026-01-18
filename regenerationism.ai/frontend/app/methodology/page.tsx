@@ -14,19 +14,13 @@ import {
   ChevronRight,
   ChevronDown,
   Database,
-  Key,
-  Eye,
-  EyeOff,
-  CheckCircle,
   AlertTriangle,
-  Info,
   ArrowRight,
   Sigma,
-  Percent,
   Clock,
 } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
-import { fetchAllFREDData, mergeSeriesData, EconomicData } from '@/lib/fredApi'
+import { fetchAllFREDData, mergeSeriesData, EconomicData, checkServerApiKey } from '@/lib/fredApi'
 import { auditLog } from '@/lib/auditLog'
 
 interface CalculationStep {
@@ -70,8 +64,24 @@ export default function MethodologyPage() {
   const [error, setError] = useState<string | null>(null)
   const [breakdown, setBreakdown] = useState<NIVBreakdown | null>(null)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['master']))
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [apiKeyInput, setApiKeyInput] = useState(apiSettings.fredApiKey || '')
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
+  const [checkingServerKey, setCheckingServerKey] = useState(true)
+
+  // Check if server has configured API key on mount
+  useEffect(() => {
+    const checkServer = async () => {
+      setCheckingServerKey(true)
+      const hasKey = await checkServerApiKey()
+      setHasServerKey(hasKey)
+      if (hasKey) {
+        setApiSettings({ useLiveData: true })
+      }
+      setCheckingServerKey(false)
+    }
+    checkServer()
+  }, [setApiSettings])
+
+  const canCalculate = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
@@ -84,8 +94,8 @@ export default function MethodologyPage() {
   }
 
   const calculateLive = useCallback(async () => {
-    if (!apiSettings.fredApiKey) {
-      setError('Please enter your FRED API key above.')
+    if (!canCalculate) {
+      setError('Unable to calculate - no data source available.')
       return
     }
 
@@ -100,8 +110,11 @@ export default function MethodologyPage() {
       const endDate = new Date().toISOString().split('T')[0]
       const startDate = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
+      // Use server key (empty string) if available, otherwise client key
+      const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
+
       const seriesData = await fetchAllFREDData(
-        apiSettings.fredApiKey,
+        apiKeyToUse,
         startDate,
         endDate,
         (series, progress) => setLoadingStatus(`Fetching ${series}... (${progress.toFixed(0)}%)`)
@@ -166,7 +179,7 @@ export default function MethodologyPage() {
     } finally {
       setIsCalculating(false)
     }
-  }, [apiSettings.fredApiKey, params])
+  }, [canCalculate, hasServerKey, apiSettings.fredApiKey, params])
 
   return (
     <div className="min-h-screen bg-dark-900 pt-20 pb-12">
@@ -181,52 +194,6 @@ export default function MethodologyPage() {
             Complete mathematical breakdown of the National Impact Velocity formula with real-time FRED data
           </p>
         </div>
-
-        {/* API Key Configuration */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-dark-800 border border-white/10 rounded-xl"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <Key className="w-5 h-5 text-regen-400" />
-            <span className="text-white font-medium">FRED API Key</span>
-            {apiSettings.fredApiKey && (
-              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="Enter your FRED API key..."
-                className="w-full bg-dark-700 border border-white/10 rounded-lg px-4 py-2 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-regen-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              >
-                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <button
-              onClick={() => setApiSettings({ fredApiKey: apiKeyInput, useLiveData: true })}
-              disabled={!apiKeyInput}
-              className="px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
-            >
-              Save
-            </button>
-          </div>
-          <p className="text-gray-500 text-sm mt-2">
-            Get a free API key from{' '}
-            <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-regen-400 hover:underline">
-              FRED
-            </a>
-          </p>
-        </motion.div>
 
         {/* Error Banner */}
         <AnimatePresence>
@@ -246,13 +213,23 @@ export default function MethodologyPage() {
         {/* Calculate Button */}
         <button
           onClick={calculateLive}
-          disabled={isCalculating || !apiSettings.fredApiKey}
+          disabled={isCalculating || checkingServerKey || !canCalculate}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-regen-600 to-regen-400 hover:from-regen-500 hover:to-regen-300 text-black font-bold rounded-xl transition disabled:opacity-50 mb-8"
         >
-          {isCalculating ? (
+          {checkingServerKey ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Initializing...
+            </>
+          ) : isCalculating ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               {loadingStatus || 'Calculating...'}
+            </>
+          ) : !canCalculate ? (
+            <>
+              <AlertTriangle className="w-5 h-5" />
+              Unable to Load Data
             </>
           ) : (
             <>

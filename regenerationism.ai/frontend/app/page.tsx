@@ -1,114 +1,39 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
   Activity,
   ArrowRight,
   Shield,
   Zap,
   BarChart3,
-  Key,
-  Loader2
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react'
 import RecessionGauge from '@/components/RecessionGauge'
 import CrashCam from '@/components/CrashCam'
-import RedAlertBanner from '@/components/RedAlertBanner'
-import { useSessionStore } from '@/store/sessionStore'
-import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
 
-interface NIVData {
-  date: string
-  niv_score: number
-  recession_probability: number
-  alert_level: string
+// Static demo data - showcases the NIV system without live data fetching
+const DEMO_DATA = {
+  date: '2024-12-01',
+  niv_score: 3.2,
+  recession_probability: 28,
+  alert_level: 'elevated',
   components: {
-    thrust: number
-    efficiency: number
-    slack: number
-    drag: number
+    thrust: 0.142,
+    efficiency: 0.171,
+    slack: 0.224,
+    drag: 0.031,
   }
 }
 
 export default function Home() {
-  const { apiSettings, setApiSettings } = useSessionStore()
-  const [data, setData] = useState<NIVData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
-
-  // Check for server key and fetch data
-  useEffect(() => {
-    const initAndFetch = async () => {
-      setLoading(true)
-
-      // Check if server has API key
-      const serverHasKey = await checkServerApiKey()
-      setHasServerKey(serverHasKey)
-
-      if (serverHasKey) {
-        setApiSettings({ useLiveData: true })
-      }
-
-      // Can fetch if server has key OR client has key
-      const canFetch = serverHasKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
-      if (!canFetch) {
-        setLoading(false)
-        setData(null)
-        return
-      }
-
-      setError(null)
-
-      try {
-        // Get last year of data to get the latest point
-        const endDate = new Date().toISOString().split('T')[0]
-        const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-
-        const apiKeyToUse = serverHasKey ? '' : apiSettings.fredApiKey
-        const nivData = await calculateNIVFromFRED(
-          apiKeyToUse,
-          startDate,
-          endDate,
-          { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
-        )
-
-        if (nivData.length > 0) {
-          const latest = nivData[nivData.length - 1]
-          setData({
-            date: latest.date,
-            niv_score: latest.niv * 100,
-            recession_probability: latest.probability,
-            alert_level: latest.probability > 70 ? 'critical' : latest.probability > 50 ? 'warning' : latest.probability > 30 ? 'elevated' : 'normal',
-            components: {
-              thrust: latest.components.thrust,
-              efficiency: latest.components.efficiency,
-              slack: latest.components.slack,
-              drag: latest.components.drag,
-            }
-          })
-        }
-      } catch (e) {
-        console.error('Failed to fetch FRED data:', e)
-        setError(e instanceof Error ? e.message : 'Failed to fetch data')
-      } finally {
-        setLoading(false)
-      }
-    }
-    initAndFetch()
-  }, [apiSettings.fredApiKey, apiSettings.useLiveData])
-
-  const isHighRisk = data ? data.recession_probability > 50 : false
+  const data = DEMO_DATA
+  const isHighRisk = data.recession_probability > 50
 
   return (
     <div className="min-h-screen">
-      {/* Red Alert Banner */}
-      {isHighRisk && data && <RedAlertBanner probability={data.recession_probability} />}
-
       {/* Hero Section */}
       <section className="relative py-20 px-6 overflow-hidden">
         {/* Background */}
@@ -125,7 +50,7 @@ export default function Home() {
             >
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-regen-500/10 border border-regen-500/20 mb-6">
                 <Activity className="w-4 h-4 text-regen-400" />
-                <span className="text-sm text-regen-400">Live Economic Intelligence</span>
+                <span className="text-sm text-regen-400">Economic Intelligence</span>
               </div>
 
               <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
@@ -145,7 +70,7 @@ export default function Home() {
                   href="/dashboard"
                   className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
                 >
-                  View Dashboard
+                  View Live Dashboard
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
@@ -164,27 +89,15 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="flex justify-center"
             >
-              {loading ? (
-                <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl">
-                  <Loader2 className="w-12 h-12 text-regen-400 animate-spin mb-4" />
-                  <p className="text-gray-400">Loading live FRED data...</p>
-                </div>
-              ) : data ? (
-                <RecessionGauge
-                  probability={data.recession_probability}
-                  alertLevel={data.alert_level}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center p-12 glass-card rounded-2xl">
-                  <Activity className="w-12 h-12 text-gray-500 mb-4" />
-                  <p className="text-gray-400">Unable to load data</p>
-                </div>
-              )}
+              <RecessionGauge
+                probability={data.recession_probability}
+                alertLevel={data.alert_level}
+              />
             </motion.div>
           </div>
         </div>
       </section>
-      
+
       {/* Crash Cam Section */}
       <section className="py-16 px-6 bg-dark-800">
         <div className="max-w-7xl mx-auto">
@@ -193,15 +106,15 @@ export default function Home() {
               The <span className="gradient-text">Crash Cam</span>
             </h2>
             <p className="text-gray-400 max-w-2xl mx-auto">
-              NIV vs Fed Yield Curve recession probability. Watch how NIV detected 
-              2008 and 2020 months before traditional indicators.
+              Live NIV vs Fed Yield Curve recession probability. Watch the calculation
+              animate in real-time as data streams from FRED.
             </p>
           </div>
-          
+
           <CrashCam />
         </div>
       </section>
-      
+
       {/* Components Section */}
       <section className="py-16 px-6">
         <div className="max-w-7xl mx-auto">
@@ -213,65 +126,54 @@ export default function Home() {
             </p>
           </div>
 
-          {data ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <ComponentCard
-                title="Thrust (u)"
-                value={data.components.thrust}
-                description="Fiscal + Monetary impulse minus rate drag"
-                icon={<Zap className="w-6 h-6" />}
-                color={data.components.thrust > 0 ? '#22c55e' : '#ef4444'}
-              />
-              <ComponentCard
-                title="Efficiency (P)"
-                value={data.components.efficiency}
-                description="Investment productivity, squared to punish hollow growth"
-                icon={<TrendingUp className="w-6 h-6" />}
-                color={data.components.efficiency > 0.01 ? '#22c55e' : '#eab308'}
-              />
-              <ComponentCard
-                title="Slack (X)"
-                value={data.components.slack}
-                description="Unused capacity = economic headroom"
-                icon={<BarChart3 className="w-6 h-6" />}
-                color={data.components.slack < 0.2 ? '#22c55e' : '#f97316'}
-              />
-              <ComponentCard
-                title="Drag (F)"
-                value={data.components.drag}
-                description="Friction from spreads, rates, and volatility"
-                icon={<TrendingDown className="w-6 h-6" />}
-                color={data.components.drag < 0.03 ? '#22c55e' : '#ef4444'}
-              />
-            </div>
-          ) : loading ? (
-            <div className="glass-card rounded-2xl p-8 text-center">
-              <Loader2 className="w-8 h-8 text-regen-400 animate-spin mx-auto mb-4" />
-              <p className="text-gray-400">Loading component data...</p>
-            </div>
-          ) : (
-            <div className="glass-card rounded-2xl p-8 text-center">
-              <p className="text-gray-400">Component data unavailable</p>
-            </div>
-          )}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <ComponentCard
+              title="Thrust (u)"
+              value={data.components.thrust}
+              description="Fiscal + Monetary impulse minus rate drag"
+              icon={<Zap className="w-6 h-6" />}
+              color={data.components.thrust > 0 ? '#22c55e' : '#ef4444'}
+            />
+            <ComponentCard
+              title="Efficiency (P)"
+              value={data.components.efficiency}
+              description="Investment productivity, squared to punish hollow growth"
+              icon={<TrendingUp className="w-6 h-6" />}
+              color={data.components.efficiency > 0.01 ? '#22c55e' : '#eab308'}
+            />
+            <ComponentCard
+              title="Slack (X)"
+              value={data.components.slack}
+              description="Unused capacity = economic headroom"
+              icon={<BarChart3 className="w-6 h-6" />}
+              color={data.components.slack < 0.2 ? '#22c55e' : '#f97316'}
+            />
+            <ComponentCard
+              title="Drag (F)"
+              value={data.components.drag}
+              description="Friction from spreads, rates, and volatility"
+              icon={<TrendingDown className="w-6 h-6" />}
+              color={data.components.drag < 0.03 ? '#22c55e' : '#ef4444'}
+            />
+          </div>
         </div>
       </section>
-      
+
       {/* Formula Section */}
       <section className="py-16 px-6 bg-dark-800">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-8">The Master Formula</h2>
-          
+
           <div className="glass-card rounded-2xl p-8 mb-8">
             <div className="font-mono text-2xl md:text-4xl text-regen-400 mb-6">
               NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
             </div>
-            
+
             <p className="text-gray-400">
               Where η = 1.5, capturing the nonlinear impact of friction on capital flow.
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-6 text-left">
             <div className="glass-card rounded-xl p-6">
               <Shield className="w-8 h-8 text-regen-400 mb-4" />
@@ -297,7 +199,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section */}
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -307,16 +209,16 @@ export default function Home() {
           <p className="text-xl text-gray-400 mb-8">
             Join hedge funds and policymakers using NIV for crisis alpha.
           </p>
-          
+
           <div className="flex flex-wrap justify-center gap-4">
-            <Link 
+            <Link
               href="/dashboard"
               className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
             >
               Launch Dashboard
               <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link 
+            <Link
               href="/explorer"
               className="px-8 py-4 border border-gray-700 text-white font-bold rounded-lg hover:border-regen-500 transition"
             >
@@ -330,12 +232,12 @@ export default function Home() {
 }
 
 // Component Card
-function ComponentCard({ 
-  title, 
-  value, 
-  description, 
-  icon, 
-  color 
+function ComponentCard({
+  title,
+  value,
+  description,
+  icon,
+  color
 }: {
   title: string
   value: number
@@ -347,7 +249,7 @@ function ComponentCard({
     <div className="glass-card rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <div style={{ color }}>{icon}</div>
-        <span 
+        <span
           className="font-mono text-2xl font-bold"
           style={{ color }}
         >
