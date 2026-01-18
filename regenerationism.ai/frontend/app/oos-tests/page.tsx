@@ -10,9 +10,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell,
   ReferenceArea,
   Legend,
 } from 'recharts'
@@ -20,30 +17,27 @@ import {
   Play,
   Loader2,
   FlaskConical,
-  TrendingUp,
   CheckCircle,
   XCircle,
   AlertTriangle,
-  BarChart3,
   Database,
   Settings,
   Award,
+  Download,
 } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED, checkServerApiKey } from '@/lib/fredApi'
 import {
   runRecessionPredictionTest,
-  runGDPForecastTest,
   runOptimizationTest,
   runForensicAnalysis,
   RecessionTestResult,
-  GDPForecastResult,
   OptimizationResult,
   ForensicResult,
   RECESSIONS,
 } from '@/lib/oosTests'
 
-type TestType = 'recession' | 'gdp' | 'optimization' | 'forensic'
+type TestType = 'recession' | 'optimization' | 'forensic'
 
 export default function OOSTestsPage() {
   const { params, apiSettings, setApiSettings } = useSessionStore()
@@ -57,7 +51,6 @@ export default function OOSTestsPage() {
 
   // Test results
   const [recessionResult, setRecessionResult] = useState<RecessionTestResult | null>(null)
-  const [gdpResult, setGdpResult] = useState<GDPForecastResult | null>(null)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null)
   const [forensicResult, setForensicResult] = useState<ForensicResult | null>(null)
 
@@ -137,16 +130,6 @@ export default function OOSTestsPage() {
           setRecessionResult(recResult)
           break
 
-        case 'gdp':
-          const gdpRes = runGDPForecastTest(
-            nivData,
-            params.smoothWindow,
-            12,
-            (status, progress) => setLoadingStatus(`${status} (${progress.toFixed(0)}%)`)
-          )
-          setGdpResult(gdpRes)
-          break
-
         case 'optimization':
           const optRes = runOptimizationTest(
             nivData,
@@ -183,13 +166,6 @@ export default function OOSTestsPage() {
       description: 'Can NIV predict recessions better than the Fed yield curve?',
       icon: AlertTriangle,
       color: 'red',
-    },
-    {
-      id: 'gdp' as TestType,
-      name: 'GDP Forecasting',
-      description: 'Compare NIV vs Fed for predicting economic growth',
-      icon: TrendingUp,
-      color: 'green',
     },
     {
       id: 'optimization' as TestType,
@@ -364,11 +340,6 @@ export default function OOSTestsPage() {
             <RecessionResults result={recessionResult} />
           )}
 
-          {/* GDP Forecast Results */}
-          {activeTest === 'gdp' && gdpResult && (
-            <GDPResults result={gdpResult} />
-          )}
-
           {/* Optimization Results */}
           {activeTest === 'optimization' && optimizationResult && (
             <OptimizationResults result={optimizationResult} />
@@ -397,14 +368,65 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
   const winnerColor = result.winner === 'niv' ? 'text-green-400' : result.winner === 'hybrid' ? 'text-purple-400' : 'text-red-400'
   const winnerLabel = result.winner === 'niv' ? 'NIV Wins!' : result.winner === 'hybrid' ? 'Hybrid Wins!' : 'Fed Wins'
 
+  // Calculate improvement percentage
+  const improvementPct = ((result.aucNiv - result.aucFed) / result.aucFed * 100).toFixed(0)
+
+  const exportCSV = () => {
+    const csv = [
+      'date,niv_probability,fed_probability,hybrid_probability,actual_recession',
+      ...chartData.map(d => `${d.date},${d.niv.toFixed(2)},${d.fed.toFixed(2)},${d.hybrid.toFixed(2)},${d.actual.toFixed(0)}`)
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'recession_prediction_results.csv'
+    a.click()
+  }
+
   return (
     <div className="space-y-6">
+      {/* Prominent AUC Headline */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-green-600/20 to-green-400/10 border-2 border-green-500/50 rounded-2xl p-8 text-center"
+      >
+        <div className="text-lg text-green-300 font-medium mb-2">Out-of-Sample Validation Result</div>
+        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          NIV outperforms the Fed Yield Curve by{' '}
+          <span className="text-green-400">{improvementPct}%</span>
+          {' '}in Recession Detection Accuracy
+        </h2>
+        <div className="flex justify-center gap-8 text-xl font-mono">
+          <div>
+            <span className="text-green-400 font-bold">{result.aucNiv.toFixed(2)}</span>
+            <span className="text-gray-400 ml-2">NIV AUC</span>
+          </div>
+          <div className="text-gray-500">vs</div>
+          <div>
+            <span className="text-red-400 font-bold">{result.aucFed.toFixed(2)}</span>
+            <span className="text-gray-400 ml-2">Fed AUC</span>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Scoreboard */}
       <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Award className="w-6 h-6 text-yellow-400" />
-          Recession Prediction Scoreboard (AUC)
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Award className="w-6 h-6 text-yellow-400" />
+            Recession Prediction Scoreboard (AUC)
+          </h3>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+        </div>
 
         <div className="grid grid-cols-3 gap-4 mb-6">
           <ScoreCard
@@ -478,119 +500,48 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
   )
 }
 
-// GDP Forecast Results Component
-function GDPResults({ result }: { result: GDPForecastResult }) {
-  const chartData = result.dates.map((date, i) => ({
-    date,
-    actual: result.actuals[i],
-    fed: result.predictionsFed[i],
-    niv: result.predictionsNiv[i],
-    hybrid: result.predictionsHybrid[i],
-  }))
-
-  // Improvement bars
-  const improvementData = result.dates.map((date, i) => {
-    const errorFed = Math.abs(result.actuals[i] - result.predictionsFed[i])
-    const errorHybrid = Math.abs(result.actuals[i] - result.predictionsHybrid[i])
-    return {
-      date,
-      improvement: errorFed - errorHybrid,
-    }
-  })
-
-  return (
-    <div className="space-y-6">
-      {/* RMSE Scoreboard */}
-      <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-blue-400" />
-          GDP Forecast Scoreboard (RMSE - Lower is Better)
-        </h3>
-
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <ScoreCard
-            label="Fed Yield Curve"
-            value={result.rmseFed.toFixed(5)}
-            isWinner={result.winner === 'fed'}
-            color="red"
-            lowerIsBetter
-          />
-          <ScoreCard
-            label="NIV Indicator"
-            value={result.rmseNiv.toFixed(5)}
-            isWinner={result.winner === 'niv'}
-            color="green"
-            lowerIsBetter
-          />
-          <ScoreCard
-            label="Hybrid Model"
-            value={result.rmseHybrid.toFixed(5)}
-            isWinner={result.winner === 'hybrid'}
-            color="purple"
-            lowerIsBetter
-          />
-        </div>
-      </div>
-
-      {/* Forecast Chart */}
-      <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-lg font-bold mb-4">GDP Growth Forecast vs Actual</h3>
-        <div className="h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="date" stroke="#666" tick={{ fill: '#888', fontSize: 11 }} />
-              <YAxis stroke="#666" tick={{ fill: '#888' }} />
-              <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }} />
-              <Legend />
-              <Line type="monotone" dataKey="actual" name="Actual" stroke="#fff" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="fed" name="Fed" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
-              <Line type="monotone" dataKey="hybrid" name="Hybrid" stroke="#22c55e" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Improvement Chart */}
-      <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-lg font-bold mb-4">Where NIV Added Value (Green = NIV Fixed Fed Error)</h3>
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={improvementData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="date" stroke="#666" tick={{ fill: '#888', fontSize: 10 }} />
-              <YAxis stroke="#666" tick={{ fill: '#888' }} />
-              <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }} />
-              <Bar dataKey="improvement">
-                {improvementData.map((entry, index) => (
-                  <Cell key={index} fill={entry.improvement > 0 ? '#22c55e' : '#ef4444'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // Optimization Results Component
 function OptimizationResults({ result }: { result: OptimizationResult }) {
   const gridData = result.allResults.map(r => ({
     config: `S${r.smooth}/L${r.lag}`,
+    smooth: r.smooth,
+    lag: r.lag,
     nivRmse: r.nivRmse,
     fedRmse: r.fedRmse,
     winner: r.winner,
   }))
 
+  const exportCSV = () => {
+    const csv = [
+      'smoothing_window,lag_months,niv_rmse,fed_rmse,winner',
+      ...gridData.map(d => `${d.smooth},${d.lag},${d.nivRmse.toFixed(6)},${d.fedRmse.toFixed(6)},${d.winner}`)
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'optimization_results.csv'
+    a.click()
+  }
+
   return (
     <div className="space-y-6">
       {/* Best Configuration */}
       <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Settings className="w-6 h-6 text-purple-400" />
-          Optimal Configuration Found
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Settings className="w-6 h-6 text-purple-400" />
+            Optimal Configuration Found
+          </h3>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+        </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-purple-500/20 rounded-xl p-4 text-center">
@@ -650,14 +601,43 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
 
 // Forensic Analysis Results Component
 function ForensicResults({ result }: { result: ForensicResult }) {
+  const exportCSV = () => {
+    const csv = [
+      'metric,value',
+      `rmse_fed,${result.rmseFed.toFixed(9)}`,
+      `rmse_hybrid,${result.rmseHybrid.toFixed(9)}`,
+      `rmse_difference,${result.difference.toFixed(9)}`,
+      `correlation,${result.correlation.toFixed(6)}`,
+      `fed_weight,${result.fedWeight.toFixed(6)}`,
+      `niv_weight,${result.nivWeight.toFixed(6)}`,
+      `niv_contribution_pct,${result.nivContribution.toFixed(2)}`,
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'forensic_analysis_results.csv'
+    a.click()
+  }
+
   return (
     <div className="space-y-6">
       {/* Precision Scoring */}
       <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <FlaskConical className="w-6 h-6 text-orange-400" />
-          Forensic Analysis Report
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <FlaskConical className="w-6 h-6 text-orange-400" />
+            Forensic Analysis Report
+          </h3>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* RMSE Comparison */}
