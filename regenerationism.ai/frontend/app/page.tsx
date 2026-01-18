@@ -14,7 +14,6 @@ import {
   LineChart,
   FlaskConical,
 } from 'lucide-react'
-import CrashCam from '@/components/CrashCam'
 
 // Static demo data for component cards
 const DEMO_COMPONENTS = {
@@ -125,32 +124,6 @@ export default function Home() {
               color="rose"
             />
           </div>
-        </div>
-      </section>
-
-      {/* Crash Cam Section */}
-      <section className="py-20 px-6 bg-neutral-950">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-500/10 border border-accent-500/20 mb-6">
-              <LineChart className="w-4 h-4 text-accent-400" />
-              <span className="text-sm font-medium text-accent-300">Live Visualization</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-neutral-100 mb-4">
-              The Crash Cam
-            </h2>
-            <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
-              Watch NIV vs Fed Yield Curve recession probability animate in real-time
-              as data streams from FRED.
-            </p>
-          </motion.div>
-
-          <CrashCam />
         </div>
       </section>
 
