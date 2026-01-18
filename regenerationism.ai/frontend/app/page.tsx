@@ -11,27 +11,17 @@ import {
   TrendingUp,
   TrendingDown,
 } from 'lucide-react'
-import RecessionGauge from '@/components/RecessionGauge'
 import CrashCam from '@/components/CrashCam'
 
-// Static demo data - showcases the NIV system without live data fetching
-const DEMO_DATA = {
-  date: '2024-12-01',
-  niv_score: 3.2,
-  recession_probability: 28,
-  alert_level: 'elevated',
-  components: {
-    thrust: 0.142,
-    efficiency: 0.171,
-    slack: 0.224,
-    drag: 0.031,
-  }
+// Static demo data for component cards
+const DEMO_COMPONENTS = {
+  thrust: 0.142,
+  efficiency: 0.171,
+  slack: 0.224,
+  drag: 0.031,
 }
 
 export default function Home() {
-  const data = DEMO_DATA
-  const isHighRisk = data.recession_probability > 50
-
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -40,61 +30,45 @@ export default function Home() {
         <div className="absolute inset-0 grid-background opacity-50" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-dark-900/50 to-dark-900" />
 
-        <div className="relative max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Text */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-regen-500/10 border border-regen-500/20 mb-6">
-                <Activity className="w-4 h-4 text-regen-400" />
-                <span className="text-sm text-regen-400">Economic Intelligence</span>
-              </div>
+        <div className="relative max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-regen-500/10 border border-regen-500/20 mb-6">
+              <Activity className="w-4 h-4 text-regen-400" />
+              <span className="text-sm text-regen-400">Economic Intelligence</span>
+            </div>
 
-              <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-                <span className="gradient-text">Predict Crises</span>
-                <br />
-                <span className="text-white">Before They Hit</span>
-              </h1>
+            <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
+              <span className="gradient-text">Predict Crises</span>
+              <br />
+              <span className="text-white">Before They Hit</span>
+            </h1>
 
-              <p className="text-xl text-gray-400 mb-8 max-w-xl">
-                The National Impact Velocity (NIV) detects liquidity shocks and recessions
-                <strong className="text-white"> 6 months before the Fed Yield Curve</strong>.
-                Proven 0.85 AUC on out-of-sample data.
-              </p>
+            <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+              The National Impact Velocity (NIV) detects liquidity shocks and recessions
+              <strong className="text-white"> 6 months before the Fed Yield Curve</strong>.
+              Proven 0.85 AUC on out-of-sample data.
+            </p>
 
-              <div className="flex flex-wrap gap-4">
-                <Link
-                  href="/dashboard"
-                  className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
-                >
-                  View Live Dashboard
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="/methodology"
-                  className="px-8 py-4 border border-gray-700 text-white font-bold rounded-lg hover:border-regen-500 hover:bg-regen-500/10 transition"
-                >
-                  Learn Methodology
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Right: Gauge */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex justify-center"
-            >
-              <RecessionGauge
-                probability={data.recession_probability}
-                alertLevel={data.alert_level}
-              />
-            </motion.div>
-          </div>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link
+                href="/dashboard"
+                className="px-8 py-4 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition flex items-center gap-2"
+              >
+                View Live Dashboard
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/methodology"
+                className="px-8 py-4 border border-gray-700 text-white font-bold rounded-lg hover:border-regen-500 hover:bg-regen-500/10 transition"
+              >
+                Learn Methodology
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -129,31 +103,31 @@ export default function Home() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <ComponentCard
               title="Thrust (u)"
-              value={data.components.thrust}
+              value={DEMO_COMPONENTS.thrust}
               description="Fiscal + Monetary impulse minus rate drag"
               icon={<Zap className="w-6 h-6" />}
-              color={data.components.thrust > 0 ? '#22c55e' : '#ef4444'}
+              color={DEMO_COMPONENTS.thrust > 0 ? '#22c55e' : '#ef4444'}
             />
             <ComponentCard
               title="Efficiency (P)"
-              value={data.components.efficiency}
+              value={DEMO_COMPONENTS.efficiency}
               description="Investment productivity, squared to punish hollow growth"
               icon={<TrendingUp className="w-6 h-6" />}
-              color={data.components.efficiency > 0.01 ? '#22c55e' : '#eab308'}
+              color={DEMO_COMPONENTS.efficiency > 0.01 ? '#22c55e' : '#eab308'}
             />
             <ComponentCard
               title="Slack (X)"
-              value={data.components.slack}
+              value={DEMO_COMPONENTS.slack}
               description="Unused capacity = economic headroom"
               icon={<BarChart3 className="w-6 h-6" />}
-              color={data.components.slack < 0.2 ? '#22c55e' : '#f97316'}
+              color={DEMO_COMPONENTS.slack < 0.2 ? '#22c55e' : '#f97316'}
             />
             <ComponentCard
               title="Drag (F)"
-              value={data.components.drag}
+              value={DEMO_COMPONENTS.drag}
               description="Friction from spreads, rates, and volatility"
               icon={<TrendingDown className="w-6 h-6" />}
-              color={data.components.drag < 0.03 ? '#22c55e' : '#ef4444'}
+              color={DEMO_COMPONENTS.drag < 0.03 ? '#22c55e' : '#ef4444'}
             />
           </div>
         </div>
