@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   LineChart,
   Line,
@@ -32,16 +32,26 @@ const getDefaultEndDate = (): string => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+// Convert YYYY-MM to YYYY-MM-DD for API
+const toApiDate = (monthStr: string): string => `${monthStr}-01`
+
+// Get start date for FRED fetch (need 13 months before display start for YoY calc)
+const getFetchStartDate = (displayStart: string): string => {
+  const [year, month] = displayStart.split('-').map(Number)
+  const date = new Date(year, month - 1 - 13, 1) // 13 months before
+  return date.toISOString().split('T')[0]
+}
+
 export default function ExplorerPage() {
   const { apiSettings, setApiSettings } = useSessionStore()
   const [data, setData] = useState<HistoricalDataPoint[]>([])
-  const [allData, setAllData] = useState<HistoricalDataPoint[]>([])
   const [startDate, setStartDate] = useState(getDefaultStartDate)
   const [endDate, setEndDate] = useState(getDefaultEndDate)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
   const [checkingServerKey, setCheckingServerKey] = useState(true)
+  const [dataRange, setDataRange] = useState<{ start: string; end: string } | null>(null)
 
   // Check if server has configured API key on mount
   useEffect(() => {
@@ -57,12 +67,11 @@ export default function ExplorerPage() {
     checkServer()
   }, [])
 
-  // Fetch historical data
-  const fetchData = async () => {
+  // Fetch data for the selected date range only
+  const fetchData = useCallback(async (fetchStart: string, fetchEnd: string) => {
     const canFetch = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
     if (!canFetch) {
       setData([])
-      setAllData([])
       return
     }
 
@@ -70,48 +79,58 @@ export default function ExplorerPage() {
     setError(null)
 
     try {
-      // Fetch full historical data from 1960
-      const endDateStr = new Date().toISOString().split('T')[0]
+      // Fetch data with buffer for YoY calculations
+      const apiStartDate = getFetchStartDate(fetchStart)
+      const apiEndDate = `${fetchEnd}-28` // End of month
 
       const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
         apiKeyToUse,
-        '1960-01-01',
-        endDateStr,
+        apiStartDate,
+        apiEndDate,
         { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 1 }
       )
 
-      const historicalData: HistoricalDataPoint[] = nivData.map(point => ({
-        date: point.date.substring(0, 7),
-        niv: point.niv * 100,
-      }))
+      const historicalData: HistoricalDataPoint[] = nivData
+        .map(point => ({
+          date: point.date.substring(0, 7),
+          niv: point.niv * 100,
+        }))
+        .filter(d => d.date >= fetchStart && d.date <= fetchEnd)
 
-      setAllData(historicalData)
-      filterData(historicalData, startDate, endDate)
+      setData(historicalData)
+      setDataRange({ start: fetchStart, end: fetchEnd })
     } catch (e) {
       console.error('Failed to fetch historical FRED data:', e)
       setError(e instanceof Error ? e.message : 'Failed to fetch data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [hasServerKey, apiSettings.fredApiKey, apiSettings.useLiveData])
 
-  const filterData = (source: HistoricalDataPoint[], start: string, end: string) => {
-    const filtered = source.filter(d => d.date >= start && d.date <= end)
-    setData(filtered)
-  }
-
+  // Initial fetch with default range
   useEffect(() => {
     if (!checkingServerKey) {
-      fetchData()
+      fetchData(startDate, endDate)
     }
-  }, [apiSettings.fredApiKey, apiSettings.useLiveData, hasServerKey, checkingServerKey])
+  }, [hasServerKey, checkingServerKey])
 
+  // Refetch when date range changes (with debounce to avoid rapid fetches)
   useEffect(() => {
-    if (allData.length > 0) {
-      filterData(allData, startDate, endDate)
+    if (checkingServerKey || !dataRange) return
+
+    // Only refetch if range expanded beyond cached data
+    const needsFetch = startDate < dataRange.start || endDate > dataRange.end
+    if (needsFetch) {
+      const timer = setTimeout(() => {
+        fetchData(startDate, endDate)
+      }, 300)
+      return () => clearTimeout(timer)
+    } else {
+      // Filter existing data for narrower range (instant)
+      setData(prev => prev.filter(d => d.date >= startDate && d.date <= endDate))
     }
-  }, [startDate, endDate, allData])
+  }, [startDate, endDate, dataRange, checkingServerKey, fetchData])
 
   const exportCSV = () => {
     if (!data.length) return
@@ -211,7 +230,7 @@ export default function ExplorerPage() {
             <p className="text-gray-400 mb-6">{error}</p>
 
             <button
-              onClick={fetchData}
+              onClick={() => fetchData(startDate, endDate)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
             >
               <RefreshCw className="w-4 h-4" />
@@ -223,10 +242,6 @@ export default function ExplorerPage() {
     )
   }
 
-  const dataYears = allData.length > 0
-    ? Math.round((new Date(allData[allData.length - 1].date).getTime() - new Date(allData[0].date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-    : 0
-
   return (
     <div className="min-h-screen py-8 px-6">
       <div className="max-w-7xl mx-auto">
@@ -235,7 +250,7 @@ export default function ExplorerPage() {
           <div>
             <h1 className="text-3xl font-bold">Historical Explorer</h1>
             <p className="text-gray-400">
-              {dataYears}+ years of NIV data ({allData[0]?.date || '---'} - present)
+              NIV data from FRED ({data.length > 0 ? `${data[0]?.date} - ${data[data.length - 1]?.date}` : 'Loading...'})
             </p>
           </div>
           <button
@@ -288,15 +303,10 @@ export default function ExplorerPage() {
                 25Y
               </button>
               <button
-                onClick={() => {
-                  if (allData.length > 0) {
-                    setStartDate(allData[0].date)
-                    setEndDate(allData[allData.length - 1].date)
-                  }
-                }}
+                onClick={() => { setStartDate('1961-01'); setEndDate(getDefaultEndDate()) }}
                 className="px-3 py-1 text-sm bg-dark-600 rounded-lg hover:bg-dark-500"
               >
-                All
+                All (60Y)
               </button>
             </div>
           </div>
