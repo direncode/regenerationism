@@ -91,14 +91,15 @@ export default function DashboardPage() {
     setError(null)
 
     try {
-      // Fetch full historical data
+      // Fetch last 3 years of data (we only display 24 months)
       const endDate = new Date().toISOString().split('T')[0]
+      const startDate = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
       // Use server key (empty string) if available, otherwise client key
       const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
         apiKeyToUse,
-        '1960-01-01',
+        startDate,
         endDate,
         { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 1 }
       )
