@@ -13,13 +13,11 @@ import {
 } from 'recharts'
 import { Calendar, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
-import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
+import { calculateNIVFromFRED, checkServerApiKey } from '@/lib/fredApi'
 
 interface HistoricalDataPoint {
   date: string
   niv: number
-  probability: number
-  isRecession: boolean
 }
 
 // Helper to get date 5 years ago for faster default loading
@@ -38,7 +36,7 @@ export default function ExplorerPage() {
   const { apiSettings, setApiSettings } = useSessionStore()
   const [data, setData] = useState<HistoricalDataPoint[]>([])
   const [allData, setAllData] = useState<HistoricalDataPoint[]>([])
-  const [startDate, setStartDate] = useState(getDefaultStartDate)  // 5 years back for faster loading
+  const [startDate, setStartDate] = useState(getDefaultStartDate)
   const [endDate, setEndDate] = useState(getDefaultEndDate)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,23 +70,20 @@ export default function ExplorerPage() {
     setError(null)
 
     try {
-      // Fetch 2 years of data (same as Dashboard for consistency)
+      // Fetch full historical data from 1960
       const endDateStr = new Date().toISOString().split('T')[0]
-      const startDateStr = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
       const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
         apiKeyToUse,
-        startDateStr,
+        '1960-01-01',
         endDateStr,
-        { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
+        { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 1 }
       )
 
       const historicalData: HistoricalDataPoint[] = nivData.map(point => ({
         date: point.date.substring(0, 7),
         niv: point.niv * 100,
-        probability: point.probability,
-        isRecession: point.isRecession,
       }))
 
       setAllData(historicalData)
@@ -122,8 +117,8 @@ export default function ExplorerPage() {
     if (!data.length) return
 
     const csv = [
-      'date,niv_score,recession_probability,is_recession',
-      ...data.map(d => `${d.date},${d.niv.toFixed(2)},${d.probability.toFixed(2)},${d.isRecession}`)
+      'date,niv_score',
+      ...data.map(d => `${d.date},${d.niv.toFixed(2)}`)
     ].join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -142,7 +137,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">Historical NIV data from FRED</p>
+              <p className="text-gray-400">60+ years of NIV data from FRED</p>
             </div>
           </div>
 
@@ -163,7 +158,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">Historical NIV data from FRED</p>
+              <p className="text-gray-400">60+ years of NIV data from FRED</p>
             </div>
           </div>
 
@@ -184,7 +179,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">Historical NIV data from FRED</p>
+              <p className="text-gray-400">60+ years of NIV data from FRED</p>
             </div>
           </div>
 
@@ -206,7 +201,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">Historical NIV data from FRED</p>
+              <p className="text-gray-400">60+ years of NIV data from FRED</p>
             </div>
           </div>
 
@@ -308,7 +303,7 @@ export default function ExplorerPage() {
         </div>
 
         {/* Main Chart */}
-        <div className="glass-card rounded-2xl p-6 mb-6">
+        <div className="glass-card rounded-2xl p-6">
           <h3 className="text-lg font-bold mb-4">NIV Score Over Time</h3>
           <div className="h-[500px]">
             {data.length > 0 ? (
@@ -334,10 +329,7 @@ export default function ExplorerPage() {
                       border: '1px solid #333',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: number, name: string) => [
-                      name === 'niv' ? value.toFixed(1) : `${value.toFixed(1)}%`,
-                      name === 'niv' ? 'NIV Score' : 'Recession Prob'
-                    ]}
+                    formatter={(value: number) => [value.toFixed(2), 'NIV Score']}
                   />
                   <Line
                     type="monotone"
@@ -359,74 +351,6 @@ export default function ExplorerPage() {
                 No data available for selected date range
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Recession Probability Chart */}
-        <div className="glass-card rounded-2xl p-6">
-          <h3 className="text-lg font-bold mb-4">Recession Probability</h3>
-          <div className="h-[300px]">
-            {data.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-
-                  <XAxis
-                    dataKey="date"
-                    stroke="#666"
-                    tick={{ fill: '#888', fontSize: 11 }}
-                    tickFormatter={(v) => v.split('-')[0]}
-                  />
-                  <YAxis
-                    stroke="#666"
-                    tick={{ fill: '#888', fontSize: 11 }}
-                    domain={[0, 100]}
-                    tickFormatter={(v) => `${v}%`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Probability']}
-                  />
-
-                  {/* 50% threshold */}
-                  <Line
-                    type="monotone"
-                    dataKey={() => 50}
-                    stroke="#666"
-                    strokeDasharray="5 5"
-                    dot={false}
-                  />
-
-                  <Line
-                    type="monotone"
-                    dataKey="probability"
-                    stroke="#f97316"
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                No data available for selected date range
-              </div>
-            )}
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-white/5">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-orange-500" />
-              <span className="text-sm text-gray-400">Recession Probability</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 border-t-2 border-dashed border-gray-500" />
-              <span className="text-sm text-gray-400">50% Threshold</span>
-            </div>
           </div>
         </div>
       </div>

@@ -13,7 +13,6 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react'
-import RecessionGauge from '@/components/RecessionGauge'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
 import {
@@ -29,8 +28,6 @@ import {
 interface DashboardData {
   date: string
   niv_score: number
-  recession_probability: number
-  alert_level: string
   components: {
     thrust: number
     efficiency: number
@@ -54,7 +51,6 @@ interface DashboardData {
 interface HistoryPoint {
   date: string
   niv: number
-  prob: number
 }
 
 export default function DashboardPage() {
@@ -95,17 +91,16 @@ export default function DashboardPage() {
     setError(null)
 
     try {
-      // Fetch 2 years of data for historical chart
+      // Fetch full historical data
       const endDate = new Date().toISOString().split('T')[0]
-      const startDate = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
       // Use server key (empty string) if available, otherwise client key
       const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
         apiKeyToUse,
-        startDate,
+        '1960-01-01',
         endDate,
-        { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
+        { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 1 }
       )
 
       if (nivData.length > 0) {
@@ -119,8 +114,8 @@ export default function DashboardPage() {
           drag_status: point.components.drag < 0.02 ? 'Low friction levels' : point.components.drag < 0.04 ? 'Normal friction levels' : 'High friction',
         })
 
-        // Determine NIV signal
-        const nivSignal = latest.probability < 30 ? 'EXPANSION' : latest.probability < 50 ? 'CAUTION' : 'CONTRACTION'
+        // Determine NIV signal based on NIV score
+        const nivSignal = latest.niv > 0.05 ? 'EXPANSION' : latest.niv > 0.02 ? 'CAUTION' : 'CONTRACTION'
 
         // Determine yield curve signal from yield penalty component
         const yieldCurveSignal = latest.components.yieldPenalty > 0 ? 'INVERTED' : 'NORMAL'
@@ -128,8 +123,6 @@ export default function DashboardPage() {
         setData({
           date: latest.date,
           niv_score: latest.niv * 100,
-          recession_probability: latest.probability,
-          alert_level: latest.probability > 70 ? 'critical' : latest.probability > 50 ? 'warning' : latest.probability > 30 ? 'elevated' : 'normal',
           components: {
             thrust: latest.components.thrust,
             efficiency: latest.components.efficiency,
@@ -145,11 +138,10 @@ export default function DashboardPage() {
           }
         })
 
-        // Transform for chart
+        // Transform for chart - show last 24 months
         setHistory(nivData.slice(-24).map(point => ({
           date: point.date.substring(0, 7),
           niv: point.niv * 100,
-          prob: point.probability,
         })))
 
         setLastUpdate(new Date())
@@ -176,8 +168,8 @@ export default function DashboardPage() {
     if (!history.length) return
 
     const csv = [
-      'date,niv_score,recession_probability',
-      ...history.map(d => `${d.date},${d.niv.toFixed(2)},${d.prob.toFixed(2)}`)
+      'date,niv_score',
+      ...history.map(d => `${d.date},${d.niv.toFixed(2)}`)
     ].join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -283,6 +275,17 @@ export default function DashboardPage() {
 
   if (!data) return null
 
+  // Determine status color based on NIV score
+  const getStatusColor = () => {
+    if (data.niv_score > 5) return '#22c55e' // Green - Expansion
+    if (data.niv_score > 2) return '#eab308' // Yellow - Caution
+    if (data.niv_score > 0) return '#f97316' // Orange - Slowdown
+    return '#ef4444' // Red - Contraction
+  }
+
+  const statusColor = getStatusColor()
+  const statusLabel = data.niv_score > 5 ? 'EXPANSION' : data.niv_score > 2 ? 'CAUTION' : data.niv_score > 0 ? 'SLOWDOWN' : 'CONTRACTION'
+
   return (
     <div className="min-h-screen py-8 px-6">
       <div className="max-w-7xl mx-auto">
@@ -317,12 +320,26 @@ export default function DashboardPage() {
 
         {/* Main Grid */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          {/* Gauge - Takes 1 column */}
+          {/* NIV Score Display - Takes 1 column */}
           <div className="glass-card rounded-2xl p-6 flex flex-col items-center justify-center">
-            <RecessionGauge
-              probability={data.recession_probability}
-              alertLevel={data.alert_level}
-            />
+            <span className="text-sm text-gray-400 uppercase tracking-wider mb-2">
+              NIV Score
+            </span>
+            <motion.div
+              className="text-6xl font-mono font-bold mb-2"
+              style={{ color: statusColor }}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {data.niv_score.toFixed(1)}
+            </motion.div>
+            <span
+              className="text-sm font-bold uppercase tracking-wider"
+              style={{ color: statusColor }}
+            >
+              {statusLabel}
+            </span>
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-400">As of {data.date}</p>
             </div>
@@ -332,13 +349,10 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 glass-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold">NIV Score</h3>
-                <p className="text-sm text-gray-400">National Impact Velocity</p>
+                <h3 className="text-lg font-bold">NIV Trend</h3>
+                <p className="text-sm text-gray-400">National Impact Velocity (24 months)</p>
               </div>
               <div className="text-right">
-                <div className="text-4xl font-mono font-bold text-regen-400">
-                  {data.niv_score.toFixed(1)}
-                </div>
                 <p className="text-sm text-gray-400">
                   {data.niv_score > 0 ? 'Positive momentum' : 'Negative momentum'}
                 </p>
@@ -359,6 +373,7 @@ export default function DashboardPage() {
                   <YAxis stroke="#666" tick={{ fill: '#888', fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+                    formatter={(value: number) => [value.toFixed(2), 'NIV Score']}
                   />
                   <Area
                     type="monotone"
