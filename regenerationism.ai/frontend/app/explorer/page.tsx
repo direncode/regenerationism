@@ -72,12 +72,15 @@ export default function ExplorerPage() {
     setError(null)
 
     try {
-      // Fetch maximum historical data (FRED has data back to 1960s for most series)
+      // Fetch 2 years of data (same as Dashboard for consistency)
+      const endDateStr = new Date().toISOString().split('T')[0]
+      const startDateStr = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
       const apiKeyToUse = hasServerKey ? '' : apiSettings.fredApiKey
       const nivData = await calculateNIVFromFRED(
         apiKeyToUse,
-        '1960-01-01',
-        new Date().toISOString().split('T')[0],
+        startDateStr,
+        endDateStr,
         { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 12 }
       )
 
@@ -139,7 +142,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">60+ years of NIV data from FRED</p>
+              <p className="text-gray-400">Historical NIV data from FRED</p>
             </div>
           </div>
 
@@ -160,7 +163,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">60+ years of NIV data from FRED</p>
+              <p className="text-gray-400">Historical NIV data from FRED</p>
             </div>
           </div>
 
@@ -181,7 +184,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">60+ years of NIV data from FRED</p>
+              <p className="text-gray-400">Historical NIV data from FRED</p>
             </div>
           </div>
 
@@ -203,7 +206,7 @@ export default function ExplorerPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-bold">Historical Explorer</h1>
-              <p className="text-gray-400">60+ years of NIV data from FRED</p>
+              <p className="text-gray-400">Historical NIV data from FRED</p>
             </div>
           </div>
 
