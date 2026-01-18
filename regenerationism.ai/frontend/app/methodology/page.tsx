@@ -53,7 +53,6 @@ interface NIVBreakdown {
   numerator: number
   denominator: number
   niv: number
-  probability: number
 }
 
 export default function MethodologyPage() {
@@ -377,32 +376,6 @@ export default function MethodologyPage() {
               </div>
             </div>
 
-            {/* Probability Mapping */}
-            <div className="p-4 bg-dark-700 rounded-lg border border-white/10">
-              <h4 className="font-bold text-white mb-3">Recession Probability Thresholds</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div className="bg-red-500/20 p-3 rounded text-center border border-red-500/30">
-                  <div className="font-mono text-red-400">NIV ≤ 0</div>
-                  <div className="text-white font-bold">99%</div>
-                  <div className="text-gray-400 text-xs">CRISIS</div>
-                </div>
-                <div className="bg-orange-500/20 p-3 rounded text-center border border-orange-500/30">
-                  <div className="font-mono text-orange-400">0 &lt; NIV &lt; 0.015</div>
-                  <div className="text-white font-bold">85%</div>
-                  <div className="text-gray-400 text-xs">HIGH RISK</div>
-                </div>
-                <div className="bg-yellow-500/20 p-3 rounded text-center border border-yellow-500/30">
-                  <div className="font-mono text-yellow-400">0.015 ≤ NIV &lt; 0.035</div>
-                  <div className="text-white font-bold">45%</div>
-                  <div className="text-gray-400 text-xs">CAUTION</div>
-                </div>
-                <div className="bg-green-500/20 p-3 rounded text-center border border-green-500/30">
-                  <div className="font-mono text-green-400">NIV ≥ 0.035</div>
-                  <div className="text-white font-bold">5%</div>
-                  <div className="text-gray-400 text-xs">EXPANSION</div>
-                </div>
-              </div>
-            </div>
           </div>
         </CollapsibleSection>
 
@@ -422,14 +395,10 @@ export default function MethodologyPage() {
                 </div>
                 <span className="text-gray-500 font-mono text-sm">{breakdown.date}</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="text-center">
                   <div className="text-3xl font-mono font-bold text-regen-400">{breakdown.niv.toFixed(4)}</div>
                   <div className="text-sm text-gray-400">NIV Score</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-mono font-bold text-blue-400">{breakdown.probability.toFixed(1)}%</div>
-                  <div className="text-sm text-gray-400">Recession Probability</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-mono font-bold text-green-400">{breakdown.numerator.toFixed(6)}</div>
@@ -529,12 +498,6 @@ export default function MethodologyPage() {
                   formula="NIV = numerator / denominator"
                   calculation={`${breakdown.numerator.toFixed(6)} / ${breakdown.denominator.toFixed(6)} = ${breakdown.niv.toFixed(6)}`}
                   highlight
-                />
-                <StepCard
-                  step={5}
-                  title="Recession Probability"
-                  formula="P(recession) = 1 / (1 + e^(NIV×2 - 1)) × 100"
-                  calculation={`1 / (1 + e^(${breakdown.niv.toFixed(4)}×2 - 1)) × 100 = ${breakdown.probability.toFixed(2)}%`}
                 />
               </div>
             </CollapsibleSection>
@@ -702,16 +665,6 @@ function calculateNIVBreakdown(
   const denominatorBase = slack + drag
   const denominator = Math.max(Math.pow(denominatorBase, ETA), EPSILON)
   const niv = numerator / denominator
-
-  // ═══════════════════════════════════════════════════════════════════
-  // STEP D: PROBABILITY & STATUS
-  // Threshold mapping based on 2008/2020 data points
-  // ═══════════════════════════════════════════════════════════════════
-  let probability: number
-  if (niv <= 0) probability = 99
-  else if (niv < 0.015) probability = 85  // High Risk
-  else if (niv < 0.035) probability = 45  // Caution
-  else probability = 5  // Safe
 
   return {
     date: current.date,
@@ -895,7 +848,6 @@ function calculateNIVBreakdown(
     numerator,
     denominator,
     niv,
-    probability,
   }
 }
 
