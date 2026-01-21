@@ -669,7 +669,7 @@ export default function MicroIntegrationPage() {
                   <div className={`text-3xl font-mono font-bold ${analytics.divergenceSignal > 20 ? 'text-red-400' : analytics.divergenceSignal > 10 ? 'text-yellow-400' : 'text-emerald-400'}`}>
                     {analytics.divergenceSignal.toFixed(1)}%
                   </div>
-                  {analytics.correlationBreak && <div className="text-xs text-amber-400 mt-1">⚠ Correlation break detected</div>}
+                  {analytics.correlationBreak && <div className="text-xs text-amber-400 mt-1">[ALERT] Correlation break detected</div>}
                 </div>
 
                 {/* OOS Winner */}
@@ -897,7 +897,7 @@ export default function MicroIntegrationPage() {
                           {r.nivMicro.toFixed(4)}
                         </td>
                         <td className="py-2 px-2 font-mono text-right text-neutral-400">{r.nivTraditional.toFixed(4)}</td>
-                        <td className="py-2 px-2">{r.isRecession ? <span className="text-red-400">●</span> : ''}</td>
+                        <td className="py-2 px-2">{r.isRecession ? <span className="text-red-400">YES</span> : ''}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -961,7 +961,7 @@ function FactorMetricCard({ name, symbol, value, percentile, momentum, icon, col
       <div className="flex items-center justify-between mt-2 text-xs">
         <span className="text-neutral-500">P{percentile.toFixed(0)}</span>
         <span className={momentum >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-          {momentum >= 0 ? '↑' : '↓'} {Math.abs(momentum).toFixed(1)}%
+          {momentum >= 0 ? '+' : '-'}{Math.abs(momentum).toFixed(1)}%
         </span>
       </div>
     </div>

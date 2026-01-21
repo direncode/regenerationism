@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   LineChart,
   Line,
@@ -20,84 +20,58 @@ import {
   Radar,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis
+  PolarRadiusAxis,
+  Treemap
 } from 'recharts'
 
 // ============================================================================
-// NIV REGENERATION THEORY TYPES
+// NIV REGENERATION THEORY - THIRD-ORDER ACCOUNTING
 // ============================================================================
 
 /**
- * NIV (National Impact Velocity) adapted for business-level regeneration analysis
+ * Third-Order Accounting Framework
+ *
+ * Traditional accounting captures historical transactions (first-order).
+ * Third-order accounting projects cumulative capital regeneration capacity
+ * using the NIV framework to reveal true enterprise value creation potential.
  *
  * Core Formula: NIV = (Thrust × Efficiency²) / (Slack + Drag)^η
+ * Projection:   Cₕ = NIV₀ × e^(rₕ×h) × (1 − ρₕ)
  *
- * Where:
- * - Thrust (T): Capital injection momentum, revenue growth impulse
- * - Efficiency (E): Capital productivity, asset utilization
- * - Slack (S): Economic headroom, liquidity buffer
- * - Drag (D): Systemic friction, debt burden, operational inefficiency
- * - η (eta): Non-linear scaling exponent (typically 1.5)
- *
- * Third-Order Projection:
- * - First-Order: NIVₜ = current regeneration velocity
- * - Second-Order: dNIV/dt = acceleration of regeneration
- * - Third-Order: Cₕ = NIV₀ × e^(rₕ×h) × (1 − ρₕ) = cumulative regenerated capital
+ * This reveals what traditional accounting cannot:
+ * - Forward-looking regeneration capacity
+ * - Risk-adjusted capital continuity
+ * - Compounding value creation potential
  */
 
 interface AccountingPeriod {
   period: string
-
-  // Income Statement
   revenue: number
   costOfGoodsSold: number
   operatingExpenses: number
   interestExpense: number
   depreciation: number
   taxes: number
-
-  // Balance Sheet - Assets
   cash: number
   accountsReceivable: number
   inventory: number
   fixedAssets: number
-
-  // Balance Sheet - Liabilities & Equity
   accountsPayable: number
   shortTermDebt: number
   longTermDebt: number
   retainedEarnings: number
   equity: number
-
-  // Cash Flow Items
   capitalExpenditure: number
   dividendsPaid: number
 }
 
 interface NIVComponents {
-  // Core NIV Components with Provenance
-  thrust: {
-    value: number
-    sources: { name: string; contribution: number; weight: number }[]
-  }
-  efficiency: {
-    value: number
-    sources: { name: string; contribution: number; weight: number }[]
-  }
-  slack: {
-    value: number
-    sources: { name: string; contribution: number; weight: number }[]
-  }
-  drag: {
-    value: number
-    sources: { name: string; contribution: number; weight: number }[]
-  }
-
-  // Computed NIV
+  thrust: { value: number; sources: { name: string; contribution: number; weight: number }[] }
+  efficiency: { value: number; sources: { name: string; contribution: number; weight: number }[] }
+  slack: { value: number; sources: { name: string; contribution: number; weight: number }[] }
+  drag: { value: number; sources: { name: string; contribution: number; weight: number }[] }
   niv: number
-  nivRaw: number // Before normalization
-
-  // Regeneration Metrics
+  nivRaw: number
   regenerationRate: number
   capitalVelocity: number
   frictionCoefficient: number
@@ -105,60 +79,77 @@ interface NIVComponents {
 
 interface ThirdOrderAnalysis {
   period: string
-
-  // NIV Components
   components: NIVComponents
-
-  // First-Order: Current State
   currentNIV: number
-
-  // Second-Order: Dynamics
   nivAcceleration: number
   thrustMomentum: number
   dragTrend: number
-
-  // Third-Order: Projections
-  effectiveRate: number        // rₕ = α × avg(NIV) − β × avg(Drag)
-  collapseProb: number         // ρₕ = logistic(γ × Drag − θ)
-  cumulativeRegen: number      // Cₕ = NIV₀ × e^(rₕ×h) × (1 − ρₕ)
+  effectiveRate: number
+  collapseProb: number
+  cumulativeRegen: number
   confidenceLower: number
   confidenceUpper: number
-
-  // Risk Assessment
   riskScore: number
   riskLevel: 'low' | 'moderate' | 'elevated' | 'high' | 'critical'
   riskFactors: { factor: string; severity: number; impact: string }[]
+}
+
+interface SP500Company {
+  symbol: string
+  name: string
+  sector: string
+  marketCap: number
+  nivComponents?: { thrust: number; efficiency: number; slack: number; drag: number; niv: number }
+}
+
+interface DecisionNode {
+  id: string
+  type: 'root' | 'decision' | 'action' | 'outcome'
+  label: string
+  description: string
+  metric?: string
+  currentValue?: number
+  targetValue?: number
+  impact: number
+  probability: number
+  timeframe: string
+  children?: DecisionNode[]
+}
+
+interface ActionPlan {
+  id: string
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  category: 'thrust' | 'efficiency' | 'slack' | 'drag'
+  title: string
+  description: string
+  rationale: string
+  expectedImpact: { nivDelta: number; chDelta: number; riskReduction: number }
+  implementation: { steps: string[]; resources: string[]; metrics: string[] }
+  timeframe: string
+  dependencies: string[]
+}
+
+interface AIAnalysis {
+  currentState: { niv: number; effectiveRate: number; collapseProb: number; cumulativeRegen: number; riskLevel: string }
+  optimizedState: { niv: number; effectiveRate: number; collapseProb: number; cumulativeRegen: number; riskLevel: string }
+  decisionTree: DecisionNode
+  actionPlans: ActionPlan[]
+  insights: string[]
 }
 
 // ============================================================================
 // NIV CALCULATION ENGINE
 // ============================================================================
 
-const NIV_PARAMS = {
-  eta: 1.5,           // Non-linear scaling exponent
-  alpha: 1.1,         // Efficiency multiplier for effective rate
-  beta: 0.8,          // Drag penalty for effective rate
-  gamma: 3.5,         // Drag sensitivity for collapse probability
-  theta: 0.15,        // Tipping threshold
-  horizonYears: 5,    // Projection horizon
-}
+const NIV_PARAMS = { eta: 1.5, alpha: 1.1, beta: 0.8, gamma: 3.5, theta: 0.15, horizonYears: 5 }
 
 function calculateNIVComponents(current: AccountingPeriod, prev: AccountingPeriod | null): NIVComponents {
-  // ============================================================================
-  // THRUST: Capital injection momentum, growth impulse
-  // Sources: Revenue growth, Operating cash flow, Reinvestment rate
-  // ============================================================================
-
-  const revenueGrowth = prev && prev.revenue > 0
-    ? (current.revenue - prev.revenue) / prev.revenue
-    : 0
-
+  const revenueGrowth = prev && prev.revenue > 0 ? (current.revenue - prev.revenue) / prev.revenue : 0
   const ebitda = current.revenue - current.costOfGoodsSold - current.operatingExpenses + current.depreciation
-  const operatingCashFlow = ebitda - (current.accountsReceivable - (prev?.accountsReceivable || current.accountsReceivable))
-                           - (current.inventory - (prev?.inventory || current.inventory))
-                           + (current.accountsPayable - (prev?.accountsPayable || current.accountsPayable))
-  const ocfToRevenue = current.revenue > 0 ? operatingCashFlow / current.revenue : 0
-
+  const ocf = ebitda - (current.accountsReceivable - (prev?.accountsReceivable || current.accountsReceivable))
+            - (current.inventory - (prev?.inventory || current.inventory))
+            + (current.accountsPayable - (prev?.accountsPayable || current.accountsPayable))
+  const ocfToRevenue = current.revenue > 0 ? ocf / current.revenue : 0
   const reinvestmentRate = ebitda > 0 ? current.capitalExpenditure / ebitda : 0
 
   const thrustSources = [
@@ -166,25 +157,13 @@ function calculateNIVComponents(current: AccountingPeriod, prev: AccountingPerio
     { name: 'Operating Cash Flow', contribution: Math.max(0, ocfToRevenue), weight: 0.35 },
     { name: 'Reinvestment Rate', contribution: Math.min(1, reinvestmentRate), weight: 0.25 }
   ]
-
   const thrustValue = thrustSources.reduce((sum, s) => sum + s.contribution * s.weight, 0)
-
-  // ============================================================================
-  // EFFICIENCY: Capital productivity, asset utilization
-  // Sources: Asset turnover, ROA, Operating margin, Inventory turnover
-  // ============================================================================
 
   const totalAssets = current.cash + current.accountsReceivable + current.inventory + current.fixedAssets
   const assetTurnover = totalAssets > 0 ? current.revenue / totalAssets : 0
-
-  const netIncome = current.revenue - current.costOfGoodsSold - current.operatingExpenses
-                   - current.interestExpense - current.depreciation - current.taxes
+  const netIncome = current.revenue - current.costOfGoodsSold - current.operatingExpenses - current.interestExpense - current.depreciation - current.taxes
   const roa = totalAssets > 0 ? netIncome / totalAssets : 0
-
-  const operatingMargin = current.revenue > 0
-    ? (current.revenue - current.costOfGoodsSold - current.operatingExpenses) / current.revenue
-    : 0
-
+  const operatingMargin = current.revenue > 0 ? (current.revenue - current.costOfGoodsSold - current.operatingExpenses) / current.revenue : 0
   const avgInventory = prev ? (current.inventory + prev.inventory) / 2 : current.inventory
   const inventoryTurnover = avgInventory > 0 ? current.costOfGoodsSold / avgInventory : 0
 
@@ -194,55 +173,29 @@ function calculateNIVComponents(current: AccountingPeriod, prev: AccountingPerio
     { name: 'Operating Margin', contribution: Math.max(0, (operatingMargin + 0.05) / 0.25), weight: 0.25 },
     { name: 'Inventory Turnover', contribution: Math.min(1, inventoryTurnover / 12), weight: 0.15 }
   ]
-
   const efficiencyValue = Math.min(1, efficiencySources.reduce((sum, s) => sum + Math.min(1, s.contribution) * s.weight, 0))
-
-  // ============================================================================
-  // SLACK: Economic headroom, liquidity buffer
-  // Sources: Current ratio excess, Cash buffer, Credit availability
-  // ============================================================================
 
   const currentAssets = current.cash + current.accountsReceivable + current.inventory
   const currentLiabilities = current.accountsPayable + current.shortTermDebt
   const currentRatio = currentLiabilities > 0 ? currentAssets / currentLiabilities : 2
-  const currentRatioExcess = Math.max(0, currentRatio - 1) / 2 // Excess above 1.0
-
-  const cashToRevenue = current.revenue > 0 ? current.cash / (current.revenue / 12) : 0 // Months of cash
-  const cashBuffer = Math.min(1, cashToRevenue / 6) // Normalize to 6 months
-
+  const cashToRevenue = current.revenue > 0 ? current.cash / (current.revenue / 12) : 0
+  const cashBuffer = Math.min(1, cashToRevenue / 6)
   const totalDebt = current.shortTermDebt + current.longTermDebt
   const debtCapacity = current.equity > 0 ? Math.max(0, 1 - totalDebt / (current.equity * 2)) : 0
 
   const slackSources = [
-    { name: 'Current Ratio Buffer', contribution: Math.min(1, currentRatioExcess), weight: 0.35 },
+    { name: 'Current Ratio Buffer', contribution: Math.min(1, Math.max(0, currentRatio - 1) / 2), weight: 0.35 },
     { name: 'Cash Runway', contribution: cashBuffer, weight: 0.4 },
     { name: 'Debt Capacity', contribution: debtCapacity, weight: 0.25 }
   ]
-
   const slackValue = slackSources.reduce((sum, s) => sum + s.contribution * s.weight, 0)
 
-  // ============================================================================
-  // DRAG: Systemic friction, debt burden, inefficiency
-  // Sources: Debt service ratio, Interest burden, Operating inefficiency, Fixed cost leverage
-  // ============================================================================
-
-  const debtServiceRatio = ebitda > 0
-    ? (current.interestExpense + current.shortTermDebt * 0.1) / ebitda
-    : 1
-
-  const interestCoverage = current.interestExpense > 0
-    ? (current.revenue - current.costOfGoodsSold - current.operatingExpenses) / current.interestExpense
-    : 10
-  const interestBurden = Math.max(0, 1 - (interestCoverage - 1) / 9) // 1x = max burden, 10x+ = no burden
-
-  const grossMargin = current.revenue > 0
-    ? (current.revenue - current.costOfGoodsSold) / current.revenue
-    : 0
-  const operatingInefficiency = Math.max(0, 0.4 - grossMargin) / 0.4 // Below 40% = inefficient
-
-  const fixedCostRatio = current.revenue > 0
-    ? (current.depreciation + current.interestExpense) / current.revenue
-    : 0
+  const debtServiceRatio = ebitda > 0 ? (current.interestExpense + current.shortTermDebt * 0.1) / ebitda : 1
+  const interestCoverage = current.interestExpense > 0 ? (current.revenue - current.costOfGoodsSold - current.operatingExpenses) / current.interestExpense : 10
+  const interestBurden = Math.max(0, 1 - (interestCoverage - 1) / 9)
+  const grossMargin = current.revenue > 0 ? (current.revenue - current.costOfGoodsSold) / current.revenue : 0
+  const operatingInefficiency = Math.max(0, 0.4 - grossMargin) / 0.4
+  const fixedCostRatio = current.revenue > 0 ? (current.depreciation + current.interestExpense) / current.revenue : 0
   const fixedCostLeverage = Math.min(1, fixedCostRatio / 0.15)
 
   const dragSources = [
@@ -251,39 +204,25 @@ function calculateNIVComponents(current: AccountingPeriod, prev: AccountingPerio
     { name: 'Operating Inefficiency', contribution: operatingInefficiency, weight: 0.25 },
     { name: 'Fixed Cost Leverage', contribution: fixedCostLeverage, weight: 0.15 }
   ]
-
   const dragValue = dragSources.reduce((sum, s) => sum + s.contribution * s.weight, 0)
-
-  // ============================================================================
-  // NIV CALCULATION: NIV = (Thrust × Efficiency²) / (Slack + Drag)^η
-  // ============================================================================
 
   const denominator = Math.pow(Math.max(0.1, slackValue + dragValue), NIV_PARAMS.eta)
   const nivRaw = (thrustValue * Math.pow(efficiencyValue, 2)) / denominator
-  const niv = Math.min(1, Math.max(-1, nivRaw)) // Normalized to [-1, 1]
-
-  // Derived regeneration metrics
-  const regenerationRate = niv * efficiencyValue
-  const capitalVelocity = thrustValue * (1 - dragValue)
-  const frictionCoefficient = dragValue / Math.max(0.1, slackValue + efficiencyValue)
+  const niv = Math.min(1, Math.max(-1, nivRaw))
 
   return {
     thrust: { value: thrustValue, sources: thrustSources },
     efficiency: { value: efficiencyValue, sources: efficiencySources },
     slack: { value: slackValue, sources: slackSources },
     drag: { value: dragValue, sources: dragSources },
-    niv,
-    nivRaw,
-    regenerationRate,
-    capitalVelocity,
-    frictionCoefficient
+    niv, nivRaw,
+    regenerationRate: niv * efficiencyValue,
+    capitalVelocity: thrustValue * (1 - dragValue),
+    frictionCoefficient: dragValue / Math.max(0.1, slackValue + efficiencyValue)
   }
 }
 
-function calculateThirdOrderAnalysis(
-  periods: AccountingPeriod[],
-  index: number
-): ThirdOrderAnalysis {
+function calculateThirdOrderAnalysis(periods: AccountingPeriod[], index: number): ThirdOrderAnalysis {
   const current = periods[index]
   const prev = index > 0 ? periods[index - 1] : null
   const prevPrev = index > 1 ? periods[index - 2] : null
@@ -291,16 +230,12 @@ function calculateThirdOrderAnalysis(
   const components = calculateNIVComponents(current, prev)
   const prevComponents = prev ? calculateNIVComponents(prev, prevPrev) : null
 
-  // Second-Order: Acceleration
   const nivAcceleration = prevComponents ? components.niv - prevComponents.niv : 0
   const thrustMomentum = prevComponents ? components.thrust.value - prevComponents.thrust.value : 0
   const dragTrend = prevComponents ? components.drag.value - prevComponents.drag.value : 0
 
-  // Calculate lookback averages for third-order
   const lookbackPeriods = Math.min(6, index + 1)
-  let avgNIV = 0
-  let avgDrag = 0
-
+  let avgNIV = 0, avgDrag = 0
   for (let i = 0; i < lookbackPeriods; i++) {
     const p = periods[index - i]
     const pPrev = index - i > 0 ? periods[index - i - 1] : null
@@ -311,22 +246,12 @@ function calculateThirdOrderAnalysis(
   avgNIV /= lookbackPeriods
   avgDrag /= lookbackPeriods
 
-  // Third-Order Calculations
-  // rₕ = α × avg(NIV) − β × avg(Drag)
   const effectiveRate = NIV_PARAMS.alpha * avgNIV - NIV_PARAMS.beta * avgDrag
-
-  // ρₕ = 1 / (1 + e^(-(γ × Drag − θ)))
   const collapseProb = 1 / (1 + Math.exp(-(NIV_PARAMS.gamma * avgDrag - NIV_PARAMS.theta)))
-
-  // Cₕ = NIV₀ × e^(rₕ×h) × (1 − ρₕ)
   const cumulativeRegen = components.niv * Math.exp(effectiveRate * NIV_PARAMS.horizonYears) * (1 - collapseProb)
-
-  // Confidence bounds (simplified Monte Carlo approximation)
   const volatility = Math.abs(nivAcceleration) + components.drag.value * 0.5
   const confidenceLower = cumulativeRegen * (1 - volatility * 1.5)
   const confidenceUpper = cumulativeRegen * (1 + volatility * 1.5)
-
-  // Risk Assessment
   const riskScore = collapseProb * 50 + components.drag.value * 30 + (1 - components.efficiency.value) * 20
 
   let riskLevel: ThirdOrderAnalysis['riskLevel'] = 'low'
@@ -336,53 +261,29 @@ function calculateThirdOrderAnalysis(
   else if (riskScore >= 25) riskLevel = 'moderate'
 
   const riskFactors: ThirdOrderAnalysis['riskFactors'] = []
-  if (components.drag.value > 0.5) {
-    riskFactors.push({ factor: 'High Systemic Drag', severity: components.drag.value, impact: 'Reduces regeneration velocity' })
-  }
-  if (collapseProb > 0.3) {
-    riskFactors.push({ factor: 'Elevated Collapse Risk', severity: collapseProb, impact: 'Threatens capital continuity' })
-  }
-  if (components.thrust.value < 0.2) {
-    riskFactors.push({ factor: 'Low Thrust Momentum', severity: 1 - components.thrust.value, impact: 'Insufficient growth impulse' })
-  }
-  if (components.slack.value < 0.2) {
-    riskFactors.push({ factor: 'Limited Slack Buffer', severity: 1 - components.slack.value, impact: 'No headroom for shocks' })
-  }
+  if (components.drag.value > 0.5) riskFactors.push({ factor: 'High Systemic Drag', severity: components.drag.value, impact: 'Reduces regeneration velocity' })
+  if (collapseProb > 0.3) riskFactors.push({ factor: 'Elevated Collapse Risk', severity: collapseProb, impact: 'Threatens capital continuity' })
+  if (components.thrust.value < 0.2) riskFactors.push({ factor: 'Low Thrust Momentum', severity: 1 - components.thrust.value, impact: 'Insufficient growth impulse' })
+  if (components.slack.value < 0.2) riskFactors.push({ factor: 'Limited Slack Buffer', severity: 1 - components.slack.value, impact: 'No headroom for shocks' })
 
   return {
-    period: current.period,
-    components,
-    currentNIV: components.niv,
-    nivAcceleration,
-    thrustMomentum,
-    dragTrend,
-    effectiveRate,
-    collapseProb,
-    cumulativeRegen,
-    confidenceLower,
-    confidenceUpper,
-    riskScore,
-    riskLevel,
-    riskFactors
+    period: current.period, components, currentNIV: components.niv, nivAcceleration, thrustMomentum, dragTrend,
+    effectiveRate, collapseProb, cumulativeRegen, confidenceLower, confidenceUpper, riskScore, riskLevel, riskFactors
   }
 }
 
 // ============================================================================
-// SAMPLE DATA GENERATOR
+// SAMPLE DATA
 // ============================================================================
 
 function generateSampleData(): AccountingPeriod[] {
   const periods: AccountingPeriod[] = []
-  let baseRevenue = 120000
-  let baseCash = 30000
+  let baseRevenue = 120000, baseCash = 30000
 
   for (let i = 0; i < 12; i++) {
     const month = (i + 1).toString().padStart(2, '0')
-    const period = `2024-${month}`
-
     const growthFactor = 1 + (Math.random() * 0.08 - 0.01)
     const seasonality = 1 + Math.sin((i / 12) * Math.PI * 2) * 0.12
-
     const revenue = Math.round(baseRevenue * growthFactor * seasonality)
     const cogs = Math.round(revenue * (0.52 + Math.random() * 0.08))
     const opex = Math.round(revenue * (0.18 + Math.random() * 0.04))
@@ -390,40 +291,23 @@ function generateSampleData(): AccountingPeriod[] {
     const interest = 1800 + Math.round(Math.random() * 400)
     const pretaxIncome = revenue - cogs - opex - depreciation - interest
     const taxes = Math.max(0, Math.round(pretaxIncome * 0.22))
-
     const cash = Math.round(baseCash * (1 + Math.random() * 0.15 - 0.03))
-    const ar = Math.round(revenue * 0.15 * (1 + Math.random() * 0.2 - 0.1))
-    const inventory = Math.round(cogs * 0.08 * (1 + Math.random() * 0.15))
-    const ap = Math.round(cogs * 0.06 * (1 + Math.random() * 0.15))
-
-    const capex = Math.round(revenue * (0.04 + Math.random() * 0.02))
-    const dividends = Math.round(Math.max(0, pretaxIncome - taxes) * 0.2)
 
     periods.push({
-      period,
-      revenue,
-      costOfGoodsSold: cogs,
-      operatingExpenses: opex,
-      interestExpense: interest,
-      depreciation,
-      taxes,
-      cash,
-      accountsReceivable: ar,
-      inventory,
+      period: `2024-${month}`, revenue, costOfGoodsSold: cogs, operatingExpenses: opex,
+      interestExpense: interest, depreciation, taxes, cash,
+      accountsReceivable: Math.round(revenue * 0.15 * (1 + Math.random() * 0.2 - 0.1)),
+      inventory: Math.round(cogs * 0.08 * (1 + Math.random() * 0.15)),
       fixedAssets: 180000 + i * 2000,
-      accountsPayable: ap,
-      shortTermDebt: 25000,
-      longTermDebt: 75000 - i * 500,
-      retainedEarnings: 50000 + i * 3000,
-      equity: 120000 + i * 3000,
-      capitalExpenditure: capex,
-      dividendsPaid: dividends
+      accountsPayable: Math.round(cogs * 0.06 * (1 + Math.random() * 0.15)),
+      shortTermDebt: 25000, longTermDebt: 75000 - i * 500,
+      retainedEarnings: 50000 + i * 3000, equity: 120000 + i * 3000,
+      capitalExpenditure: Math.round(revenue * (0.04 + Math.random() * 0.02)),
+      dividendsPaid: Math.round(Math.max(0, pretaxIncome - taxes) * 0.2)
     })
-
     baseRevenue = revenue
     baseCash = cash
   }
-
   return periods
 }
 
@@ -432,11 +316,12 @@ function generateSampleData(): AccountingPeriod[] {
 // ============================================================================
 
 const formatCurrency = (n: number) => {
+  if (Math.abs(n) >= 1e12) return `$${(n / 1e12).toFixed(1)}T`
+  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`
   if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
   if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(1)}K`
   return `$${n.toLocaleString()}`
 }
-
 const formatPercent = (n: number) => `${(n * 100).toFixed(1)}%`
 const formatNumber = (n: number, d = 4) => isNaN(n) || !isFinite(n) ? 'N/A' : n.toFixed(d)
 
@@ -452,13 +337,18 @@ const getRiskColor = (level: string) => {
 }
 
 const getComponentColor = (component: string) => {
-  const colors: Record<string, string> = {
-    thrust: '#22d3ee',    // cyan
-    efficiency: '#a78bfa', // purple
-    slack: '#34d399',      // emerald
-    drag: '#f87171'        // red
-  }
+  const colors: Record<string, string> = { thrust: '#22d3ee', efficiency: '#a78bfa', slack: '#34d399', drag: '#f87171' }
   return colors[component] || '#9ca3af'
+}
+
+const getPriorityColor = (priority: string) => {
+  const colors: Record<string, string> = {
+    critical: 'border-red-500 bg-red-500/10',
+    high: 'border-orange-500 bg-orange-500/10',
+    medium: 'border-yellow-500 bg-yellow-500/10',
+    low: 'border-neutral-500 bg-neutral-500/10'
+  }
+  return colors[priority] || ''
 }
 
 // ============================================================================
@@ -468,15 +358,19 @@ const getComponentColor = (component: string) => {
 export default function ThirdOrderAccountingPage() {
   const [accountingData, setAccountingData] = useState<AccountingPeriod[]>(generateSampleData)
   const [selectedPeriod, setSelectedPeriod] = useState(11)
-  const [activeTab, setActiveTab] = useState<'overview' | 'components' | 'engine' | 'provenance'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'components' | 'engine' | 'sp500' | 'ai-engine' | 'provenance'>('overview')
   const [editMode, setEditMode] = useState(false)
 
-  // Compute all analyses
-  const analyses = useMemo(() =>
-    accountingData.map((_, i) => calculateThirdOrderAnalysis(accountingData, i)),
-    [accountingData]
-  )
+  // S&P 500 State
+  const [sp500Data, setSp500Data] = useState<SP500Company[]>([])
+  const [sp500Loading, setSp500Loading] = useState(false)
+  const [sp500Error, setSp500Error] = useState<string | null>(null)
 
+  // AI Engine State
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+
+  const analyses = useMemo(() => accountingData.map((_, i) => calculateThirdOrderAnalysis(accountingData, i)), [accountingData])
   const currentAnalysis = analyses[selectedPeriod]
   const currentData = accountingData[selectedPeriod]
 
@@ -488,12 +382,59 @@ export default function ThirdOrderAccountingPage() {
     })
   }, [selectedPeriod])
 
-  const resetData = () => {
-    setAccountingData(generateSampleData())
-    setSelectedPeriod(11)
+  const resetData = () => { setAccountingData(generateSampleData()); setSelectedPeriod(11) }
+
+  // Fetch S&P 500 data
+  const fetchSP500 = async () => {
+    setSp500Loading(true)
+    setSp500Error(null)
+    try {
+      const res = await fetch('/api/sp500?mode=demo')
+      const data = await res.json()
+      if (data.success) {
+        setSp500Data(data.companies)
+      } else {
+        setSp500Error(data.error || 'Failed to fetch data')
+      }
+    } catch {
+      setSp500Error('Network error')
+    }
+    setSp500Loading(false)
   }
 
-  // Radar chart data for NIV components
+  // Fetch AI Analysis
+  const fetchAIAnalysis = async () => {
+    setAiLoading(true)
+    try {
+      const res = await fetch('/api/ai-decision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thrust: currentAnalysis.components.thrust.value,
+          efficiency: currentAnalysis.components.efficiency.value,
+          slack: currentAnalysis.components.slack.value,
+          drag: currentAnalysis.components.drag.value
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setAiAnalysis(data.analysis)
+      }
+    } catch (e) {
+      console.error('AI Analysis error:', e)
+    }
+    setAiLoading(false)
+  }
+
+  useEffect(() => {
+    if (activeTab === 'sp500' && sp500Data.length === 0) fetchSP500()
+    if (activeTab === 'ai-engine' && !aiAnalysis) fetchAIAnalysis()
+  }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'ai-engine') fetchAIAnalysis()
+  }, [selectedPeriod])
+
   const radarData = [
     { component: 'Thrust', value: currentAnalysis.components.thrust.value, fullMark: 1 },
     { component: 'Efficiency', value: currentAnalysis.components.efficiency.value, fullMark: 1 },
@@ -507,15 +448,15 @@ export default function ThirdOrderAccountingPage() {
       <div className="bg-gradient-to-r from-cyan-950 via-neutral-950 to-purple-950 border-b border-neutral-800 py-6 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold text-white">Third-Order Regeneration Engine</h1>
+            <h1 className="text-2xl font-bold text-white">Third-Order Accounting</h1>
             <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded border border-cyan-500/30">NIV</span>
             <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-bold rounded border border-amber-500/30">BETA</span>
           </div>
           <p className="text-neutral-400 text-sm mb-3">
-            Business-level NIV analysis with exponential compounding projections
+            Beyond traditional accounting: Forward-looking capital regeneration analysis
           </p>
           <div className="font-mono text-xs text-neutral-500 bg-neutral-900/50 px-3 py-1.5 rounded inline-block">
-            NIV = (T × E²) / (S + D)<sup>η</sup> → Cₕ = NIV₀ × e<sup>(rₕ×h)</sup> × (1 − ρₕ)
+            NIV = (T x E^2) / (S + D)^n | Ch = NIV0 x e^(rh x h) x (1 - ph)
           </div>
         </div>
       </div>
@@ -526,27 +467,15 @@ export default function ThirdOrderAccountingPage() {
           <span className="text-sm text-neutral-500">Period:</span>
           <div className="flex gap-1 overflow-x-auto">
             {accountingData.map((p, i) => (
-              <button
-                key={p.period}
-                onClick={() => setSelectedPeriod(i)}
-                className={`px-3 py-1.5 text-xs rounded font-mono transition ${
-                  selectedPeriod === i
-                    ? 'bg-cyan-600 text-white'
-                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-                }`}
-              >
+              <button key={p.period} onClick={() => setSelectedPeriod(i)}
+                className={`px-3 py-1.5 text-xs rounded font-mono transition ${selectedPeriod === i ? 'bg-cyan-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'}`}>
                 {p.period}
               </button>
             ))}
           </div>
           <div className="flex-1" />
-          <button onClick={resetData} className="px-3 py-1.5 text-xs bg-neutral-800 text-neutral-400 rounded hover:bg-neutral-700">
-            Reset
-          </button>
-          <button
-            onClick={() => setEditMode(!editMode)}
-            className={`px-3 py-1.5 text-xs rounded ${editMode ? 'bg-amber-600 text-white' : 'bg-neutral-800 text-neutral-300'}`}
-          >
+          <button onClick={resetData} className="px-3 py-1.5 text-xs bg-neutral-800 text-neutral-400 rounded hover:bg-neutral-700">Reset</button>
+          <button onClick={() => setEditMode(!editMode)} className={`px-3 py-1.5 text-xs rounded ${editMode ? 'bg-amber-600 text-white' : 'bg-neutral-800 text-neutral-300'}`}>
             {editMode ? 'Done' : 'Edit'}
           </button>
         </div>
@@ -555,23 +484,17 @@ export default function ThirdOrderAccountingPage() {
       {/* Tab Navigation */}
       <div className="bg-neutral-900/30 border-b border-neutral-800">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto">
             {[
-              { id: 'overview', label: 'NIV Overview', icon: '◉' },
-              { id: 'components', label: 'Component Mapping', icon: '⬡' },
-              { id: 'engine', label: 'Third-Order Engine', icon: '∞' },
-              { id: 'provenance', label: 'Provenance & Data', icon: '⊞' }
+              { id: 'overview', label: 'NIV Overview' },
+              { id: 'components', label: 'Component Mapping' },
+              { id: 'engine', label: 'Third-Order Engine' },
+              { id: 'sp500', label: 'S&P 500 Analysis' },
+              { id: 'ai-engine', label: 'AI Decision Engine' },
+              { id: 'provenance', label: 'Data Provenance' }
             ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-5 py-3 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-b-2 border-cyan-500 text-cyan-400'
-                    : 'text-neutral-500 hover:text-neutral-300'
-                }`}
-              >
-                <span className="mr-2">{tab.icon}</span>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`px-5 py-3 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.id ? 'border-b-2 border-cyan-500 text-cyan-400' : 'text-neutral-500 hover:text-neutral-300'}`}>
                 {tab.label}
               </button>
             ))}
@@ -584,6 +507,25 @@ export default function ThirdOrderAccountingPage() {
         {/* Tab: NIV Overview */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {/* Value Proposition */}
+            <div className="bg-gradient-to-r from-cyan-900/20 to-purple-900/20 border border-neutral-700 rounded-xl p-5">
+              <h3 className="text-lg font-bold text-white mb-3">The True Value of Third-Order Accounting</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-neutral-900/50 rounded-lg p-4">
+                  <div className="text-cyan-400 font-semibold mb-2">Traditional Accounting</div>
+                  <p className="text-neutral-400">Records historical transactions. Backward-looking. Tells you what happened.</p>
+                </div>
+                <div className="bg-neutral-900/50 rounded-lg p-4">
+                  <div className="text-purple-400 font-semibold mb-2">Third-Order Accounting</div>
+                  <p className="text-neutral-400">Projects regeneration capacity. Forward-looking. Reveals future value creation potential.</p>
+                </div>
+                <div className="bg-neutral-900/50 rounded-lg p-4">
+                  <div className="text-emerald-400 font-semibold mb-2">Key Insight</div>
+                  <p className="text-neutral-400">Ch (cumulative regeneration) captures what book value cannot: risk-adjusted compounding capacity.</p>
+                </div>
+              </div>
+            </div>
+
             {/* Primary Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-gradient-to-br from-cyan-900/30 to-neutral-900 border border-cyan-500/30 rounded-xl p-4">
@@ -593,7 +535,6 @@ export default function ThirdOrderAccountingPage() {
                 </div>
                 <div className="text-xs text-neutral-500 mt-1">Regeneration velocity</div>
               </div>
-
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
                 <div className="text-xs text-neutral-400 mb-1">NIV ACCELERATION</div>
                 <div className={`text-2xl font-bold ${currentAnalysis.nivAcceleration >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -601,25 +542,22 @@ export default function ThirdOrderAccountingPage() {
                 </div>
                 <div className="text-xs text-neutral-500 mt-1">dNIV/dt</div>
               </div>
-
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
                 <div className="text-xs text-neutral-400 mb-1">EFFECTIVE RATE</div>
                 <div className={`text-2xl font-bold ${currentAnalysis.effectiveRate >= 0 ? 'text-purple-400' : 'text-orange-400'}`}>
                   {formatNumber(currentAnalysis.effectiveRate, 3)}
                 </div>
-                <div className="text-xs text-neutral-500 mt-1">rₕ = α×NIV − β×Drag</div>
+                <div className="text-xs text-neutral-500 mt-1">rh = a x NIV - b x Drag</div>
               </div>
-
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
                 <div className="text-xs text-neutral-400 mb-1">COLLAPSE PROB</div>
                 <div className={`text-2xl font-bold ${currentAnalysis.collapseProb < 0.2 ? 'text-emerald-400' : currentAnalysis.collapseProb < 0.4 ? 'text-yellow-400' : 'text-red-400'}`}>
                   {formatPercent(currentAnalysis.collapseProb)}
                 </div>
-                <div className="text-xs text-neutral-500 mt-1">ρₕ risk factor</div>
+                <div className="text-xs text-neutral-500 mt-1">ph risk factor</div>
               </div>
-
               <div className="bg-gradient-to-br from-purple-900/30 to-neutral-900 border border-purple-500/30 rounded-xl p-4">
-                <div className="text-xs text-purple-400 mb-1 font-semibold">CUMULATIVE Cₕ</div>
+                <div className="text-xs text-purple-400 mb-1 font-semibold">CUMULATIVE Ch</div>
                 <div className={`text-3xl font-bold ${currentAnalysis.cumulativeRegen >= 0 ? 'text-purple-400' : 'text-red-400'}`}>
                   {formatNumber(currentAnalysis.cumulativeRegen, 3)}
                 </div>
@@ -627,7 +565,7 @@ export default function ThirdOrderAccountingPage() {
               </div>
             </div>
 
-            {/* Component Radar & Risk */}
+            {/* Radar & Risk */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-white mb-4">NIV Component Balance</h3>
@@ -647,9 +585,7 @@ export default function ThirdOrderAccountingPage() {
                     { key: 'drag', label: 'Drag', value: currentAnalysis.components.drag.value }
                   ].map(c => (
                     <div key={c.key} className="bg-neutral-800/50 rounded-lg p-2">
-                      <div className="text-lg font-bold" style={{ color: getComponentColor(c.key) }}>
-                        {formatPercent(c.value)}
-                      </div>
+                      <div className="text-lg font-bold" style={{ color: getComponentColor(c.key) }}>{formatPercent(c.value)}</div>
                       <div className="text-xs text-neutral-500">{c.label}</div>
                     </div>
                   ))}
@@ -667,7 +603,6 @@ export default function ThirdOrderAccountingPage() {
                     <div className="text-sm text-neutral-500">Composite Score</div>
                   </div>
                 </div>
-
                 {currentAnalysis.riskFactors.length > 0 ? (
                   <div className="space-y-3">
                     {currentAnalysis.riskFactors.map((rf, i) => (
@@ -684,15 +619,12 @@ export default function ThirdOrderAccountingPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center text-neutral-500 py-8">
-                    <span className="text-3xl block mb-2">✓</span>
-                    No significant risk factors detected
-                  </div>
+                  <div className="text-center text-neutral-500 py-8">No significant risk factors detected</div>
                 )}
               </div>
             </div>
 
-            {/* NIV Evolution Chart */}
+            {/* Evolution Chart */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
               <h3 className="text-lg font-semibold text-white mb-4">NIV Regeneration Evolution</h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -701,14 +633,11 @@ export default function ThirdOrderAccountingPage() {
                   <XAxis dataKey="period" stroke="#9ca3af" tick={{ fontSize: 11 }} />
                   <YAxis yAxisId="left" stroke="#9ca3af" />
                   <YAxis yAxisId="right" orientation="right" stroke="#9ca3af" />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-                    formatter={(value: number, name: string) => [formatNumber(value, 4), name]}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(value: number, name: string) => [formatNumber(value, 4), name]} />
                   <Legend />
-                  <Area yAxisId="left" type="monotone" dataKey="cumulativeRegen" fill="#a78bfa" stroke="#a78bfa" fillOpacity={0.2} name="Cₕ Projection" />
+                  <Area yAxisId="left" type="monotone" dataKey="cumulativeRegen" fill="#a78bfa" stroke="#a78bfa" fillOpacity={0.2} name="Ch Projection" />
                   <Line yAxisId="left" type="monotone" dataKey="currentNIV" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3 }} name="NIV" />
-                  <Line yAxisId="right" type="monotone" dataKey="collapseProb" stroke="#f87171" strokeWidth={2} strokeDasharray="5 5" name="Collapse ρ" />
+                  <Line yAxisId="right" type="monotone" dataKey="collapseProb" stroke="#f87171" strokeWidth={2} strokeDasharray="5 5" name="Collapse p" />
                   <ReferenceLine yAxisId="left" y={0} stroke="#6b7280" />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -722,128 +651,49 @@ export default function ThirdOrderAccountingPage() {
             <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-5">
               <h3 className="text-sm font-semibold text-cyan-300 mb-2">NIV Component Mapping</h3>
               <p className="text-sm text-neutral-400">
-                Each NIV component is derived from specific accounting metrics. The formula
-                <span className="font-mono text-cyan-400 mx-1">NIV = (T × E²) / (S + D)^η</span>
+                Each NIV component derives from specific accounting metrics. The formula NIV = (T x E^2) / (S + D)^n
                 compounds efficiency while balancing thrust against friction.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Thrust */}
-              <div className="bg-neutral-900 border-2 border-cyan-500/30 rounded-xl p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                    <span className="text-cyan-400 text-xl">↗</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-cyan-400">THRUST (T)</h3>
-                    <p className="text-xs text-neutral-500">Capital injection momentum</p>
-                  </div>
-                  <div className="ml-auto text-2xl font-bold text-cyan-400">
-                    {formatPercent(currentAnalysis.components.thrust.value)}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {currentAnalysis.components.thrust.sources.map((s, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-neutral-400">{s.name}</span>
-                        <span className="text-neutral-300">{formatPercent(s.contribution)} × {s.weight}</span>
+              {['thrust', 'efficiency', 'slack', 'drag'].map(comp => {
+                const data = currentAnalysis.components[comp as keyof typeof currentAnalysis.components] as NIVComponents['thrust']
+                const labels: Record<string, { title: string; desc: string; symbol: string }> = {
+                  thrust: { title: 'THRUST (T)', desc: 'Capital injection momentum', symbol: 'T' },
+                  efficiency: { title: 'EFFICIENCY (E)', desc: 'Capital productivity (squared in NIV)', symbol: 'E' },
+                  slack: { title: 'SLACK (S)', desc: 'Economic headroom buffer', symbol: 'S' },
+                  drag: { title: 'DRAG (D)', desc: 'Systemic friction and burden', symbol: 'D' }
+                }
+                const info = labels[comp]
+                return (
+                  <div key={comp} className={`bg-neutral-900 border-2 rounded-xl p-5`} style={{ borderColor: `${getComponentColor(comp)}40` }}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold" style={{ backgroundColor: `${getComponentColor(comp)}20`, color: getComponentColor(comp) }}>
+                        {info.symbol}
                       </div>
-                      <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-cyan-500" style={{ width: `${Math.min(100, s.contribution * 100)}%` }} />
+                      <div>
+                        <h3 className="text-lg font-semibold" style={{ color: getComponentColor(comp) }}>{info.title}</h3>
+                        <p className="text-xs text-neutral-500">{info.desc}</p>
                       </div>
+                      <div className="ml-auto text-2xl font-bold" style={{ color: getComponentColor(comp) }}>{formatPercent(data.value)}</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Efficiency */}
-              <div className="bg-neutral-900 border-2 border-purple-500/30 rounded-xl p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                    <span className="text-purple-400 text-xl">⚡</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-purple-400">EFFICIENCY (E)</h3>
-                    <p className="text-xs text-neutral-500">Capital productivity (squared in NIV)</p>
-                  </div>
-                  <div className="ml-auto text-2xl font-bold text-purple-400">
-                    {formatPercent(currentAnalysis.components.efficiency.value)}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {currentAnalysis.components.efficiency.sources.map((s, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-neutral-400">{s.name}</span>
-                        <span className="text-neutral-300">{formatPercent(s.contribution)} × {s.weight}</span>
-                      </div>
-                      <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500" style={{ width: `${Math.min(100, s.contribution * 100)}%` }} />
-                      </div>
+                    <div className="space-y-3">
+                      {data.sources.map((s, i) => (
+                        <div key={i}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-neutral-400">{s.name}</span>
+                            <span className="text-neutral-300">{formatPercent(s.contribution)} x {s.weight}</span>
+                          </div>
+                          <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                            <div className="h-full" style={{ width: `${Math.min(100, s.contribution * 100)}%`, backgroundColor: getComponentColor(comp) }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Slack */}
-              <div className="bg-neutral-900 border-2 border-emerald-500/30 rounded-xl p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                    <span className="text-emerald-400 text-xl">◇</span>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-emerald-400">SLACK (S)</h3>
-                    <p className="text-xs text-neutral-500">Economic headroom buffer</p>
-                  </div>
-                  <div className="ml-auto text-2xl font-bold text-emerald-400">
-                    {formatPercent(currentAnalysis.components.slack.value)}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {currentAnalysis.components.slack.sources.map((s, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-neutral-400">{s.name}</span>
-                        <span className="text-neutral-300">{formatPercent(s.contribution)} × {s.weight}</span>
-                      </div>
-                      <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, s.contribution * 100)}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Drag */}
-              <div className="bg-neutral-900 border-2 border-red-500/30 rounded-xl p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-                    <span className="text-red-400 text-xl">▼</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-red-400">DRAG (D)</h3>
-                    <p className="text-xs text-neutral-500">Systemic friction & burden</p>
-                  </div>
-                  <div className="ml-auto text-2xl font-bold text-red-400">
-                    {formatPercent(currentAnalysis.components.drag.value)}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {currentAnalysis.components.drag.sources.map((s, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-neutral-400">{s.name}</span>
-                        <span className="text-neutral-300">{formatPercent(s.contribution)} × {s.weight}</span>
-                      </div>
-                      <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-red-500" style={{ width: `${Math.min(100, s.contribution * 100)}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                )
+              })}
             </div>
 
             {/* Component Trends */}
@@ -854,10 +704,7 @@ export default function ThirdOrderAccountingPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="period" stroke="#9ca3af" tick={{ fontSize: 11 }} />
                   <YAxis stroke="#9ca3af" domain={[0, 1]} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-                    formatter={(value: number) => formatPercent(value)}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(value: number) => formatPercent(value)} />
                   <Legend />
                   <Line type="monotone" dataKey="components.thrust.value" stroke="#22d3ee" strokeWidth={2} name="Thrust" dot={false} />
                   <Line type="monotone" dataKey="components.efficiency.value" stroke="#a78bfa" strokeWidth={2} name="Efficiency" dot={false} />
@@ -872,80 +719,62 @@ export default function ThirdOrderAccountingPage() {
         {/* Tab: Third-Order Engine */}
         {activeTab === 'engine' && (
           <div className="space-y-6">
-            {/* Formula Explanation */}
             <div className="bg-gradient-to-r from-purple-900/30 via-neutral-900 to-cyan-900/30 border border-neutral-700 rounded-xl p-6">
               <h3 className="text-lg font-bold text-white mb-4">Third-Order Regeneration Engine</h3>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-neutral-900/80 rounded-lg p-4">
                   <div className="text-cyan-400 font-semibold mb-2">First-Order</div>
-                  <div className="font-mono text-lg text-white mb-2">NIVₜ</div>
-                  <p className="text-xs text-neutral-400">Current regeneration velocity at time t. Represents instantaneous capital regeneration rate.</p>
+                  <div className="font-mono text-lg text-white mb-2">NIVt</div>
+                  <p className="text-xs text-neutral-400">Current regeneration velocity. Instantaneous capital regeneration rate.</p>
                 </div>
-
                 <div className="bg-neutral-900/80 rounded-lg p-4">
                   <div className="text-purple-400 font-semibold mb-2">Second-Order</div>
                   <div className="font-mono text-lg text-white mb-2">dNIV/dt</div>
-                  <p className="text-xs text-neutral-400">Acceleration of regeneration. Positive = improving momentum, Negative = decelerating.</p>
+                  <p className="text-xs text-neutral-400">Acceleration of regeneration. Positive = improving, Negative = decelerating.</p>
                 </div>
-
                 <div className="bg-neutral-900/80 rounded-lg p-4">
                   <div className="text-emerald-400 font-semibold mb-2">Third-Order</div>
-                  <div className="font-mono text-lg text-white mb-2">Cₕ = NIV₀ × e<sup>rₕ×h</sup> × (1−ρₕ)</div>
+                  <div className="font-mono text-lg text-white mb-2">Ch = NIV0 x e^(rh x h) x (1-ph)</div>
                   <p className="text-xs text-neutral-400">Cumulative regenerated capital after horizon h years, risk-adjusted.</p>
                 </div>
               </div>
             </div>
 
-            {/* Engine Parameters */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-                <div className="text-xs text-neutral-500 mb-1">η (eta)</div>
-                <div className="text-2xl font-bold text-neutral-200">{NIV_PARAMS.eta}</div>
-                <div className="text-xs text-neutral-600">Nonlinear exponent</div>
-              </div>
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-                <div className="text-xs text-neutral-500 mb-1">α (alpha)</div>
-                <div className="text-2xl font-bold text-neutral-200">{NIV_PARAMS.alpha}</div>
-                <div className="text-xs text-neutral-600">Efficiency multiplier</div>
-              </div>
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-                <div className="text-xs text-neutral-500 mb-1">β (beta)</div>
-                <div className="text-2xl font-bold text-neutral-200">{NIV_PARAMS.beta}</div>
-                <div className="text-xs text-neutral-600">Drag penalty</div>
-              </div>
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-                <div className="text-xs text-neutral-500 mb-1">γ / θ</div>
-                <div className="text-2xl font-bold text-neutral-200">{NIV_PARAMS.gamma} / {NIV_PARAMS.theta}</div>
-                <div className="text-xs text-neutral-600">Collapse sensitivity</div>
-              </div>
+              {[
+                { label: 'n (eta)', value: NIV_PARAMS.eta, desc: 'Nonlinear exponent' },
+                { label: 'a (alpha)', value: NIV_PARAMS.alpha, desc: 'Efficiency multiplier' },
+                { label: 'b (beta)', value: NIV_PARAMS.beta, desc: 'Drag penalty' },
+                { label: 'g / th', value: `${NIV_PARAMS.gamma} / ${NIV_PARAMS.theta}`, desc: 'Collapse sensitivity' }
+              ].map(p => (
+                <div key={p.label} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                  <div className="text-xs text-neutral-500 mb-1">{p.label}</div>
+                  <div className="text-2xl font-bold text-neutral-200">{p.value}</div>
+                  <div className="text-xs text-neutral-600">{p.desc}</div>
+                </div>
+              ))}
             </div>
 
-            {/* Projection Chart with Confidence */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-              <h3 className="text-lg font-semibold text-white mb-4">Cumulative Regeneration Projection (Cₕ)</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">Cumulative Regeneration Projection (Ch)</h3>
               <ResponsiveContainer width="100%" height={350}>
                 <ComposedChart data={analyses}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="period" stroke="#9ca3af" tick={{ fontSize: 11 }} />
                   <YAxis stroke="#9ca3af" />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-                    formatter={(value: number, name: string) => [formatNumber(value, 4), name]}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(value: number, name: string) => [formatNumber(value, 4), name]} />
                   <Legend />
                   <Area type="monotone" dataKey="confidenceUpper" stroke="none" fill="#a78bfa" fillOpacity={0.15} name="95% Upper" />
                   <Area type="monotone" dataKey="confidenceLower" stroke="none" fill="#a78bfa" fillOpacity={0.15} name="95% Lower" />
-                  <Line type="monotone" dataKey="cumulativeRegen" stroke="#a78bfa" strokeWidth={3} dot={{ r: 4 }} name="Cₕ" />
-                  <Line type="monotone" dataKey="effectiveRate" stroke="#22d3ee" strokeWidth={2} strokeDasharray="5 5" name="rₕ" />
+                  <Line type="monotone" dataKey="cumulativeRegen" stroke="#a78bfa" strokeWidth={3} dot={{ r: 4 }} name="Ch" />
+                  <Line type="monotone" dataKey="effectiveRate" stroke="#22d3ee" strokeWidth={2} strokeDasharray="5 5" name="rh" />
                   <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Detailed Metrics Table */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-              <h3 className="text-lg font-semibold text-white mb-4">Third-Order Analysis History</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">Analysis History</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -953,9 +782,9 @@ export default function ThirdOrderAccountingPage() {
                       <th className="text-left py-2 px-2 text-neutral-400">Period</th>
                       <th className="text-right py-2 px-2 text-cyan-400">NIV</th>
                       <th className="text-right py-2 px-2 text-neutral-400">dNIV/dt</th>
-                      <th className="text-right py-2 px-2 text-neutral-400">rₕ</th>
-                      <th className="text-right py-2 px-2 text-neutral-400">ρₕ</th>
-                      <th className="text-right py-2 px-2 text-purple-400">Cₕ</th>
+                      <th className="text-right py-2 px-2 text-neutral-400">rh</th>
+                      <th className="text-right py-2 px-2 text-neutral-400">ph</th>
+                      <th className="text-right py-2 px-2 text-purple-400">Ch</th>
                       <th className="text-right py-2 px-2 text-neutral-400">Risk</th>
                     </tr>
                   </thead>
@@ -963,20 +792,12 @@ export default function ThirdOrderAccountingPage() {
                     {analyses.map((a, i) => (
                       <tr key={a.period} className={`border-b border-neutral-800 ${i === selectedPeriod ? 'bg-cyan-500/10' : 'hover:bg-neutral-800/50'}`}>
                         <td className="py-2 px-2 font-mono text-neutral-300">{a.period}</td>
-                        <td className={`py-2 px-2 text-right font-mono ${a.currentNIV >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
-                          {formatNumber(a.currentNIV, 4)}
-                        </td>
-                        <td className={`py-2 px-2 text-right font-mono ${a.nivAcceleration >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {a.nivAcceleration >= 0 ? '+' : ''}{formatNumber(a.nivAcceleration, 4)}
-                        </td>
+                        <td className={`py-2 px-2 text-right font-mono ${a.currentNIV >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>{formatNumber(a.currentNIV, 4)}</td>
+                        <td className={`py-2 px-2 text-right font-mono ${a.nivAcceleration >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{a.nivAcceleration >= 0 ? '+' : ''}{formatNumber(a.nivAcceleration, 4)}</td>
                         <td className="py-2 px-2 text-right font-mono text-neutral-300">{formatNumber(a.effectiveRate, 3)}</td>
                         <td className="py-2 px-2 text-right font-mono text-neutral-300">{formatPercent(a.collapseProb)}</td>
-                        <td className={`py-2 px-2 text-right font-mono font-bold ${a.cumulativeRegen >= 0 ? 'text-purple-400' : 'text-red-400'}`}>
-                          {formatNumber(a.cumulativeRegen, 3)}
-                        </td>
-                        <td className="py-2 px-2 text-right">
-                          <span className={`px-2 py-0.5 rounded text-xs ${getRiskColor(a.riskLevel)}`}>{a.riskLevel}</span>
-                        </td>
+                        <td className={`py-2 px-2 text-right font-mono font-bold ${a.cumulativeRegen >= 0 ? 'text-purple-400' : 'text-red-400'}`}>{formatNumber(a.cumulativeRegen, 3)}</td>
+                        <td className="py-2 px-2 text-right"><span className={`px-2 py-0.5 rounded text-xs ${getRiskColor(a.riskLevel)}`}>{a.riskLevel}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -986,18 +807,301 @@ export default function ThirdOrderAccountingPage() {
           </div>
         )}
 
-        {/* Tab: Provenance & Data */}
+        {/* Tab: S&P 500 Analysis */}
+        {activeTab === 'sp500' && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-emerald-900/20 to-cyan-900/20 border border-neutral-700 rounded-xl p-5">
+              <h3 className="text-lg font-bold text-white mb-2">S&P 500 Third-Order Analysis</h3>
+              <p className="text-sm text-neutral-400">Real-time NIV analysis of top S&P 500 companies reveals regeneration capacity invisible to traditional metrics.</p>
+            </div>
+
+            <div className="flex gap-4 items-center">
+              <button onClick={fetchSP500} disabled={sp500Loading} className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50">
+                {sp500Loading ? 'Loading...' : 'Refresh Data'}
+              </button>
+              {sp500Error && <span className="text-red-400 text-sm">{sp500Error}</span>}
+              <span className="text-neutral-500 text-sm">{sp500Data.length} companies loaded</span>
+            </div>
+
+            {sp500Data.length > 0 && (
+              <>
+                {/* Aggregate Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                    <div className="text-xs text-neutral-500 mb-1">Avg NIV</div>
+                    <div className="text-2xl font-bold text-cyan-400">{formatNumber(sp500Data.reduce((s, c) => s + (c.nivComponents?.niv || 0), 0) / sp500Data.length, 4)}</div>
+                  </div>
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                    <div className="text-xs text-neutral-500 mb-1">Avg Thrust</div>
+                    <div className="text-2xl font-bold text-cyan-400">{formatPercent(sp500Data.reduce((s, c) => s + (c.nivComponents?.thrust || 0), 0) / sp500Data.length)}</div>
+                  </div>
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                    <div className="text-xs text-neutral-500 mb-1">Avg Efficiency</div>
+                    <div className="text-2xl font-bold text-purple-400">{formatPercent(sp500Data.reduce((s, c) => s + (c.nivComponents?.efficiency || 0), 0) / sp500Data.length)}</div>
+                  </div>
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                    <div className="text-xs text-neutral-500 mb-1">Avg Slack</div>
+                    <div className="text-2xl font-bold text-emerald-400">{formatPercent(sp500Data.reduce((s, c) => s + (c.nivComponents?.slack || 0), 0) / sp500Data.length)}</div>
+                  </div>
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                    <div className="text-xs text-neutral-500 mb-1">Avg Drag</div>
+                    <div className="text-2xl font-bold text-red-400">{formatPercent(sp500Data.reduce((s, c) => s + (c.nivComponents?.drag || 0), 0) / sp500Data.length)}</div>
+                  </div>
+                </div>
+
+                {/* NIV Ranking Chart */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-white mb-4">NIV Ranking (Top 15)</h3>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={sp500Data.slice(0, 15)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis type="number" stroke="#9ca3af" domain={[0, 'auto']} />
+                      <YAxis dataKey="symbol" type="category" width={60} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                        formatter={(value: number) => formatNumber(value, 4)} />
+                      <Bar dataKey="nivComponents.niv" fill="#22d3ee" name="NIV" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Company Table */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-white mb-4">Company Analysis</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-neutral-700">
+                          <th className="text-left py-2 px-2 text-neutral-400">Symbol</th>
+                          <th className="text-left py-2 px-2 text-neutral-400">Name</th>
+                          <th className="text-left py-2 px-2 text-neutral-400">Sector</th>
+                          <th className="text-right py-2 px-2 text-neutral-400">Market Cap</th>
+                          <th className="text-right py-2 px-2 text-cyan-400">NIV</th>
+                          <th className="text-right py-2 px-2 text-neutral-400">T</th>
+                          <th className="text-right py-2 px-2 text-neutral-400">E</th>
+                          <th className="text-right py-2 px-2 text-neutral-400">S</th>
+                          <th className="text-right py-2 px-2 text-neutral-400">D</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sp500Data.map(c => (
+                          <tr key={c.symbol} className="border-b border-neutral-800 hover:bg-neutral-800/50">
+                            <td className="py-2 px-2 font-mono font-bold text-white">{c.symbol}</td>
+                            <td className="py-2 px-2 text-neutral-300 truncate max-w-[150px]">{c.name}</td>
+                            <td className="py-2 px-2 text-neutral-500">{c.sector}</td>
+                            <td className="py-2 px-2 text-right font-mono text-neutral-300">{formatCurrency(c.marketCap)}</td>
+                            <td className={`py-2 px-2 text-right font-mono font-bold ${(c.nivComponents?.niv || 0) >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                              {formatNumber(c.nivComponents?.niv || 0, 4)}
+                            </td>
+                            <td className="py-2 px-2 text-right font-mono text-neutral-400">{formatPercent(c.nivComponents?.thrust || 0)}</td>
+                            <td className="py-2 px-2 text-right font-mono text-neutral-400">{formatPercent(c.nivComponents?.efficiency || 0)}</td>
+                            <td className="py-2 px-2 text-right font-mono text-neutral-400">{formatPercent(c.nivComponents?.slack || 0)}</td>
+                            <td className="py-2 px-2 text-right font-mono text-neutral-400">{formatPercent(c.nivComponents?.drag || 0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Tab: AI Decision Engine */}
+        {activeTab === 'ai-engine' && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-purple-900/20 to-amber-900/20 border border-neutral-700 rounded-xl p-5">
+              <h3 className="text-lg font-bold text-white mb-2">AI Decision Engine</h3>
+              <p className="text-sm text-neutral-400">Optimal decision trees and organic regeneration plans generated from third-order analysis.</p>
+            </div>
+
+            <button onClick={fetchAIAnalysis} disabled={aiLoading} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
+              {aiLoading ? 'Generating...' : 'Regenerate Analysis'}
+            </button>
+
+            {aiAnalysis && (
+              <>
+                {/* State Comparison */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-neutral-900 border border-red-500/30 rounded-xl p-5">
+                    <h3 className="text-lg font-semibold text-red-400 mb-4">Current State</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between"><span className="text-neutral-400">NIV</span><span className="font-mono text-white">{formatNumber(aiAnalysis.currentState.niv, 4)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Effective Rate</span><span className="font-mono text-white">{formatNumber(aiAnalysis.currentState.effectiveRate, 3)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Collapse Prob</span><span className="font-mono text-white">{formatPercent(aiAnalysis.currentState.collapseProb)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Cumulative Ch</span><span className="font-mono text-white">{formatNumber(aiAnalysis.currentState.cumulativeRegen, 3)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Risk Level</span><span className={`px-2 py-0.5 rounded text-xs ${getRiskColor(aiAnalysis.currentState.riskLevel)}`}>{aiAnalysis.currentState.riskLevel}</span></div>
+                    </div>
+                  </div>
+                  <div className="bg-neutral-900 border border-emerald-500/30 rounded-xl p-5">
+                    <h3 className="text-lg font-semibold text-emerald-400 mb-4">Optimized State</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between"><span className="text-neutral-400">NIV</span><span className="font-mono text-emerald-400">{formatNumber(aiAnalysis.optimizedState.niv, 4)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Effective Rate</span><span className="font-mono text-emerald-400">{formatNumber(aiAnalysis.optimizedState.effectiveRate, 3)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Collapse Prob</span><span className="font-mono text-emerald-400">{formatPercent(aiAnalysis.optimizedState.collapseProb)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Cumulative Ch</span><span className="font-mono text-emerald-400">{formatNumber(aiAnalysis.optimizedState.cumulativeRegen, 3)}</span></div>
+                      <div className="flex justify-between"><span className="text-neutral-400">Risk Level</span><span className={`px-2 py-0.5 rounded text-xs ${getRiskColor(aiAnalysis.optimizedState.riskLevel)}`}>{aiAnalysis.optimizedState.riskLevel}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Improvement Delta */}
+                <div className="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-emerald-400 mb-4">Optimization Potential</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-emerald-400">+{formatNumber((aiAnalysis.optimizedState.niv - aiAnalysis.currentState.niv) * 100, 1)}%</div>
+                      <div className="text-xs text-neutral-500">NIV Improvement</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-emerald-400">+{formatNumber((aiAnalysis.optimizedState.cumulativeRegen - aiAnalysis.currentState.cumulativeRegen) / Math.abs(aiAnalysis.currentState.cumulativeRegen || 0.01) * 100, 0)}%</div>
+                      <div className="text-xs text-neutral-500">Ch Improvement</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-emerald-400">-{formatNumber((aiAnalysis.currentState.collapseProb - aiAnalysis.optimizedState.collapseProb) * 100, 1)}pp</div>
+                      <div className="text-xs text-neutral-500">Risk Reduction</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-cyan-400">{aiAnalysis.actionPlans.length}</div>
+                      <div className="text-xs text-neutral-500">Action Plans</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Decision Tree */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-white mb-4">Decision Tree</h3>
+                  <div className="space-y-4">
+                    <div className="bg-neutral-800 rounded-lg p-4">
+                      <div className="text-cyan-400 font-semibold">{aiAnalysis.decisionTree.label}</div>
+                      <div className="text-sm text-neutral-400 mt-1">{aiAnalysis.decisionTree.description}</div>
+                    </div>
+                    {aiAnalysis.decisionTree.children?.map(branch => (
+                      <div key={branch.id} className="ml-6 border-l-2 border-neutral-700 pl-4">
+                        <div className="bg-neutral-800/50 rounded-lg p-4 mb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-semibold text-white">{branch.label}</div>
+                              <div className="text-sm text-neutral-400">{branch.description}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-lg font-bold ${branch.impact >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {branch.impact >= 0 ? '+' : ''}{formatNumber(branch.impact, 3)} Ch
+                              </div>
+                              <div className="text-xs text-neutral-500">{(branch.probability * 100).toFixed(0)}% confidence</div>
+                            </div>
+                          </div>
+                        </div>
+                        {branch.children?.map(action => (
+                          <div key={action.id} className="ml-4 border-l border-neutral-700 pl-4 py-2">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="text-sm font-medium text-neutral-300">{action.label}</div>
+                                <div className="text-xs text-neutral-500">{action.timeframe}</div>
+                              </div>
+                              <div className="text-sm font-mono text-emerald-400">+{formatNumber(action.impact, 4)}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action Plans */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-white mb-4">Organic Action Plans</h3>
+                  <div className="space-y-4">
+                    {aiAnalysis.actionPlans.map(plan => (
+                      <div key={plan.id} className={`border-2 rounded-xl p-5 ${getPriorityColor(plan.priority)}`}>
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${plan.priority === 'critical' ? 'bg-red-500 text-white' : plan.priority === 'high' ? 'bg-orange-500 text-white' : plan.priority === 'medium' ? 'bg-yellow-500 text-black' : 'bg-neutral-500 text-white'}`}>
+                              {plan.priority}
+                            </span>
+                            <span className="ml-2 px-2 py-0.5 rounded text-xs" style={{ backgroundColor: `${getComponentColor(plan.category)}30`, color: getComponentColor(plan.category) }}>
+                              {plan.category.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-emerald-400 font-bold">+{formatNumber(plan.expectedImpact.chDelta, 3)} Ch</div>
+                            <div className="text-xs text-neutral-500">{plan.timeframe}</div>
+                          </div>
+                        </div>
+                        <h4 className="text-lg font-semibold text-white mb-2">{plan.title}</h4>
+                        <p className="text-sm text-neutral-400 mb-4">{plan.description}</p>
+                        <div className="bg-neutral-800/50 rounded-lg p-4 mb-4">
+                          <div className="text-xs text-neutral-500 uppercase mb-2">Rationale</div>
+                          <p className="text-sm text-neutral-300">{plan.rationale}</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <div className="text-xs text-neutral-500 uppercase mb-2">Implementation Steps</div>
+                            <ul className="text-sm text-neutral-400 space-y-1">
+                              {plan.implementation.steps.slice(0, 3).map((s, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="text-neutral-600">{i + 1}.</span>
+                                  <span>{s}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <div className="text-xs text-neutral-500 uppercase mb-2">Key Metrics</div>
+                            <ul className="text-sm text-neutral-400 space-y-1">
+                              {plan.implementation.metrics.slice(0, 3).map((m, i) => (
+                                <li key={i}>{m}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <div className="text-xs text-neutral-500 uppercase mb-2">Expected Impact</div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-neutral-400">NIV Delta</span>
+                                <span className="text-emerald-400">+{formatNumber(plan.expectedImpact.nivDelta, 4)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-neutral-400">Ch Delta</span>
+                                <span className="text-emerald-400">+{formatNumber(plan.expectedImpact.chDelta, 3)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-neutral-400">Risk Reduction</span>
+                                <span className="text-emerald-400">-{formatPercent(plan.expectedImpact.riskReduction)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Insights */}
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-white mb-4">AI Insights</h3>
+                  <div className="space-y-3">
+                    {aiAnalysis.insights.map((insight, i) => (
+                      <div key={i} className="bg-neutral-800/50 rounded-lg p-4">
+                        <p className="text-sm text-neutral-300">{insight}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Data Provenance */}
         {activeTab === 'provenance' && (
           <div className="space-y-6">
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-amber-300 mb-2">Data Provenance</h3>
-              <p className="text-sm text-neutral-400">
-                All NIV components are derived from standard accounting data. Edit values below to see real-time impact on regeneration metrics.
-              </p>
+              <p className="text-sm text-neutral-400">All NIV components derive from standard accounting data. Edit values to see real-time regeneration impact.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Income Statement */}
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-white mb-4">Income Statement</h3>
                 <div className="space-y-3">
@@ -1012,15 +1116,12 @@ export default function ThirdOrderAccountingPage() {
                     <div key={field.key} className="flex items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="text-sm text-neutral-300">{field.label}</div>
-                        <div className="text-xs text-neutral-600">→ {field.maps}</div>
+                        <div className="text-xs text-neutral-600">Maps to: {field.maps}</div>
                       </div>
                       {editMode ? (
-                        <input
-                          type="number"
-                          value={currentData[field.key as keyof AccountingPeriod] as number}
+                        <input type="number" value={currentData[field.key as keyof AccountingPeriod] as number}
                           onChange={(e) => updateField(field.key as keyof AccountingPeriod, parseFloat(e.target.value) || 0)}
-                          className="w-28 px-2 py-1 text-right font-mono text-sm bg-neutral-800 border border-neutral-700 rounded text-white"
-                        />
+                          className="w-28 px-2 py-1 text-right font-mono text-sm bg-neutral-800 border border-neutral-700 rounded text-white" />
                       ) : (
                         <span className="font-mono text-sm text-white">{formatCurrency(currentData[field.key as keyof AccountingPeriod] as number)}</span>
                       )}
@@ -1029,7 +1130,6 @@ export default function ThirdOrderAccountingPage() {
                 </div>
               </div>
 
-              {/* Balance Sheet */}
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-white mb-4">Balance Sheet</h3>
                 <div className="space-y-3">
@@ -1046,15 +1146,12 @@ export default function ThirdOrderAccountingPage() {
                     <div key={field.key} className="flex items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="text-sm text-neutral-300">{field.label}</div>
-                        <div className="text-xs text-neutral-600">→ {field.maps}</div>
+                        <div className="text-xs text-neutral-600">Maps to: {field.maps}</div>
                       </div>
                       {editMode ? (
-                        <input
-                          type="number"
-                          value={currentData[field.key as keyof AccountingPeriod] as number}
+                        <input type="number" value={currentData[field.key as keyof AccountingPeriod] as number}
                           onChange={(e) => updateField(field.key as keyof AccountingPeriod, parseFloat(e.target.value) || 0)}
-                          className="w-28 px-2 py-1 text-right font-mono text-sm bg-neutral-800 border border-neutral-700 rounded text-white"
-                        />
+                          className="w-28 px-2 py-1 text-right font-mono text-sm bg-neutral-800 border border-neutral-700 rounded text-white" />
                       ) : (
                         <span className="font-mono text-sm text-white">{formatCurrency(currentData[field.key as keyof AccountingPeriod] as number)}</span>
                       )}
@@ -1064,47 +1161,18 @@ export default function ThirdOrderAccountingPage() {
               </div>
             </div>
 
-            {/* Cash Flow */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-              <h3 className="text-lg font-semibold text-white mb-4">Cash Flow Items</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { key: 'capitalExpenditure', label: 'Capital Expenditure', maps: 'Thrust (Reinvestment)' },
-                  { key: 'dividendsPaid', label: 'Dividends Paid', maps: 'Thrust (Payout)' }
-                ].map(field => (
-                  <div key={field.key} className="flex items-center justify-between gap-4 bg-neutral-800/50 rounded-lg p-3">
-                    <div className="flex-1">
-                      <div className="text-sm text-neutral-300">{field.label}</div>
-                      <div className="text-xs text-neutral-600">→ {field.maps}</div>
-                    </div>
-                    {editMode ? (
-                      <input
-                        type="number"
-                        value={currentData[field.key as keyof AccountingPeriod] as number}
-                        onChange={(e) => updateField(field.key as keyof AccountingPeriod, parseFloat(e.target.value) || 0)}
-                        className="w-28 px-2 py-1 text-right font-mono text-sm bg-neutral-800 border border-neutral-700 rounded text-white"
-                      />
-                    ) : (
-                      <span className="font-mono text-sm text-white">{formatCurrency(currentData[field.key as keyof AccountingPeriod] as number)}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Derived Metrics */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
               <h3 className="text-lg font-semibold text-white mb-4">Derived Regeneration Metrics</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-neutral-800/50 rounded-lg p-4 text-center">
                   <div className="text-2xl font-bold text-cyan-400">{formatNumber(currentAnalysis.components.regenerationRate, 4)}</div>
                   <div className="text-xs text-neutral-500">Regeneration Rate</div>
-                  <div className="text-xs text-neutral-600 mt-1">NIV × E</div>
+                  <div className="text-xs text-neutral-600 mt-1">NIV x E</div>
                 </div>
                 <div className="bg-neutral-800/50 rounded-lg p-4 text-center">
                   <div className="text-2xl font-bold text-purple-400">{formatNumber(currentAnalysis.components.capitalVelocity, 4)}</div>
                   <div className="text-xs text-neutral-500">Capital Velocity</div>
-                  <div className="text-xs text-neutral-600 mt-1">T × (1-D)</div>
+                  <div className="text-xs text-neutral-600 mt-1">T x (1-D)</div>
                 </div>
                 <div className="bg-neutral-800/50 rounded-lg p-4 text-center">
                   <div className="text-2xl font-bold text-orange-400">{formatNumber(currentAnalysis.components.frictionCoefficient, 4)}</div>
