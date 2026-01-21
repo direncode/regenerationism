@@ -107,7 +107,7 @@ export default function ThirdOrderAccountingPage() {
       const endStr = endDate.toISOString().slice(0, 10)
 
       // Fetch FRED data (empty string uses server-side key)
-      const keyToUse = hasServerKey ? '' : apiKey
+      const keyToUse: string = hasServerKey ? '' : apiKey
       const fredData = await fetchAllFREDData(keyToUse, startStr, endStr)
       const merged = mergeSeriesData(fredData)
 
