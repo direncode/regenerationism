@@ -377,6 +377,9 @@ export default function ThirdOrderAccountingPage() {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
 
+  // Provenance State - links accounting data to S&P 500 company
+  const [provenanceCompany, setProvenanceCompany] = useState<string | null>(null)
+
   const analyses = useMemo(() => accountingData.map((_, i) => calculateThirdOrderAnalysis(accountingData, i)), [accountingData])
   const currentAnalysis = analyses[selectedPeriod]
   const currentData = accountingData[selectedPeriod]
@@ -434,7 +437,7 @@ export default function ThirdOrderAccountingPage() {
   }
 
   useEffect(() => {
-    if (activeTab === 'sp500' && sp500Data.length === 0) fetchSP500()
+    if ((activeTab === 'sp500' || activeTab === 'provenance') && sp500Data.length === 0) fetchSP500()
     if (activeTab === 'ai-engine' && !aiAnalysis) fetchAIAnalysis()
   }, [activeTab])
 
@@ -1103,14 +1106,71 @@ export default function ThirdOrderAccountingPage() {
         {/* Tab: Data Provenance */}
         {activeTab === 'provenance' && (
           <div className="space-y-6">
+            {/* Company Source Selector */}
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-cyan-300 mb-3">S&P 500 Data Source</h3>
+              <div className="flex flex-wrap items-center gap-4">
+                <select
+                  value={provenanceCompany || ''}
+                  onChange={(e) => setProvenanceCompany(e.target.value || null)}
+                  className="px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm min-w-[200px]"
+                >
+                  <option value="">Select a company...</option>
+                  {sp500Data.map(c => (
+                    <option key={c.symbol} value={c.symbol}>{c.symbol} - {c.name}</option>
+                  ))}
+                </select>
+                {sp500Loading && <span className="text-sm text-neutral-500">Loading companies...</span>}
+                {provenanceCompany && (
+                  <span className="text-sm text-cyan-400">
+                    Source: {sp500Data.find(c => c.symbol === provenanceCompany)?.name || provenanceCompany}
+                  </span>
+                )}
+              </div>
+              {provenanceCompany && (() => {
+                const company = sp500Data.find(c => c.symbol === provenanceCompany)
+                return company ? (
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="bg-neutral-800/50 rounded-lg p-3">
+                      <div className="text-xs text-neutral-500">Sector</div>
+                      <div className="text-sm font-medium text-white">{company.sector}</div>
+                    </div>
+                    <div className="bg-neutral-800/50 rounded-lg p-3">
+                      <div className="text-xs text-neutral-500">Market Cap</div>
+                      <div className="text-sm font-medium text-white">{formatCurrency(company.marketCap)}</div>
+                    </div>
+                    <div className="bg-neutral-800/50 rounded-lg p-3">
+                      <div className="text-xs text-neutral-500">NIV Score</div>
+                      <div className="text-sm font-medium text-cyan-400">{formatNumber(company.nivComponents?.niv, 4)}</div>
+                    </div>
+                    <div className="bg-neutral-800/50 rounded-lg p-3">
+                      <div className="text-xs text-neutral-500">Thrust</div>
+                      <div className="text-sm font-medium text-cyan-400">{formatPercent(company.nivComponents?.thrust)}</div>
+                    </div>
+                    <div className="bg-neutral-800/50 rounded-lg p-3">
+                      <div className="text-xs text-neutral-500">Efficiency</div>
+                      <div className="text-sm font-medium text-purple-400">{formatPercent(company.nivComponents?.efficiency)}</div>
+                    </div>
+                  </div>
+                ) : null
+              })()}
+            </div>
+
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-amber-300 mb-2">Data Provenance</h3>
-              <p className="text-sm text-neutral-400">All NIV components derive from standard accounting data. Edit values to see real-time regeneration impact.</p>
+              <h3 className="text-sm font-semibold text-amber-300 mb-2">Accounting Data Provenance</h3>
+              <p className="text-sm text-neutral-400">
+                {provenanceCompany
+                  ? `Financial metrics mapped from ${sp500Data.find(c => c.symbol === provenanceCompany)?.name || provenanceCompany} SEC filings and earnings reports.`
+                  : 'Select an S&P 500 company above to trace data provenance from real financial statements.'}
+              </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-                <h3 className="text-lg font-semibold text-white mb-4">Income Statement</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Income Statement</h3>
+                  {provenanceCompany && <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">{provenanceCompany}</span>}
+                </div>
                 <div className="space-y-3">
                   {[
                     { key: 'revenue', label: 'Revenue', maps: 'Thrust, Efficiency' },
@@ -1138,7 +1198,10 @@ export default function ThirdOrderAccountingPage() {
               </div>
 
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-                <h3 className="text-lg font-semibold text-white mb-4">Balance Sheet</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Balance Sheet</h3>
+                  {provenanceCompany && <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">{provenanceCompany}</span>}
+                </div>
                 <div className="space-y-3">
                   {[
                     { key: 'cash', label: 'Cash', maps: 'Slack' },
@@ -1167,6 +1230,43 @@ export default function ThirdOrderAccountingPage() {
                 </div>
               </div>
             </div>
+
+            {/* NIV Component Mapping from Company */}
+            {provenanceCompany && (() => {
+              const company = sp500Data.find(c => c.symbol === provenanceCompany)
+              return company?.nivComponents ? (
+                <div className="bg-neutral-900 border border-cyan-500/30 rounded-xl p-5">
+                  <h3 className="text-lg font-semibold text-white mb-4">NIV Component Derivation from {company.name}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-cyan-500/10 rounded-lg p-4">
+                      <div className="text-xs text-neutral-500 mb-1">Thrust (T)</div>
+                      <div className="text-2xl font-bold text-cyan-400">{formatPercent(company.nivComponents.thrust)}</div>
+                      <div className="text-xs text-neutral-600 mt-2">Derived from: Revenue growth, Cash flow momentum</div>
+                    </div>
+                    <div className="bg-purple-500/10 rounded-lg p-4">
+                      <div className="text-xs text-neutral-500 mb-1">Efficiency (E)</div>
+                      <div className="text-2xl font-bold text-purple-400">{formatPercent(company.nivComponents.efficiency)}</div>
+                      <div className="text-xs text-neutral-600 mt-2">Derived from: Gross margin, Asset turnover</div>
+                    </div>
+                    <div className="bg-emerald-500/10 rounded-lg p-4">
+                      <div className="text-xs text-neutral-500 mb-1">Slack (S)</div>
+                      <div className="text-2xl font-bold text-emerald-400">{formatPercent(company.nivComponents.slack)}</div>
+                      <div className="text-xs text-neutral-600 mt-2">Derived from: Cash ratio, Working capital</div>
+                    </div>
+                    <div className="bg-red-500/10 rounded-lg p-4">
+                      <div className="text-xs text-neutral-500 mb-1">Drag (D)</div>
+                      <div className="text-2xl font-bold text-red-400">{formatPercent(company.nivComponents.drag)}</div>
+                      <div className="text-xs text-neutral-600 mt-2">Derived from: Debt ratio, Interest coverage</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-neutral-800/50 rounded-lg">
+                    <div className="text-sm text-neutral-400">
+                      <span className="text-white font-medium">Formula Applied:</span> NIV = (T x E^2) / (S + D)^1.5 = {formatNumber(company.nivComponents.niv, 4)}
+                    </div>
+                  </div>
+                </div>
+              ) : null
+            })()}
 
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
               <h3 className="text-lg font-semibold text-white mb-4">Derived Regeneration Metrics</h3>
