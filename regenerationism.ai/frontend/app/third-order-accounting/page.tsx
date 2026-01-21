@@ -99,6 +99,32 @@ interface SP500Company {
   name: string
   sector: string
   marketCap: number
+  // Income Statement
+  revenue?: number
+  costOfRevenue?: number
+  operatingExpenses?: number
+  interestExpense?: number
+  depreciationAndAmortization?: number
+  incomeTaxExpense?: number
+  netIncome?: number
+  // Balance Sheet
+  cashAndEquivalents?: number
+  accountsReceivable?: number
+  inventory?: number
+  totalCurrentAssets?: number
+  propertyPlantEquipment?: number
+  totalAssets?: number
+  accountsPayable?: number
+  shortTermDebt?: number
+  totalCurrentLiabilities?: number
+  longTermDebt?: number
+  totalLiabilities?: number
+  totalEquity?: number
+  // Cash Flow
+  operatingCashFlow?: number
+  capitalExpenditure?: number
+  freeCashFlow?: number
+  // NIV
   nivComponents?: { thrust: number; efficiency: number; slack: number; drag: number; niv: number }
 }
 
@@ -412,19 +438,32 @@ export default function ThirdOrderAccountingPage() {
     setSp500Loading(false)
   }
 
-  // Fetch AI Analysis
-  const fetchAIAnalysis = async () => {
+  // Fetch AI Analysis - uses provenance company if selected
+  const fetchAIAnalysis = async (companySymbol?: string | null) => {
     setAiLoading(true)
     try {
+      // Use provenance company data if available
+      const company = companySymbol ? sp500Data.find(c => c.symbol === companySymbol) : null
+      const nivData = company?.nivComponents ? {
+        thrust: company.nivComponents.thrust,
+        efficiency: company.nivComponents.efficiency,
+        slack: company.nivComponents.slack,
+        drag: company.nivComponents.drag,
+        companySymbol: company.symbol,
+        companyName: company.name,
+        sector: company.sector,
+        marketCap: company.marketCap
+      } : {
+        thrust: currentAnalysis.components.thrust.value,
+        efficiency: currentAnalysis.components.efficiency.value,
+        slack: currentAnalysis.components.slack.value,
+        drag: currentAnalysis.components.drag.value
+      }
+
       const res = await fetch('/api/ai-decision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thrust: currentAnalysis.components.thrust.value,
-          efficiency: currentAnalysis.components.efficiency.value,
-          slack: currentAnalysis.components.slack.value,
-          drag: currentAnalysis.components.drag.value
-        })
+        body: JSON.stringify(nivData)
       })
       const data = await res.json()
       if (data.success) {
@@ -438,12 +477,12 @@ export default function ThirdOrderAccountingPage() {
 
   useEffect(() => {
     if ((activeTab === 'sp500' || activeTab === 'provenance') && sp500Data.length === 0) fetchSP500()
-    if (activeTab === 'ai-engine' && !aiAnalysis) fetchAIAnalysis()
+    if (activeTab === 'ai-engine' && !aiAnalysis) fetchAIAnalysis(provenanceCompany)
   }, [activeTab])
 
   useEffect(() => {
-    if (activeTab === 'ai-engine') fetchAIAnalysis()
-  }, [selectedPeriod])
+    if (activeTab === 'ai-engine') fetchAIAnalysis(provenanceCompany)
+  }, [selectedPeriod, provenanceCompany])
 
   const radarData = [
     { component: 'Thrust', value: currentAnalysis.components.thrust.value, fullMark: 1 },
@@ -920,14 +959,35 @@ export default function ThirdOrderAccountingPage() {
         {/* Tab: AI Decision Engine */}
         {activeTab === 'ai-engine' && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-purple-900/20 to-amber-900/20 border border-neutral-700 rounded-xl p-5">
-              <h3 className="text-lg font-bold text-white mb-2">AI Decision Engine</h3>
-              <p className="text-sm text-neutral-400">Optimal decision trees and organic regeneration plans generated from third-order analysis.</p>
-            </div>
+            {(() => {
+              const company = provenanceCompany ? sp500Data.find(c => c.symbol === provenanceCompany) : null
+              return (
+                <div className="bg-gradient-to-r from-purple-900/20 to-amber-900/20 border border-neutral-700 rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-white">AI Decision Engine</h3>
+                    {company && (
+                      <span className="text-sm text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-full">
+                        Analyzing: {company.symbol} - {company.name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-neutral-400">
+                    {company
+                      ? `Personalized regeneration plans for ${company.name} based on their financial metrics and NIV profile.`
+                      : 'Optimal decision trees and organic regeneration plans generated from third-order analysis. Select a company in Data Provenance for company-specific insights.'}
+                  </p>
+                </div>
+              )
+            })()}
 
-            <button onClick={fetchAIAnalysis} disabled={aiLoading} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
-              {aiLoading ? 'Generating...' : 'Regenerate Analysis'}
-            </button>
+            <div className="flex items-center gap-4">
+              <button onClick={() => fetchAIAnalysis(provenanceCompany)} disabled={aiLoading} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
+                {aiLoading ? 'Generating...' : 'Regenerate Analysis'}
+              </button>
+              {provenanceCompany && (
+                <span className="text-sm text-neutral-500">Using {provenanceCompany} NIV data</span>
+              )}
+            </div>
 
             {aiAnalysis && (
               <>
@@ -1166,69 +1226,90 @@ export default function ThirdOrderAccountingPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white">Income Statement</h3>
-                  {provenanceCompany && <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">{provenanceCompany}</span>}
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { key: 'revenue', label: 'Revenue', maps: 'Thrust, Efficiency' },
-                    { key: 'costOfGoodsSold', label: 'Cost of Goods Sold', maps: 'Efficiency, Drag' },
-                    { key: 'operatingExpenses', label: 'Operating Expenses', maps: 'Drag' },
-                    { key: 'depreciation', label: 'Depreciation', maps: 'Drag' },
-                    { key: 'interestExpense', label: 'Interest Expense', maps: 'Drag' },
-                    { key: 'taxes', label: 'Taxes', maps: 'Efficiency' }
-                  ].map(field => (
-                    <div key={field.key} className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="text-sm text-neutral-300">{field.label}</div>
-                        <div className="text-xs text-neutral-600">Maps to: {field.maps}</div>
-                      </div>
-                      {editMode ? (
-                        <input type="number" value={currentData[field.key as keyof AccountingPeriod] as number}
-                          onChange={(e) => updateField(field.key as keyof AccountingPeriod, parseFloat(e.target.value) || 0)}
-                          className="w-28 px-2 py-1 text-right font-mono text-sm bg-neutral-800 border border-neutral-700 rounded text-white" />
-                      ) : (
-                        <span className="font-mono text-sm text-white">{formatCurrency(currentData[field.key as keyof AccountingPeriod] as number)}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {(() => {
+                const company = provenanceCompany ? sp500Data.find(c => c.symbol === provenanceCompany) : null
+                const incomeFields = [
+                  { key: 'revenue', apiKey: 'revenue', label: 'Revenue', maps: 'Thrust, Efficiency' },
+                  { key: 'costOfGoodsSold', apiKey: 'costOfRevenue', label: 'Cost of Goods Sold', maps: 'Efficiency, Drag' },
+                  { key: 'operatingExpenses', apiKey: 'operatingExpenses', label: 'Operating Expenses', maps: 'Drag' },
+                  { key: 'depreciation', apiKey: 'depreciationAndAmortization', label: 'Depreciation', maps: 'Drag' },
+                  { key: 'interestExpense', apiKey: 'interestExpense', label: 'Interest Expense', maps: 'Drag' },
+                  { key: 'taxes', apiKey: 'incomeTaxExpense', label: 'Taxes', maps: 'Efficiency' }
+                ]
+                const balanceFields = [
+                  { key: 'cash', apiKey: 'cashAndEquivalents', label: 'Cash', maps: 'Slack' },
+                  { key: 'accountsReceivable', apiKey: 'accountsReceivable', label: 'Accounts Receivable', maps: 'Slack, Thrust' },
+                  { key: 'inventory', apiKey: 'inventory', label: 'Inventory', maps: 'Efficiency' },
+                  { key: 'fixedAssets', apiKey: 'propertyPlantEquipment', label: 'Fixed Assets', maps: 'Efficiency' },
+                  { key: 'accountsPayable', apiKey: 'accountsPayable', label: 'Accounts Payable', maps: 'Thrust' },
+                  { key: 'shortTermDebt', apiKey: 'shortTermDebt', label: 'Short-Term Debt', maps: 'Drag, Slack' },
+                  { key: 'longTermDebt', apiKey: 'longTermDebt', label: 'Long-Term Debt', maps: 'Drag' },
+                  { key: 'equity', apiKey: 'totalEquity', label: 'Equity', maps: 'Slack, Drag' }
+                ]
 
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white">Balance Sheet</h3>
-                  {provenanceCompany && <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">{provenanceCompany}</span>}
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { key: 'cash', label: 'Cash', maps: 'Slack' },
-                    { key: 'accountsReceivable', label: 'Accounts Receivable', maps: 'Slack, Thrust' },
-                    { key: 'inventory', label: 'Inventory', maps: 'Efficiency' },
-                    { key: 'fixedAssets', label: 'Fixed Assets', maps: 'Efficiency' },
-                    { key: 'accountsPayable', label: 'Accounts Payable', maps: 'Thrust' },
-                    { key: 'shortTermDebt', label: 'Short-Term Debt', maps: 'Drag, Slack' },
-                    { key: 'longTermDebt', label: 'Long-Term Debt', maps: 'Drag' },
-                    { key: 'equity', label: 'Equity', maps: 'Slack, Drag' }
-                  ].map(field => (
-                    <div key={field.key} className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="text-sm text-neutral-300">{field.label}</div>
-                        <div className="text-xs text-neutral-600">Maps to: {field.maps}</div>
+                const getValue = (field: { key: string; apiKey: string }) => {
+                  if (company && company[field.apiKey as keyof SP500Company] !== undefined) {
+                    return company[field.apiKey as keyof SP500Company] as number
+                  }
+                  return currentData[field.key as keyof AccountingPeriod] as number
+                }
+
+                return (
+                  <>
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-white">Income Statement</h3>
+                        {company && <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">{company.symbol} - {company.name}</span>}
                       </div>
-                      {editMode ? (
-                        <input type="number" value={currentData[field.key as keyof AccountingPeriod] as number}
-                          onChange={(e) => updateField(field.key as keyof AccountingPeriod, parseFloat(e.target.value) || 0)}
-                          className="w-28 px-2 py-1 text-right font-mono text-sm bg-neutral-800 border border-neutral-700 rounded text-white" />
-                      ) : (
-                        <span className="font-mono text-sm text-white">{formatCurrency(currentData[field.key as keyof AccountingPeriod] as number)}</span>
-                      )}
+                      <div className="space-y-3">
+                        {incomeFields.map(field => (
+                          <div key={field.key} className="flex items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="text-sm text-neutral-300">{field.label}</div>
+                              <div className="text-xs text-neutral-600">Maps to: {field.maps}</div>
+                            </div>
+                            <span className="font-mono text-sm text-white">{formatCurrency(getValue(field))}</span>
+                          </div>
+                        ))}
+                        {company && (
+                          <div className="pt-3 mt-3 border-t border-neutral-700">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-emerald-400">Net Income</span>
+                              <span className="font-mono text-sm text-emerald-400">{formatCurrency(company.netIncome)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-white">Balance Sheet</h3>
+                        {company && <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">{company.symbol}</span>}
+                      </div>
+                      <div className="space-y-3">
+                        {balanceFields.map(field => (
+                          <div key={field.key} className="flex items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="text-sm text-neutral-300">{field.label}</div>
+                              <div className="text-xs text-neutral-600">Maps to: {field.maps}</div>
+                            </div>
+                            <span className="font-mono text-sm text-white">{formatCurrency(getValue(field))}</span>
+                          </div>
+                        ))}
+                        {company && (
+                          <div className="pt-3 mt-3 border-t border-neutral-700">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-blue-400">Total Assets</span>
+                              <span className="font-mono text-sm text-blue-400">{formatCurrency(company.totalAssets)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
 
             {/* NIV Component Mapping from Company */}

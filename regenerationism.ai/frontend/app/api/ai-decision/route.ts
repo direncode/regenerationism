@@ -18,9 +18,11 @@ interface NIVInput {
   efficiency: number
   slack: number
   drag: number
-  niv: number
+  niv?: number
+  companySymbol?: string
   companyName?: string
   sector?: string
+  marketCap?: number
 }
 
 interface DecisionNode {
@@ -604,37 +606,44 @@ function createPlanForComponent(
 
 function generateInsights(input: NIVInput, currentState: DecisionAnalysis['currentState'], optimizedState: DecisionAnalysis['optimizedState']): string[] {
   const insights: string[] = []
-  const { thrust, efficiency, slack, drag, niv } = input
+  const { thrust, efficiency, slack, drag, companyName, sector } = input
+  const entityName = companyName || 'the business'
+  const sectorContext = sector ? ` in the ${sector} sector` : ''
+
+  // Company-specific header if available
+  if (companyName) {
+    insights.push(`Analysis for ${companyName}${sectorContext}: NIV score of ${(input.niv ?? ((thrust * Math.pow(efficiency, 2)) / Math.pow(Math.max(0.1, slack + drag), 1.5))).toFixed(4)} indicates ${input.niv > 0.035 ? 'strong' : input.niv > 0.015 ? 'moderate' : 'weak'} regeneration potential.`)
+  }
 
   // Component-specific insights
   if (efficiency < 0.5) {
-    insights.push(`Efficiency at ${(efficiency * 100).toFixed(1)}% is critically low. Because efficiency is squared in the NIV formula, improving it yields exponential returns on regeneration velocity.`)
+    insights.push(`${entityName}'s efficiency at ${(efficiency * 100).toFixed(1)}% is critically low. Because efficiency is squared in the NIV formula, improving it yields exponential returns on regeneration velocity.`)
   }
 
   if (drag > 0.5) {
-    insights.push(`High drag (${(drag * 100).toFixed(1)}%) is significantly impeding regeneration. Each 10% reduction in drag can improve Cₕ by 15-25% through both direct NIV improvement and collapse probability reduction.`)
+    insights.push(`High drag (${(drag * 100).toFixed(1)}%) is significantly impeding ${entityName}'s regeneration. Each 10% reduction in drag can improve Cₕ by 15-25% through both direct NIV improvement and collapse probability reduction.`)
   }
 
   if (slack < 0.3) {
-    insights.push(`Limited slack (${(slack * 100).toFixed(1)}%) exposes the business to regeneration collapse risk. Building liquidity buffers provides both downside protection and optionality for growth investments.`)
+    insights.push(`Limited slack (${(slack * 100).toFixed(1)}%) exposes ${entityName} to regeneration collapse risk. Building liquidity buffers provides both downside protection and optionality for growth investments.`)
   }
 
   if (thrust < 0.3) {
-    insights.push(`Low thrust (${(thrust * 100).toFixed(1)}%) indicates insufficient capital momentum. Without adequate growth impulse, even efficient operations cannot achieve meaningful regeneration.`)
+    insights.push(`Low thrust (${(thrust * 100).toFixed(1)}%) indicates insufficient capital momentum for ${entityName}. Without adequate growth impulse, even efficient operations cannot achieve meaningful regeneration.`)
   }
 
   // Third-order insights
   const chImprovement = ((optimizedState.cumulativeRegen - currentState.cumulativeRegen) / Math.abs(currentState.cumulativeRegen || 0.01)) * 100
   if (chImprovement > 50) {
-    insights.push(`Optimization potential is substantial: implementing recommended actions could improve 5-year cumulative regeneration (Cₕ) by ${chImprovement.toFixed(0)}%.`)
+    insights.push(`Optimization potential for ${entityName} is substantial: implementing recommended actions could improve 5-year cumulative regeneration (Cₕ) by ${chImprovement.toFixed(0)}%.`)
   }
 
   if (currentState.collapseProb > 0.3) {
-    insights.push(`Current collapse probability of ${(currentState.collapseProb * 100).toFixed(1)}% represents material risk to capital continuity. Priority should be given to drag reduction and slack building.`)
+    insights.push(`${entityName}'s current collapse probability of ${(currentState.collapseProb * 100).toFixed(1)}% represents material risk to capital continuity. Priority should be given to drag reduction and slack building.`)
   }
 
   // Strategic insight
-  insights.push(`Third-order accounting reveals that ${efficiency < thrust ? 'efficiency improvements' : 'thrust acceleration'} will have the highest marginal impact on long-term regeneration due to the compounding nature of the Cₕ projection formula.`)
+  insights.push(`Third-order accounting reveals that ${efficiency < thrust ? 'efficiency improvements' : 'thrust acceleration'} will have the highest marginal impact on ${entityName}'s long-term regeneration due to the compounding nature of the Cₕ projection formula.`)
 
   return insights
 }
@@ -642,7 +651,7 @@ function generateInsights(input: NIVInput, currentState: DecisionAnalysis['curre
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { thrust, efficiency, slack, drag, companyName, sector } = body
+    const { thrust, efficiency, slack, drag, companySymbol, companyName, sector, marketCap } = body
 
     // Validate inputs
     if (typeof thrust !== 'number' || typeof efficiency !== 'number' ||
@@ -659,8 +668,10 @@ export async function POST(request: NextRequest) {
       slack: Math.max(0, Math.min(1, slack)),
       drag: Math.max(0, Math.min(1, drag)),
       niv: calculateNIV(thrust, efficiency, slack, drag),
+      companySymbol,
       companyName,
-      sector
+      sector,
+      marketCap
     }
 
     // Current state analysis
