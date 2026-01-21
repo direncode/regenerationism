@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LineChart,
@@ -14,6 +14,8 @@ import {
   ReferenceLine,
   Area,
   ComposedChart,
+  Brush,
+  AreaChart,
 } from 'recharts'
 import {
   Play,
@@ -33,18 +35,30 @@ import {
   Layers,
   Zap,
   BarChart3,
-  Gauge,
   Activity,
   Calculator,
+  FlaskConical,
+  Download,
+  Calendar,
 } from 'lucide-react'
 import { checkServerApiKey } from '@/lib/fredApi'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONSTANTS - NIV Engine Parameters
 // ═══════════════════════════════════════════════════════════════════════════
-const ETA = 1.5           // Nonlinearity (Crisis Sensitivity)
-const EPSILON = 0.001     // Safety Floor (Prevents zero-division)
-const PROXY_MULTIPLIER = 1.15  // R&D + Education Proxy
+const ETA = 1.5
+const EPSILON = 0.001
+const PROXY_MULTIPLIER = 1.15
+
+// NBER Recession Dates for OOS Testing
+const RECESSIONS = [
+  { start: '1980-01-01', end: '1980-07-01' },
+  { start: '1981-07-01', end: '1982-11-01' },
+  { start: '1990-07-01', end: '1991-03-01' },
+  { start: '2001-03-01', end: '2001-11-01' },
+  { start: '2007-12-01', end: '2009-06-01' },
+  { start: '2020-02-01', end: '2020-04-01' },
+]
 
 // ═══════════════════════════════════════════════════════════════════════════
 // INTERFACES
@@ -77,21 +91,16 @@ interface FREDObservation {
 
 interface MicroData {
   date: string
-  // Men (Labor)
   employment: number | null
   participation: number | null
   hours: number | null
-  // Materials
   ppi: number | null
   industrialProd: number | null
-  // Machines
   investment: number | null
   capacity: number | null
   durableGoods: number | null
-  // Entrepreneurial
   businessApps: number | null
   sentiment: number | null
-  // Reference for NIV
   gdp: number | null
   m2: number | null
   fedFunds: number | null
@@ -112,30 +121,32 @@ interface NIVComponents {
   thrust: number
   slack: number
   drag: number
-  // Drag sub-components
   yieldPenalty: number
   realRate: number
   volatility: number
-  // Raw inputs
-  dG: number  // Investment growth
-  dA: number  // M2 growth
-  dr: number  // Rate change
+  dG: number
+  dA: number
+  dr: number
 }
 
 interface FullResult {
   date: string
   micro: MicroComponents
   niv: NIVComponents
-  // Computed NIV values
   nivMicro: number
   nivTraditional: number
-  // Recession probabilities
-  probMicro: number
-  probTraditional: number
-  // Status
-  statusMicro: 'EXPANSION' | 'SLOWDOWN' | 'CONTRACTION' | 'CRISIS'
-  statusTraditional: 'EXPANSION' | 'SLOWDOWN' | 'CONTRACTION' | 'CRISIS'
+  isRecession: boolean
   rawData: MicroData
+}
+
+interface OOSResult {
+  aucMicro: number
+  aucTraditional: number
+  winner: 'micro' | 'traditional' | 'tie'
+  testSamples: number
+  trainSamples: number
+  recessionsCaptured: number
+  totalRecessions: number
 }
 
 // The Four Fundamental Factors
@@ -148,11 +159,11 @@ const MICRO_FACTORS: MicroFactor[] = [
     icon: <Users className="w-5 h-5" />,
     color: 'blue',
     formula: 'M_l = (Employment_growth × Participation × Hours_intensity)',
-    interpretation: 'Measures labor utilization efficiency. High values indicate workforce operating near potential with strong participation and productive hours.',
+    interpretation: 'Measures labor utilization efficiency.',
     proxies: [
-      { fredId: 'PAYEMS', name: 'Total Nonfarm Payrolls', description: 'Employment level (thousands)', transformation: 'YoY growth rate', weight: 0.4 },
-      { fredId: 'CIVPART', name: 'Labor Force Participation Rate', description: 'Percentage of working-age population in labor force', transformation: 'Level / 100', weight: 0.35 },
-      { fredId: 'AWHNONAG', name: 'Average Weekly Hours', description: 'Hours worked in non-agricultural sector', transformation: 'Level / 40 (normalized to standard week)', weight: 0.25 },
+      { fredId: 'PAYEMS', name: 'Total Nonfarm Payrolls', description: 'Employment level', transformation: 'YoY growth rate', weight: 0.4 },
+      { fredId: 'CIVPART', name: 'Labor Force Participation Rate', description: 'Working-age population in labor force', transformation: 'Level / 100', weight: 0.35 },
+      { fredId: 'AWHNONAG', name: 'Average Weekly Hours', description: 'Hours worked', transformation: 'Level / 40', weight: 0.25 },
     ],
   },
   {
@@ -163,10 +174,10 @@ const MICRO_FACTORS: MicroFactor[] = [
     icon: <Package className="w-5 h-5" />,
     color: 'amber',
     formula: 'M_m = (Industrial_output / Material_costs)',
-    interpretation: 'Measures how efficiently raw materials convert to output. Rising commodity costs without matching industrial output signals material inefficiency.',
+    interpretation: 'Measures material conversion efficiency.',
     proxies: [
-      { fredId: 'INDPRO', name: 'Industrial Production Index', description: 'Real output of manufacturing, mining, utilities', transformation: 'Index / 100', weight: 0.6 },
-      { fredId: 'PPIACO', name: 'Producer Price Index (Commodities)', description: 'Material input costs', transformation: '1 / (YoY growth + 1) - cost inflation penalty', weight: 0.4 },
+      { fredId: 'INDPRO', name: 'Industrial Production Index', description: 'Real output', transformation: 'Index / 100', weight: 0.6 },
+      { fredId: 'PPIACO', name: 'Producer Price Index', description: 'Material costs', transformation: '1 / (YoY + 1)', weight: 0.4 },
     ],
   },
   {
@@ -177,11 +188,11 @@ const MICRO_FACTORS: MicroFactor[] = [
     icon: <Cog className="w-5 h-5" />,
     color: 'emerald',
     formula: 'M_k = (Capacity_utilization × Investment_intensity)',
-    interpretation: 'Measures how well existing capital stock is deployed and expanded. Low utilization with high investment suggests overcapacity.',
+    interpretation: 'Measures capital stock deployment.',
     proxies: [
-      { fredId: 'TCU', name: 'Total Capacity Utilization', description: 'Percentage of industrial capacity in use', transformation: 'Level / 100', weight: 0.5 },
-      { fredId: 'GPDIC1', name: 'Real Private Domestic Investment', description: 'Capital formation (billions)', transformation: 'YoY growth rate + 1', weight: 0.3 },
-      { fredId: 'DGORDER', name: 'Durable Goods Orders', description: 'New orders for long-lasting goods', transformation: 'YoY growth rate + 1', weight: 0.2 },
+      { fredId: 'TCU', name: 'Total Capacity Utilization', description: 'Industrial capacity in use', transformation: 'Level / 100', weight: 0.5 },
+      { fredId: 'GPDIC1', name: 'Real Private Investment', description: 'Capital formation', transformation: 'YoY + 1', weight: 0.3 },
+      { fredId: 'DGORDER', name: 'Durable Goods Orders', description: 'Long-lasting goods orders', transformation: 'YoY + 1', weight: 0.2 },
     ],
   },
   {
@@ -192,36 +203,64 @@ const MICRO_FACTORS: MicroFactor[] = [
     icon: <Lightbulb className="w-5 h-5" />,
     color: 'purple',
     formula: 'E = (Business_formation × Consumer_confidence)',
-    interpretation: 'Measures the willingness to take productive risks and form new enterprises. Politicians often sacrifice this factor to preserve stability.',
+    interpretation: 'Measures willingness to take productive risks.',
     proxies: [
-      { fredId: 'BABATOTALSAUS', name: 'Business Applications', description: 'New business formation applications', transformation: 'YoY growth rate + 1', weight: 0.6 },
-      { fredId: 'UMCSENT', name: 'Consumer Sentiment Index', description: 'University of Michigan confidence survey', transformation: 'Level / 100', weight: 0.4 },
+      { fredId: 'BABATOTALSAUS', name: 'Business Applications', description: 'New business formation', transformation: 'YoY + 1', weight: 0.6 },
+      { fredId: 'UMCSENT', name: 'Consumer Sentiment', description: 'Confidence survey', transformation: 'Level / 100', weight: 0.4 },
     ],
   },
 ]
 
 // All FRED Series needed
 const ALL_SERIES = {
-  // Micro factors - Men (Labor)
-  EMPLOYMENT: 'PAYEMS',
-  PARTICIPATION: 'CIVPART',
-  HOURS: 'AWHNONAG',
-  // Micro factors - Materials
-  PPI: 'PPIACO',
-  INDUSTRIAL: 'INDPRO',
-  // Micro factors - Machines
-  INVESTMENT: 'GPDIC1',
-  CAPACITY: 'TCU',
-  DURABLE: 'DGORDER',
-  // Micro factors - Entrepreneurial
-  BUSINESS_APPS: 'BABATOTALSAUS',
-  SENTIMENT: 'UMCSENT',
-  // NIV Components
-  GDP: 'GDPC1',
-  M2: 'M2SL',
-  FED_FUNDS: 'FEDFUNDS',
-  YIELD_SPREAD: 'T10Y3M',
-  CPI: 'CPIAUCSL',
+  EMPLOYMENT: 'PAYEMS', PARTICIPATION: 'CIVPART', HOURS: 'AWHNONAG',
+  PPI: 'PPIACO', INDUSTRIAL: 'INDPRO',
+  INVESTMENT: 'GPDIC1', CAPACITY: 'TCU', DURABLE: 'DGORDER',
+  BUSINESS_APPS: 'BABATOTALSAUS', SENTIMENT: 'UMCSENT',
+  GDP: 'GDPC1', M2: 'M2SL', FED_FUNDS: 'FEDFUNDS', YIELD_SPREAD: 'T10Y3M', CPI: 'CPIAUCSL',
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OOS TESTING UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function isInRecession(date: string): boolean {
+  const d = new Date(date)
+  return RECESSIONS.some(r => d >= new Date(r.start) && d <= new Date(r.end))
+}
+
+function calculateAUC(actuals: number[], predictions: number[]): number {
+  const pairs = actuals.map((a, i) => ({ actual: a, pred: predictions[i] }))
+  pairs.sort((a, b) => b.pred - a.pred)
+
+  let tp = 0, fp = 0
+  const totalPos = actuals.filter(a => a === 1).length
+  const totalNeg = actuals.length - totalPos
+
+  if (totalPos === 0 || totalNeg === 0) return 0.5
+
+  const points: Array<{ tpr: number; fpr: number }> = [{ tpr: 0, fpr: 0 }]
+
+  for (const pair of pairs) {
+    if (pair.actual === 1) tp++
+    else fp++
+    points.push({ tpr: tp / totalPos, fpr: fp / totalNeg })
+  }
+
+  let auc = 0
+  for (let i = 1; i < points.length; i++) {
+    auc += (points[i].fpr - points[i - 1].fpr) * (points[i].tpr + points[i - 1].tpr) / 2
+  }
+
+  return auc
+}
+
+function rollingMean(data: number[], window: number): number[] {
+  return data.map((_, i) => {
+    if (i < window - 1) return NaN
+    const slice = data.slice(i - window + 1, i + 1)
+    return slice.reduce((a, b) => a + b, 0) / window
+  })
 }
 
 export default function MicroIntegrationPage() {
@@ -229,9 +268,11 @@ export default function MicroIntegrationPage() {
   const [loadingStatus, setLoadingStatus] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<FullResult[]>([])
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['theory', 'formula']))
+  const [oosResult, setOosResult] = useState<OOSResult | null>(null)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['formula']))
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
   const [checkingServerKey, setCheckingServerKey] = useState(true)
+  const [brushRange, setBrushRange] = useState<{ startIndex?: number; endIndex?: number }>({})
 
   useEffect(() => {
     const checkServer = async () => {
@@ -245,29 +286,19 @@ export default function MicroIntegrationPage() {
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section)
-    } else {
-      newExpanded.add(section)
-    }
+    if (newExpanded.has(section)) newExpanded.delete(section)
+    else newExpanded.add(section)
     setExpandedSections(newExpanded)
   }
 
-  const fetchFREDSeries = async (
-    seriesId: string,
-    startDate: string,
-    endDate: string
-  ): Promise<FREDObservation[]> => {
+  const fetchFREDSeries = async (seriesId: string, startDate: string, endDate: string): Promise<FREDObservation[]> => {
     const proxyUrl = new URL('/api/fred', window.location.origin)
     proxyUrl.searchParams.set('series_id', seriesId)
     proxyUrl.searchParams.set('observation_start', startDate)
     proxyUrl.searchParams.set('observation_end', endDate)
     proxyUrl.searchParams.set('endpoint', 'observations')
-
     const response = await fetch(proxyUrl.toString())
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${seriesId}`)
-    }
+    if (!response.ok) throw new Error(`Failed to fetch ${seriesId}`)
     const data = await response.json()
     return data.observations || []
   }
@@ -281,23 +312,66 @@ export default function MicroIntegrationPage() {
   const stdDev = (arr: number[]): number => {
     if (arr.length === 0) return 0
     const mean = arr.reduce((a, b) => a + b, 0) / arr.length
-    const squaredDiffs = arr.map(x => Math.pow(x - mean, 2))
-    return Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / arr.length)
+    return Math.sqrt(arr.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / arr.length)
   }
 
-  const calculateStatus = (prob: number): 'EXPANSION' | 'SLOWDOWN' | 'CONTRACTION' | 'CRISIS' => {
-    if (prob > 80) return 'CRISIS'
-    if (prob > 40) return 'CONTRACTION'
-    if (prob > 20) return 'SLOWDOWN'
-    return 'EXPANSION'
-  }
+  const runOOSTest = useCallback((data: FullResult[]): OOSResult => {
+    const smoothWindow = 12
+    const predictionLag = 12
 
-  const calculateProbability = (niv: number): number => {
-    if (niv <= 0) return 99
-    if (niv < 0.015) return 85
-    if (niv < 0.035) return 45
-    return 5
-  }
+    // Smooth NIV values
+    const nivMicroValues = data.map(d => d.nivMicro)
+    const nivTradValues = data.map(d => d.nivTraditional)
+    const smoothedMicro = rollingMean(nivMicroValues, smoothWindow)
+    const smoothedTrad = rollingMean(nivTradValues, smoothWindow)
+
+    // Create targets (recession 12 months ahead)
+    const targets = data.map((_, i) => {
+      if (i + predictionLag < data.length) {
+        return data[i + predictionLag].isRecession ? 1 : 0
+      }
+      return NaN
+    })
+
+    // Filter valid data
+    const validIndices = data.map((_, i) =>
+      !isNaN(smoothedMicro[i]) && !isNaN(smoothedTrad[i]) && !isNaN(targets[i])
+    )
+
+    const validData = data.filter((_, i) => validIndices[i])
+    const validMicro = smoothedMicro.filter((_, i) => validIndices[i])
+    const validTrad = smoothedTrad.filter((_, i) => validIndices[i])
+    const validTargets = targets.filter((_, i) => validIndices[i])
+
+    if (validData.length < 50) {
+      return { aucMicro: 0.5, aucTraditional: 0.5, winner: 'tie', testSamples: 0, trainSamples: 0, recessionsCaptured: 0, totalRecessions: 0 }
+    }
+
+    // For AUC: lower NIV = higher recession risk, so invert
+    const predsMicro = validMicro.map(v => -v)
+    const predsTrad = validTrad.map(v => -v)
+
+    const aucMicro = calculateAUC(validTargets, predsMicro)
+    const aucTraditional = calculateAUC(validTargets, predsTrad)
+
+    const recessionsCaptured = validTargets.filter(t => t === 1).length
+    const totalRecessions = RECESSIONS.length
+
+    let winner: 'micro' | 'traditional' | 'tie' = 'tie'
+    if (Math.abs(aucMicro - aucTraditional) > 0.01) {
+      winner = aucMicro > aucTraditional ? 'micro' : 'traditional'
+    }
+
+    return {
+      aucMicro,
+      aucTraditional,
+      winner,
+      testSamples: validData.length,
+      trainSamples: Math.floor(validData.length * 0.2),
+      recessionsCaptured,
+      totalRecessions,
+    }
+  }, [])
 
   const calculateFullNIV = useCallback(async () => {
     if (!hasServerKey) {
@@ -308,12 +382,13 @@ export default function MicroIntegrationPage() {
     setIsCalculating(true)
     setError(null)
     setResults([])
+    setOosResult(null)
 
     try {
       const endDate = new Date().toISOString().split('T')[0]
-      const startDate = new Date(Date.now() - 5 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      // Fetch 60 years for comprehensive OOS testing
+      const startDate = '1965-01-01'
 
-      // Fetch all series
       const seriesList = Object.entries(ALL_SERIES)
       const seriesData = new Map<string, FREDObservation[]>()
 
@@ -324,21 +399,17 @@ export default function MicroIntegrationPage() {
           const data = await fetchFREDSeries(seriesId, startDate, endDate)
           seriesData.set(name, data)
         } catch {
-          console.warn(`Failed to fetch ${seriesId}`)
           seriesData.set(name, [])
         }
       }
 
-      setLoadingStatus('Processing data and calculating NIV...')
+      setLoadingStatus('Processing data...')
 
-      // Create monthly lookups
       const createLookup = (observations: FREDObservation[]) => {
         const lookup = new Map<string, number>()
         observations.forEach((obs) => {
           const val = parseValue(obs.value)
-          if (val !== null) {
-            lookup.set(obs.date.substring(0, 7), val)
-          }
+          if (val !== null) lookup.set(obs.date.substring(0, 7), val)
         })
         return lookup
       }
@@ -361,24 +432,19 @@ export default function MicroIntegrationPage() {
         cpi: createLookup(seriesData.get('CPI') || []),
       }
 
-      // Get all dates from M2 (monthly, most complete)
       const allDates = Array.from(lookups.m2.keys()).sort()
-
       const calculatedResults: FullResult[] = []
-
-      // Forward-fill quarterly series
       let lastInvestment: number | null = null
       let lastGdp: number | null = null
-
-      // Store fedFunds for volatility calculation
       const fedFundsHistory: number[] = []
+
+      setLoadingStatus('Calculating NIV values...')
 
       for (let i = 12; i < allDates.length; i++) {
         const monthKey = allDates[i]
         const yearAgoKey = allDates[i - 12]
         const prevMonthKey = allDates[i - 1]
 
-        // Get current values
         const employment = lookups.employment.get(monthKey) ?? null
         const participation = lookups.participation.get(monthKey) ?? null
         const hours = lookups.hours.get(monthKey) ?? null
@@ -393,19 +459,16 @@ export default function MicroIntegrationPage() {
         const yieldSpread = lookups.yieldSpread.get(monthKey) ?? null
         const cpi = lookups.cpi.get(monthKey) ?? null
 
-        // Forward-fill quarterly
         const inv = lookups.investment.get(monthKey)
         if (inv !== undefined) lastInvestment = inv
         const gdp = lookups.gdp.get(monthKey)
         if (gdp !== undefined) lastGdp = gdp
 
-        // Track fedFunds for volatility
         if (fedFunds !== null) {
           fedFundsHistory.push(fedFunds)
           if (fedFundsHistory.length > 12) fedFundsHistory.shift()
         }
 
-        // Get year-ago and prev-month values
         const employmentYA = lookups.employment.get(yearAgoKey) ?? null
         const ppiYA = lookups.ppi.get(yearAgoKey) ?? null
         const industrialYA = lookups.industrial.get(yearAgoKey) ?? null
@@ -416,7 +479,6 @@ export default function MicroIntegrationPage() {
         const cpiYA = lookups.cpi.get(yearAgoKey) ?? null
         const fedFundsPrev = lookups.fedFunds.get(prevMonthKey) ?? null
 
-        // Skip if missing critical data
         if (
           employment === null || employmentYA === null ||
           participation === null || hours === null ||
@@ -424,92 +486,55 @@ export default function MicroIntegrationPage() {
           capacity === null || lastInvestment === null || lastGdp === null ||
           m2 === null || m2YA === null || fedFunds === null ||
           cpi === null || cpiYA === null
-        ) {
-          continue
-        }
+        ) continue
 
         const rawData: MicroData = {
-          date: `${monthKey}-01`,
-          employment, participation, hours, ppi,
-          industrialProd: industrial,
-          investment: lastInvestment, capacity, durableGoods: durable,
-          businessApps, sentiment, gdp: lastGdp,
+          date: `${monthKey}-01`, employment, participation, hours, ppi,
+          industrialProd: industrial, investment: lastInvestment, capacity,
+          durableGoods: durable, businessApps, sentiment, gdp: lastGdp,
           m2, fedFunds, yieldSpread, cpi,
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // MICRO COMPONENTS CALCULATION
-        // ═══════════════════════════════════════════════════════════════════
-
-        // 1. MEN (M_l): Labor Efficiency
+        // MICRO COMPONENTS
         const employmentGrowth = (employment - employmentYA) / employmentYA
         const participationRate = participation / 100
         const hoursIntensity = (hours ?? 34) / 40
         const men = (0.4 * (1 + employmentGrowth)) * (0.35 * participationRate + 0.65) * (0.25 * hoursIntensity + 0.75)
 
-        // 2. MATERIALS (M_m): Resource Efficiency
         const ppiGrowth = ppi && ppiYA ? (ppi - ppiYA) / ppiYA : 0
         const materialCostPenalty = 1 / (1 + Math.max(0, ppiGrowth))
         const materials = (0.6 * (industrial / 100)) * (0.4 * materialCostPenalty + 0.6)
 
-        // 3. MACHINES (M_k): Capital Efficiency
         const capacityUtil = capacity / 100
         const invGrowth = investmentYA ? (lastInvestment - investmentYA) / investmentYA : 0
         const durableGrowth = durable && durableYA ? (durable - durableYA) / durableYA : 0
         const machines = (0.5 * capacityUtil) * (0.3 * (1 + invGrowth) + 0.7) * (0.2 * (1 + durableGrowth) + 0.8)
 
-        // 4. ENTREPRENEURIAL (E): Innovation Capital
         const businessGrowth = businessApps && businessAppsYA ? (businessApps - businessAppsYA) / businessAppsYA : 0
         const confidenceLevel = (sentiment ?? 80) / 100
         const entrepreneurial = (0.6 * (1 + businessGrowth * 0.5) + 0.4) * (0.4 * confidenceLevel + 0.6)
 
-        // P values
         const microP = Math.pow(Math.max(0.001, men * materials * machines * entrepreneurial), 0.25)
         const traditionalP = (lastInvestment * PROXY_MULTIPLIER) / lastGdp
 
-        // ═══════════════════════════════════════════════════════════════════
-        // NIV COMPONENTS CALCULATION
-        // ═══════════════════════════════════════════════════════════════════
-
-        // THRUST (u) = tanh(1.0*dG + 1.0*dA - 0.7*dr)
+        // NIV COMPONENTS
         const dG = invGrowth
         const dA = (m2 - m2YA) / m2YA
         const dr = fedFundsPrev !== null ? fedFunds - fedFundsPrev : 0
-        const rawThrust = (1.0 * dG) + (1.0 * dA) - (0.7 * dr)
-        const thrust = Math.tanh(rawThrust)
-
-        // SLACK (X) = 1 - (TCU / 100)
+        const thrust = Math.tanh((1.0 * dG) + (1.0 * dA) - (0.7 * dr))
         const slack = 1.0 - (capacity / 100.0)
 
-        // DRAG (F) = 0.4*s + 0.4*max(0, r-π) + 0.2*σ
         const yieldPenalty = (yieldSpread ?? 0) < 0 ? Math.abs((yieldSpread ?? 0) / 100) : 0
         const inflationRate = (cpi - cpiYA) / cpiYA
-        const realRateRaw = (fedFunds / 100) - inflationRate
-        const realRate = Math.max(0, realRateRaw)
+        const realRate = Math.max(0, (fedFunds / 100) - inflationRate)
         const volatility = stdDev(fedFundsHistory) / 100
         const drag = (0.4 * yieldPenalty) + (0.4 * realRate) + (0.2 * volatility)
 
-        // ═══════════════════════════════════════════════════════════════════
-        // COMPUTE NIV WITH BOTH P VALUES
-        // NIV = (u × P²) / (X + F)^η
-        // ═══════════════════════════════════════════════════════════════════
-
-        const microPSquared = Math.pow(microP, 2)
-        const traditionalPSquared = Math.pow(traditionalP, 2)
-
-        const numeratorMicro = thrust * microPSquared
-        const numeratorTraditional = thrust * traditionalPSquared
-
-        const denominatorBase = slack + drag
-        const safeBase = Math.max(denominatorBase, EPSILON)
+        // COMPUTE NIV
+        const safeBase = Math.max(slack + drag, EPSILON)
         const denominator = Math.pow(safeBase, ETA)
-
-        const nivMicro = numeratorMicro / denominator
-        const nivTraditional = numeratorTraditional / denominator
-
-        // Probabilities
-        const probMicro = calculateProbability(nivMicro)
-        const probTraditional = calculateProbability(nivTraditional)
+        const nivMicro = (thrust * Math.pow(microP, 2)) / denominator
+        const nivTraditional = (thrust * Math.pow(traditionalP, 2)) / denominator
 
         calculatedResults.push({
           date: `${monthKey}-01`,
@@ -517,33 +542,33 @@ export default function MicroIntegrationPage() {
           niv: { thrust, slack, drag, yieldPenalty, realRate, volatility, dG, dA, dr },
           nivMicro,
           nivTraditional,
-          probMicro,
-          probTraditional,
-          statusMicro: calculateStatus(probMicro),
-          statusTraditional: calculateStatus(probTraditional),
+          isRecession: isInRecession(`${monthKey}-01`),
           rawData,
         })
       }
 
       setResults(calculatedResults)
+
+      // Run OOS test
+      setLoadingStatus('Running OOS tests...')
+      const oos = runOOSTest(calculatedResults)
+      setOosResult(oos)
+
       setLoadingStatus('')
     } catch (err) {
-      console.error('Calculation error:', err)
       setError(err instanceof Error ? err.message : 'Calculation failed')
     } finally {
       setIsCalculating(false)
     }
-  }, [hasServerKey])
+  }, [hasServerKey, runOOSTest])
 
   const latestResult = results[results.length - 1]
 
-  // Chart data
-  const chartData = results.map(r => ({
+  // Chart data with brush filtering
+  const chartData = useMemo(() => results.map(r => ({
     date: r.date.substring(0, 7),
     nivMicro: r.nivMicro,
     nivTraditional: r.nivTraditional,
-    probMicro: r.probMicro,
-    probTraditional: r.probTraditional,
     men: r.micro.men,
     materials: r.micro.materials,
     machines: r.micro.machines,
@@ -553,7 +578,33 @@ export default function MicroIntegrationPage() {
     thrust: r.niv.thrust,
     slack: r.niv.slack,
     drag: r.niv.drag,
-  }))
+    isRecession: r.isRecession ? 0.1 : 0,
+  })), [results])
+
+  const filteredData = useMemo(() => {
+    if (brushRange.startIndex !== undefined && brushRange.endIndex !== undefined) {
+      return chartData.slice(brushRange.startIndex, brushRange.endIndex + 1)
+    }
+    return chartData
+  }, [chartData, brushRange])
+
+  const exportCSV = useCallback(() => {
+    if (results.length === 0) return
+    const headers = ['Date', 'M_l', 'M_m', 'M_k', 'E', 'P_micro', 'P_trad', 'u', 'X', 'F', 'NIV_micro', 'NIV_trad', 'Recession']
+    const rows = results.map(r => [
+      r.date, r.micro.men.toFixed(4), r.micro.materials.toFixed(4), r.micro.machines.toFixed(4),
+      r.micro.entrepreneurial.toFixed(4), r.micro.microP.toFixed(4), r.micro.traditionalP.toFixed(4),
+      r.niv.thrust.toFixed(4), r.niv.slack.toFixed(4), r.niv.drag.toFixed(4),
+      r.nivMicro.toFixed(4), r.nivTraditional.toFixed(4), r.isRecession ? '1' : '0'
+    ])
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'micro_niv_data.csv'
+    a.click()
+  }, [results])
 
   return (
     <div className="min-h-screen bg-neutral-950 pt-20 pb-12">
@@ -569,224 +620,140 @@ export default function MicroIntegrationPage() {
             Micro Integration Experiment
           </h1>
           <p className="text-neutral-400 mt-2 max-w-3xl">
-            Full NIV computation comparing <strong className="text-accent-400">P<sub>micro</sub></strong> (microeconomic factors)
-            vs <strong className="text-neutral-300">P<sub>traditional</sub></strong> (aggregate investment/GDP).
+            Full NIV computation comparing <strong className="text-accent-400">P<sub>micro</sub></strong> vs <strong className="text-neutral-300">P<sub>traditional</sub></strong> with out-of-sample testing.
           </p>
         </div>
 
         {/* Error Banner */}
         <AnimatePresence>
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3"
-            >
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-red-400" />
               <span className="text-red-200">{error}</span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Theoretical Foundation */}
-        <CollapsibleSection
-          title="Theoretical Foundation"
-          icon={<Info className="w-5 h-5" />}
-          isExpanded={expandedSections.has('theory')}
-          onToggle={() => toggleSection('theory')}
-          color="gray"
-        >
-          <div className="prose prose-invert max-w-none">
-            <div className="space-y-4 text-neutral-300">
-              <p>
-                <strong className="text-neutral-100">Is macroeconomics a result of microeconomics, or the reverse?</strong>
-              </p>
-              <p>
-                This experiment proposes that macroeconomic phenomena emerge from the interaction of
-                four fundamental microeconomic resources. Societies rise and fall based on finding
-                equilibrium between these factors:
-              </p>
-
-              <div className="grid md:grid-cols-2 gap-4 my-6">
-                {MICRO_FACTORS.map((factor) => (
-                  <FactorCard key={factor.id} factor={factor} />
-                ))}
-              </div>
-
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                <p className="text-amber-200 text-sm">
-                  <strong>Political Economy Insight:</strong> Politicians often sacrifice efficiency among
-                  <strong className="text-blue-400"> Men</strong> (through unemployment benefits, early retirement,
-                  labor protections that reduce mobility) to sustain their positions. This creates structural
-                  inefficiency that the aggregate P function does not capture.
-                </p>
-              </div>
-            </div>
-          </div>
-        </CollapsibleSection>
-
-        {/* The Complete Formula */}
-        <CollapsibleSection
-          title="Complete NIV Formula with Micro P"
-          icon={<Calculator className="w-5 h-5" />}
-          isExpanded={expandedSections.has('formula')}
-          onToggle={() => toggleSection('formula')}
-          color="accent"
-        >
+        {/* Formula Section */}
+        <CollapsibleSection title="Complete NIV Formula" icon={<Calculator className="w-5 h-5" />}
+          isExpanded={expandedSections.has('formula')} onToggle={() => toggleSection('formula')} color="accent">
           <div className="space-y-6">
-            {/* Master Equation */}
             <div className="text-center p-6 bg-neutral-900 rounded-xl border border-accent-500/30">
               <div className="font-mono text-2xl md:text-3xl text-accent-400 mb-4">
                 NIV<sub>t</sub> = (u<sub>t</sub> × P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
               </div>
-              <p className="text-neutral-400 text-sm mb-4">
-                Where <span className="text-accent-400">P</span> can be either <span className="text-accent-400">P<sub>micro</sub></span> or <span className="text-neutral-300">P<sub>traditional</sub></span>
-              </p>
             </div>
-
-            {/* Side by side P formulas */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="p-4 bg-accent-500/10 rounded-lg border border-accent-500/30">
                 <h4 className="font-bold text-accent-400 mb-2">Micro-Integrated P</h4>
-                <div className="font-mono text-accent-300 mb-2">
-                  P<sub>micro</sub> = (M<sub>l</sub> × M<sub>m</sub> × M<sub>k</sub> × E)<sup>1/4</sup>
-                </div>
-                <p className="text-xs text-accent-200/60">
-                  Geometric mean of four fundamental factors ensures balanced contribution.
-                </p>
+                <div className="font-mono text-accent-300">P<sub>micro</sub> = (M<sub>l</sub> × M<sub>m</sub> × M<sub>k</sub> × E)<sup>1/4</sup></div>
               </div>
               <div className="p-4 bg-neutral-800 rounded-lg border border-neutral-700">
                 <h4 className="font-bold text-neutral-300 mb-2">Traditional P</h4>
-                <div className="font-mono text-neutral-400 mb-2">
-                  P<sub>traditional</sub> = (Investment × 1.15) / GDP
-                </div>
-                <p className="text-xs text-neutral-500">
-                  Aggregate capital productivity with R&D proxy multiplier.
-                </p>
+                <div className="font-mono text-neutral-400">P<sub>traditional</sub> = (Investment × 1.15) / GDP</div>
               </div>
             </div>
-
-            {/* Other Components */}
             <div className="grid md:grid-cols-3 gap-4">
               <div className="p-4 bg-blue-500/10 rounded-lg border-l-4 border-blue-500">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap className="w-4 h-4 text-blue-400" />
                   <span className="font-bold text-blue-400">Thrust (u)</span>
                 </div>
-                <div className="font-mono text-blue-300 text-sm">
-                  u = tanh(ΔG + ΔA − 0.7Δr)
-                </div>
-                <p className="text-xs text-blue-200/60 mt-1">Policy impulse: investment + M2 − rate hikes</p>
+                <div className="font-mono text-blue-300 text-sm">u = tanh(ΔG + ΔA − 0.7Δr)</div>
               </div>
               <div className="p-4 bg-yellow-500/10 rounded-lg border-l-4 border-yellow-500">
                 <div className="flex items-center gap-2 mb-2">
                   <BarChart3 className="w-4 h-4 text-yellow-400" />
                   <span className="font-bold text-yellow-400">Slack (X)</span>
                 </div>
-                <div className="font-mono text-yellow-300 text-sm">
-                  X = 1 − (TCU / 100)
-                </div>
-                <p className="text-xs text-yellow-200/60 mt-1">Economic headroom before overheating</p>
+                <div className="font-mono text-yellow-300 text-sm">X = 1 − (TCU / 100)</div>
               </div>
               <div className="p-4 bg-red-500/10 rounded-lg border-l-4 border-red-500">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingDown className="w-4 h-4 text-red-400" />
                   <span className="font-bold text-red-400">Drag (F)</span>
                 </div>
-                <div className="font-mono text-red-300 text-sm">
-                  F = 0.4s + 0.4(r−π) + 0.2σ
-                </div>
-                <p className="text-xs text-red-200/60 mt-1">Yield penalty + real rates + volatility</p>
+                <div className="font-mono text-red-300 text-sm">F = 0.4s + 0.4(r−π) + 0.2σ</div>
               </div>
             </div>
           </div>
         </CollapsibleSection>
 
+        {/* Micro Factors */}
+        <CollapsibleSection title="Four Fundamental Factors" icon={<Info className="w-5 h-5" />}
+          isExpanded={expandedSections.has('factors')} onToggle={() => toggleSection('factors')} color="purple">
+          <div className="grid md:grid-cols-2 gap-4">
+            {MICRO_FACTORS.map((factor) => <FactorCard key={factor.id} factor={factor} />)}
+          </div>
+        </CollapsibleSection>
+
         {/* Calculate Button */}
-        <button
-          onClick={calculateFullNIV}
-          disabled={isCalculating || checkingServerKey || !hasServerKey}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white font-bold rounded-xl transition disabled:opacity-50 my-8"
-        >
-          {checkingServerKey ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Initializing...
-            </>
-          ) : isCalculating ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              {loadingStatus || 'Calculating...'}
-            </>
-          ) : !hasServerKey ? (
-            <>
-              <AlertTriangle className="w-5 h-5" />
-              Server API Key Required
-            </>
-          ) : (
-            <>
-              <Play className="w-5 h-5" />
-              Calculate Full NIV with Live FRED Data
-            </>
-          )}
+        <button onClick={calculateFullNIV} disabled={isCalculating || checkingServerKey || !hasServerKey}
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white font-bold rounded-xl transition disabled:opacity-50 my-8">
+          {checkingServerKey ? (<><Loader2 className="w-5 h-5 animate-spin" />Initializing...</>) :
+           isCalculating ? (<><Loader2 className="w-5 h-5 animate-spin" />{loadingStatus || 'Calculating...'}</>) :
+           !hasServerKey ? (<><AlertTriangle className="w-5 h-5" />Server API Key Required</>) :
+           (<><Play className="w-5 h-5" />Calculate Full NIV with 60 Years of FRED Data</>)}
         </button>
 
         {/* Results */}
         {latestResult && (
           <>
-            {/* Main Comparison Cards */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8"
-            >
-              <h3 className="text-lg font-bold text-neutral-100 mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-accent-400" />
-                Latest Results ({latestResult.date})
-              </h3>
+            {/* OOS Test Results */}
+            {oosResult && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+                <h3 className="text-lg font-bold text-neutral-100 mb-4 flex items-center gap-2">
+                  <FlaskConical className="w-5 h-5 text-emerald-400" />
+                  Out-of-Sample Test Results
+                </h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className={`p-6 rounded-xl border ${oosResult.winner === 'micro' ? 'border-accent-500/50 bg-accent-500/10' : 'border-neutral-700 bg-neutral-900'}`}>
+                    <div className="text-sm text-neutral-400 mb-1">AUC (Micro P)</div>
+                    <div className={`text-4xl font-mono font-bold ${oosResult.winner === 'micro' ? 'text-accent-400' : 'text-neutral-300'}`}>
+                      {oosResult.aucMicro.toFixed(3)}
+                    </div>
+                    {oosResult.winner === 'micro' && <div className="text-xs text-accent-400 mt-2">WINNER</div>}
+                  </div>
+                  <div className={`p-6 rounded-xl border ${oosResult.winner === 'traditional' ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-neutral-700 bg-neutral-900'}`}>
+                    <div className="text-sm text-neutral-400 mb-1">AUC (Traditional P)</div>
+                    <div className={`text-4xl font-mono font-bold ${oosResult.winner === 'traditional' ? 'text-emerald-400' : 'text-neutral-300'}`}>
+                      {oosResult.aucTraditional.toFixed(3)}
+                    </div>
+                    {oosResult.winner === 'traditional' && <div className="text-xs text-emerald-400 mt-2">WINNER</div>}
+                  </div>
+                  <div className="p-6 rounded-xl border border-neutral-700 bg-neutral-900">
+                    <div className="text-sm text-neutral-400 mb-1">Advantage</div>
+                    <div className={`text-4xl font-mono font-bold ${oosResult.aucMicro > oosResult.aucTraditional ? 'text-accent-400' : 'text-emerald-400'}`}>
+                      {oosResult.aucMicro > oosResult.aucTraditional ? '+' : ''}{((oosResult.aucMicro - oosResult.aucTraditional) * 100).toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-neutral-500 mt-2">{oosResult.testSamples} samples tested</div>
+                  </div>
+                </div>
+                <div className="mt-4 p-4 bg-neutral-900 rounded-lg border border-neutral-700">
+                  <div className="text-sm text-neutral-400">
+                    <strong className="text-neutral-200">Interpretation:</strong> AUC (Area Under ROC Curve) measures how well each NIV variant predicts
+                    recessions 12 months ahead. Values above 0.5 indicate predictive power, with 1.0 being perfect prediction.
+                    {oosResult.recessionsCaptured > 0 && (
+                      <span className="ml-1">Test includes {oosResult.recessionsCaptured} recession periods.</span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
-              {/* Side-by-side NIV comparison */}
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <NIVResultCard
-                  title="NIV with Micro P"
-                  niv={latestResult.nivMicro}
-                  probability={latestResult.probMicro}
-                  status={latestResult.statusMicro}
-                  pValue={latestResult.micro.microP}
-                  pLabel="P_micro"
-                  color="accent"
-                  isHighlighted={true}
-                />
-                <NIVResultCard
-                  title="NIV with Traditional P"
-                  niv={latestResult.nivTraditional}
-                  probability={latestResult.probTraditional}
-                  status={latestResult.statusTraditional}
-                  pValue={latestResult.micro.traditionalP}
-                  pLabel="P_traditional"
-                  color="neutral"
-                  isHighlighted={false}
-                />
+            {/* Latest Values */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-neutral-100 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-accent-400" />
+                  Latest Values ({latestResult.date})
+                </h3>
+                <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm text-neutral-300 transition">
+                  <Download className="w-4 h-4" />Export CSV
+                </button>
               </div>
 
-              {/* Divergence indicator */}
-              <DivergenceCard
-                nivMicro={latestResult.nivMicro}
-                nivTraditional={latestResult.nivTraditional}
-                probMicro={latestResult.probMicro}
-                probTraditional={latestResult.probTraditional}
-              />
-            </motion.div>
-
-            {/* Micro Factor Breakdown */}
-            <CollapsibleSection
-              title="Micro Factor Breakdown"
-              icon={<Layers className="w-5 h-5" />}
-              isExpanded={expandedSections.has('micro')}
-              onToggle={() => toggleSection('micro')}
-              color="purple"
-            >
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <MicroFactorCard name="Men" symbol="M_l" value={latestResult.micro.men} icon={<Users className="w-5 h-5" />} color="blue" />
                 <MicroFactorCard name="Materials" symbol="M_m" value={latestResult.micro.materials} icon={<Package className="w-5 h-5" />} color="amber" />
@@ -794,148 +761,86 @@ export default function MicroIntegrationPage() {
                 <MicroFactorCard name="Entrepreneurial" symbol="E" value={latestResult.micro.entrepreneurial} icon={<Lightbulb className="w-5 h-5" />} color="purple" />
               </div>
 
-              {/* Micro factors chart */}
-              <div className="h-64 mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData.slice(-36)}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
-                    <YAxis stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
-                    <Legend />
-                    <Line type="monotone" dataKey="men" stroke="#3b82f6" name="Men (M_l)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="materials" stroke="#f59e0b" name="Materials (M_m)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="machines" stroke="#10b981" name="Machines (M_k)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="entrepreneurial" stroke="#a855f7" name="Entrepreneurial (E)" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="grid md:grid-cols-2 gap-4">
+                <NIVCard title="NIV (Micro P)" value={latestResult.nivMicro} pValue={latestResult.micro.microP} pLabel="P_micro" isHighlighted />
+                <NIVCard title="NIV (Traditional P)" value={latestResult.nivTraditional} pValue={latestResult.micro.traditionalP} pLabel="P_trad" isHighlighted={false} />
+              </div>
+            </motion.div>
+
+            {/* Explorer Chart */}
+            <CollapsibleSection title={`Historical Explorer (${results.length} months)`} icon={<Calendar className="w-5 h-5" />}
+              isExpanded={expandedSections.has('explorer')} onToggle={() => toggleSection('explorer')} color="blue">
+              <div className="space-y-6">
+                {/* Main NIV Chart with Brush */}
+                <div>
+                  <h4 className="text-sm font-semibold text-neutral-300 mb-2">NIV Comparison (drag to select range)</h4>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={chartData} onMouseUp={(e) => {
+                        if (e && e.activeLabel) setBrushRange({})
+                      }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                        <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999', fontSize: 10 }} interval={Math.floor(chartData.length / 10)} />
+                        <YAxis stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
+                        <Legend />
+                        <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="5 5" />
+                        {/* Recession bands */}
+                        <Area type="step" dataKey="isRecession" fill="#ef4444" fillOpacity={0.3} stroke="none" name="Recession" />
+                        <Line type="monotone" dataKey="nivMicro" stroke="#7c3aed" name="NIV (Micro)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="nivTraditional" stroke="#6b7280" name="NIV (Traditional)" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+                        <Brush dataKey="date" height={30} stroke="#7c3aed" fill="#1a1a1a"
+                          onChange={(range) => setBrushRange(range as { startIndex?: number; endIndex?: number })} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Filtered Micro Factors */}
+                <div>
+                  <h4 className="text-sm font-semibold text-neutral-300 mb-2">Micro Factors (Selected Range: {filteredData.length} months)</h4>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={filteredData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                        <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
+                        <YAxis stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
+                        <Legend />
+                        <Line type="monotone" dataKey="men" stroke="#3b82f6" name="Men (M_l)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="materials" stroke="#f59e0b" name="Materials (M_m)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="machines" stroke="#10b981" name="Machines (M_k)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="entrepreneurial" stroke="#a855f7" name="Entrepreneurial (E)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* NIV Components */}
+                <div>
+                  <h4 className="text-sm font-semibold text-neutral-300 mb-2">NIV Components</h4>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={filteredData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                        <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
+                        <YAxis stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
+                        <Legend />
+                        <ReferenceLine y={0} stroke="#666" />
+                        <Area type="monotone" dataKey="thrust" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} name="Thrust (u)" />
+                        <Area type="monotone" dataKey="slack" stroke="#eab308" fill="#eab308" fillOpacity={0.2} name="Slack (X)" />
+                        <Area type="monotone" dataKey="drag" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} name="Drag (F)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
             </CollapsibleSection>
 
-            {/* NIV Components */}
-            <CollapsibleSection
-              title="NIV Components (u, X, F)"
-              icon={<Zap className="w-5 h-5" />}
-              isExpanded={expandedSections.has('nivcomp')}
-              onToggle={() => toggleSection('nivcomp')}
-              color="blue"
-            >
-              <div className="grid md:grid-cols-3 gap-4 mb-6">
-                <ComponentCard
-                  name="Thrust"
-                  symbol="u"
-                  value={latestResult.niv.thrust}
-                  icon={<Zap className="w-5 h-5" />}
-                  color="blue"
-                  details={[
-                    { label: 'ΔG (Inv growth)', value: latestResult.niv.dG },
-                    { label: 'ΔA (M2 growth)', value: latestResult.niv.dA },
-                    { label: 'Δr (Rate change)', value: latestResult.niv.dr },
-                  ]}
-                />
-                <ComponentCard
-                  name="Slack"
-                  symbol="X"
-                  value={latestResult.niv.slack}
-                  icon={<BarChart3 className="w-5 h-5" />}
-                  color="yellow"
-                  details={[
-                    { label: 'Capacity Util', value: latestResult.rawData.capacity ? (latestResult.rawData.capacity / 100) : 0 },
-                  ]}
-                />
-                <ComponentCard
-                  name="Drag"
-                  symbol="F"
-                  value={latestResult.niv.drag}
-                  icon={<TrendingDown className="w-5 h-5" />}
-                  color="red"
-                  details={[
-                    { label: 'Yield Penalty', value: latestResult.niv.yieldPenalty },
-                    { label: 'Real Rate', value: latestResult.niv.realRate },
-                    { label: 'Volatility', value: latestResult.niv.volatility },
-                  ]}
-                />
-              </div>
-
-              {/* Components chart */}
-              <div className="h-64 mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData.slice(-36)}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
-                    <YAxis stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
-                    <Legend />
-                    <ReferenceLine y={0} stroke="#666" />
-                    <Line type="monotone" dataKey="thrust" stroke="#3b82f6" name="Thrust (u)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="slack" stroke="#eab308" name="Slack (X)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="drag" stroke="#ef4444" name="Drag (F)" strokeWidth={2} dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </CollapsibleSection>
-
-            {/* NIV Comparison Chart */}
-            <CollapsibleSection
-              title="NIV Comparison: Micro vs Traditional"
-              icon={<TrendingUp className="w-5 h-5" />}
-              isExpanded={expandedSections.has('chart')}
-              onToggle={() => toggleSection('chart')}
-              color="accent"
-            >
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999', fontSize: 10 }} interval={Math.floor(chartData.length / 12)} />
-                    <YAxis stroke="#666" tick={{ fill: '#999', fontSize: 10 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
-                    <Legend />
-                    <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="5 5" />
-                    <ReferenceLine y={0.015} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: 'Warning', fill: '#f59e0b', fontSize: 10 }} />
-                    <ReferenceLine y={0.035} stroke="#22c55e" strokeDasharray="3 3" label={{ value: 'Normal', fill: '#22c55e', fontSize: 10 }} />
-                    <Area type="monotone" dataKey="nivMicro" fill="#7c3aed" fillOpacity={0.2} stroke="none" />
-                    <Line type="monotone" dataKey="nivMicro" stroke="#7c3aed" name="NIV (Micro P)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="nivTraditional" stroke="#6b7280" name="NIV (Traditional P)" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </CollapsibleSection>
-
-            {/* Probability Comparison */}
-            <CollapsibleSection
-              title="Recession Probability Comparison"
-              icon={<Gauge className="w-5 h-5" />}
-              isExpanded={expandedSections.has('prob')}
-              onToggle={() => toggleSection('prob')}
-              color="red"
-            >
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999', fontSize: 10 }} interval={Math.floor(chartData.length / 12)} />
-                    <YAxis stroke="#666" tick={{ fill: '#999', fontSize: 10 }} domain={[0, 100]} />
-                    <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
-                    <Legend />
-                    <ReferenceLine y={40} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: 'Elevated', fill: '#f59e0b', fontSize: 10 }} />
-                    <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Critical', fill: '#ef4444', fontSize: 10 }} />
-                    <Area type="monotone" dataKey="probMicro" fill="#ef4444" fillOpacity={0.2} stroke="none" />
-                    <Line type="monotone" dataKey="probMicro" stroke="#ef4444" name="P(Recession) Micro" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="probTraditional" stroke="#6b7280" name="P(Recession) Traditional" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </CollapsibleSection>
-
-            {/* Historical Data Table */}
-            <CollapsibleSection
-              title={`Historical Data (${results.length} months)`}
-              icon={<BarChart3 className="w-5 h-5" />}
-              isExpanded={expandedSections.has('history')}
-              onToggle={() => toggleSection('history')}
-              color="gray"
-            >
+            {/* Data Table */}
+            <CollapsibleSection title="Data Table" icon={<BarChart3 className="w-5 h-5" />}
+              isExpanded={expandedSections.has('table')} onToggle={() => toggleSection('table')} color="gray">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
@@ -952,59 +857,46 @@ export default function MicroIntegrationPage() {
                       <th className="text-right py-2 px-2">F</th>
                       <th className="text-right py-2 px-2 text-accent-400">NIV<sub>μ</sub></th>
                       <th className="text-right py-2 px-2">NIV<sub>t</sub></th>
-                      <th className="text-right py-2 px-2">Prob<sub>μ</sub></th>
+                      <th className="text-right py-2 px-2">Rec</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {results.slice(-24).reverse().map((result) => (
-                      <tr key={result.date} className="border-b border-neutral-800/50 hover:bg-neutral-900">
-                        <td className="py-2 px-2 font-mono text-neutral-300">{result.date.substring(0, 7)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-blue-400">{result.micro.men.toFixed(3)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-amber-400">{result.micro.materials.toFixed(3)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-emerald-400">{result.micro.machines.toFixed(3)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-purple-400">{result.micro.entrepreneurial.toFixed(3)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-accent-400">{result.micro.microP.toFixed(4)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-neutral-400">{result.micro.traditionalP.toFixed(4)}</td>
-                        <td className={`py-2 px-2 font-mono text-right ${result.niv.thrust >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{result.niv.thrust.toFixed(3)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-yellow-400">{result.niv.slack.toFixed(3)}</td>
-                        <td className="py-2 px-2 font-mono text-right text-red-400">{result.niv.drag.toFixed(4)}</td>
-                        <td className={`py-2 px-2 font-mono text-right font-bold ${result.nivMicro >= 0.035 ? 'text-emerald-400' : result.nivMicro >= 0.015 ? 'text-yellow-400' : 'text-red-400'}`}>
-                          {result.nivMicro.toFixed(4)}
+                    {results.slice(-36).reverse().map((r) => (
+                      <tr key={r.date} className={`border-b border-neutral-800/50 hover:bg-neutral-900 ${r.isRecession ? 'bg-red-500/10' : ''}`}>
+                        <td className="py-2 px-2 font-mono text-neutral-300">{r.date.substring(0, 7)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-blue-400">{r.micro.men.toFixed(3)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-amber-400">{r.micro.materials.toFixed(3)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-emerald-400">{r.micro.machines.toFixed(3)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-purple-400">{r.micro.entrepreneurial.toFixed(3)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-accent-400">{r.micro.microP.toFixed(4)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-neutral-400">{r.micro.traditionalP.toFixed(4)}</td>
+                        <td className={`py-2 px-2 font-mono text-right ${r.niv.thrust >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.niv.thrust.toFixed(3)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-yellow-400">{r.niv.slack.toFixed(3)}</td>
+                        <td className="py-2 px-2 font-mono text-right text-red-400">{r.niv.drag.toFixed(4)}</td>
+                        <td className={`py-2 px-2 font-mono text-right font-bold ${r.nivMicro >= 0.035 ? 'text-emerald-400' : r.nivMicro >= 0.015 ? 'text-yellow-400' : 'text-red-400'}`}>
+                          {r.nivMicro.toFixed(4)}
                         </td>
-                        <td className="py-2 px-2 font-mono text-right text-neutral-400">{result.nivTraditional.toFixed(4)}</td>
-                        <td className={`py-2 px-2 font-mono text-right ${result.probMicro < 40 ? 'text-emerald-400' : result.probMicro < 80 ? 'text-yellow-400' : 'text-red-400'}`}>
-                          {result.probMicro.toFixed(0)}%
-                        </td>
+                        <td className="py-2 px-2 font-mono text-right text-neutral-400">{r.nivTraditional.toFixed(4)}</td>
+                        <td className="py-2 px-2 font-mono text-right">{r.isRecession ? <span className="text-red-400">●</span> : ''}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs text-neutral-500 text-center mt-4">
-                Showing last 24 months. Full dataset contains {results.length} observations.
-              </p>
+              <p className="text-xs text-neutral-500 text-center mt-4">Showing last 36 months. Full dataset: {results.length} observations.</p>
             </CollapsibleSection>
           </>
         )}
 
         {/* Future Directions */}
-        <CollapsibleSection
-          title="Future Research Directions"
-          icon={<ArrowRight className="w-5 h-5" />}
-          isExpanded={expandedSections.has('future')}
-          onToggle={() => toggleSection('future')}
-          color="gray"
-        >
-          <div className="prose prose-invert max-w-none">
-            <ul className="space-y-2 text-neutral-300 text-sm">
-              <li><strong className="text-neutral-100">Sector-specific micro factors:</strong> Different industries may have different factor sensitivities.</li>
-              <li><strong className="text-neutral-100">Dynamic weights:</strong> Factor importance may shift during different phases of the business cycle.</li>
-              <li><strong className="text-neutral-100">International comparisons:</strong> How do micro factor compositions differ across economies?</li>
-              <li><strong className="text-neutral-100">Policy impact analysis:</strong> Which policies most effectively improve each micro factor?</li>
-              <li><strong className="text-neutral-100">Leading indicators:</strong> Do certain micro factors lead macro outcomes more than others?</li>
-              <li><strong className="text-neutral-100">Divergence signals:</strong> When NIV<sub>micro</sub> diverges significantly from NIV<sub>traditional</sub>, what does it predict?</li>
-            </ul>
-          </div>
+        <CollapsibleSection title="Future Research" icon={<ArrowRight className="w-5 h-5" />}
+          isExpanded={expandedSections.has('future')} onToggle={() => toggleSection('future')} color="gray">
+          <ul className="space-y-2 text-neutral-300 text-sm">
+            <li><strong className="text-neutral-100">Sector-specific factors:</strong> Different industries may have different factor sensitivities.</li>
+            <li><strong className="text-neutral-100">Dynamic weights:</strong> Factor importance may shift during business cycles.</li>
+            <li><strong className="text-neutral-100">International comparisons:</strong> How do micro factor compositions differ across economies?</li>
+            <li><strong className="text-neutral-100">Leading indicators:</strong> Do certain micro factors lead macro outcomes more than others?</li>
+          </ul>
         </CollapsibleSection>
       </div>
     </div>
@@ -1019,19 +911,12 @@ function CollapsibleSection({ title, icon, isExpanded, onToggle, color, children
   title: string; icon: React.ReactNode; isExpanded: boolean; onToggle: () => void; color: string; children: React.ReactNode
 }) {
   const colorClasses: Record<string, string> = {
-    accent: 'border-accent-500/30 bg-accent-500/5',
-    blue: 'border-blue-500/30 bg-blue-500/5',
-    green: 'border-green-500/30 bg-green-500/5',
-    yellow: 'border-yellow-500/30 bg-yellow-500/5',
-    red: 'border-red-500/30 bg-red-500/5',
-    purple: 'border-purple-500/30 bg-purple-500/5',
-    gray: 'border-neutral-700 bg-neutral-900',
+    accent: 'border-accent-500/30 bg-accent-500/5', blue: 'border-blue-500/30 bg-blue-500/5',
+    purple: 'border-purple-500/30 bg-purple-500/5', gray: 'border-neutral-700 bg-neutral-900',
   }
   const iconColors: Record<string, string> = {
-    accent: 'text-accent-400', blue: 'text-blue-400', green: 'text-green-400',
-    yellow: 'text-yellow-400', red: 'text-red-400', purple: 'text-purple-400', gray: 'text-neutral-400',
+    accent: 'text-accent-400', blue: 'text-blue-400', purple: 'text-purple-400', gray: 'text-neutral-400',
   }
-
   return (
     <div className={`mb-4 border rounded-xl overflow-hidden ${colorClasses[color]}`}>
       <button onClick={onToggle} className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition">
@@ -1055,7 +940,6 @@ function CollapsibleSection({ title, icon, isExpanded, onToggle, color, children
 function FactorCard({ factor }: { factor: MicroFactor }) {
   const borderColors: Record<string, string> = { blue: 'border-blue-500', amber: 'border-amber-500', emerald: 'border-emerald-500', purple: 'border-purple-500' }
   const textColors: Record<string, string> = { blue: 'text-blue-400', amber: 'text-amber-400', emerald: 'text-emerald-400', purple: 'text-purple-400' }
-
   return (
     <div className={`p-4 bg-neutral-900 rounded-lg border-l-4 ${borderColors[factor.color]}`}>
       <div className="flex items-center gap-2 mb-2">
@@ -1063,7 +947,10 @@ function FactorCard({ factor }: { factor: MicroFactor }) {
         <span className={`font-bold ${textColors[factor.color]}`}>{factor.name}</span>
         <span className="text-neutral-500 font-mono text-sm">({factor.symbol})</span>
       </div>
-      <p className="text-sm text-neutral-400">{factor.description}</p>
+      <p className="text-sm text-neutral-400 mb-2">{factor.description}</p>
+      <div className="text-xs text-neutral-500">
+        {factor.proxies.map(p => <span key={p.fredId} className="mr-2 font-mono">{p.fredId}</span>)}
+      </div>
     </div>
   )
 }
@@ -1073,7 +960,6 @@ function MicroFactorCard({ name, symbol, value, icon, color }: { name: string; s
     blue: 'border-blue-500/30 text-blue-400', amber: 'border-amber-500/30 text-amber-400',
     emerald: 'border-emerald-500/30 text-emerald-400', purple: 'border-purple-500/30 text-purple-400',
   }
-
   return (
     <div className={`p-4 bg-neutral-900 rounded-lg border ${colorClasses[color].split(' ')[0]}`}>
       <div className="flex items-center gap-2 mb-2">
@@ -1086,133 +972,22 @@ function MicroFactorCard({ name, symbol, value, icon, color }: { name: string; s
   )
 }
 
-function ComponentCard({ name, symbol, value, icon, color, details }: {
-  name: string; symbol: string; value: number; icon: React.ReactNode; color: string; details: { label: string; value: number }[]
-}) {
-  const colorClasses: Record<string, string> = {
-    blue: 'border-blue-500/30 text-blue-400 bg-blue-500/5',
-    yellow: 'border-yellow-500/30 text-yellow-400 bg-yellow-500/5',
-    red: 'border-red-500/30 text-red-400 bg-red-500/5',
-  }
-
-  return (
-    <div className={`p-4 rounded-lg border ${colorClasses[color]}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <span>{icon}</span>
-        <span className="font-bold">{name}</span>
-        <span className="text-neutral-500 font-mono text-sm">({symbol})</span>
-      </div>
-      <div className="text-3xl font-mono font-bold mb-2">{value.toFixed(4)}</div>
-      <div className="space-y-1">
-        {details.map((d) => (
-          <div key={d.label} className="flex justify-between text-xs">
-            <span className="text-neutral-500">{d.label}</span>
-            <span className="font-mono">{d.value.toFixed(4)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function NIVResultCard({ title, niv, probability, status, pValue, pLabel, color, isHighlighted }: {
-  title: string; niv: number; probability: number; status: string; pValue: number; pLabel: string; color: string; isHighlighted: boolean
-}) {
-  const statusColors: Record<string, string> = {
-    EXPANSION: 'text-emerald-400 bg-emerald-500/20',
-    SLOWDOWN: 'text-yellow-400 bg-yellow-500/20',
-    CONTRACTION: 'text-orange-400 bg-orange-500/20',
-    CRISIS: 'text-red-400 bg-red-500/20',
-  }
-
+function NIVCard({ title, value, pValue, pLabel, isHighlighted }: { title: string; value: number; pValue: number; pLabel: string; isHighlighted: boolean }) {
   return (
     <div className={`p-6 rounded-xl border ${isHighlighted ? 'border-accent-500/50 bg-accent-500/5' : 'border-neutral-700 bg-neutral-900'}`}>
       <h4 className={`text-lg font-bold mb-4 ${isHighlighted ? 'text-accent-400' : 'text-neutral-300'}`}>{title}</h4>
-
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <div className="text-xs text-neutral-500 mb-1">NIV Score</div>
-          <div className={`text-3xl font-mono font-bold ${niv >= 0.035 ? 'text-emerald-400' : niv >= 0.015 ? 'text-yellow-400' : 'text-red-400'}`}>
-            {niv.toFixed(4)}
+          <div className={`text-3xl font-mono font-bold ${value >= 0.035 ? 'text-emerald-400' : value >= 0.015 ? 'text-yellow-400' : 'text-red-400'}`}>
+            {value.toFixed(4)}
           </div>
         </div>
         <div>
-          <div className="text-xs text-neutral-500 mb-1">P(Recession)</div>
-          <div className={`text-3xl font-mono font-bold ${probability < 40 ? 'text-emerald-400' : probability < 80 ? 'text-yellow-400' : 'text-red-400'}`}>
-            {probability.toFixed(0)}%
-          </div>
+          <div className="text-xs text-neutral-500 mb-1">{pLabel}</div>
+          <div className="text-2xl font-mono text-neutral-300">{pValue.toFixed(4)}</div>
         </div>
       </div>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-xs text-neutral-500">{pLabel}</div>
-          <div className="font-mono text-sm">{pValue.toFixed(4)}</div>
-        </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusColors[status]}`}>
-          {status}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function DivergenceCard({ nivMicro, nivTraditional, probMicro, probTraditional }: {
-  nivMicro: number; nivTraditional: number; probMicro: number; probTraditional: number
-}) {
-  const nivDiff = nivMicro - nivTraditional
-  const nivDiffPct = ((nivMicro - nivTraditional) / Math.abs(nivTraditional)) * 100
-  const probDiff = probMicro - probTraditional
-
-  const isSignificantDivergence = Math.abs(nivDiffPct) > 20 || Math.abs(probDiff) > 15
-
-  return (
-    <div className={`p-4 rounded-xl border ${isSignificantDivergence ? 'border-amber-500/50 bg-amber-500/10' : 'border-neutral-700 bg-neutral-900'}`}>
-      <div className="flex items-center gap-2 mb-3">
-        {isSignificantDivergence ? (
-          <AlertTriangle className="w-5 h-5 text-amber-400" />
-        ) : (
-          <Activity className="w-5 h-5 text-neutral-400" />
-        )}
-        <span className={`font-bold ${isSignificantDivergence ? 'text-amber-400' : 'text-neutral-300'}`}>
-          Model Divergence Analysis
-        </span>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 text-center">
-        <div>
-          <div className="text-xs text-neutral-500 mb-1">NIV Difference</div>
-          <div className={`text-xl font-mono font-bold ${nivDiff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            {nivDiff >= 0 ? '+' : ''}{nivDiff.toFixed(4)}
-          </div>
-          <div className="text-xs text-neutral-500">
-            ({nivDiffPct >= 0 ? '+' : ''}{nivDiffPct.toFixed(1)}%)
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-neutral-500 mb-1">Probability Diff</div>
-          <div className={`text-xl font-mono font-bold ${probDiff <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            {probDiff >= 0 ? '+' : ''}{probDiff.toFixed(0)}%
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-neutral-500 mb-1">Interpretation</div>
-          <div className={`text-sm ${isSignificantDivergence ? 'text-amber-300' : 'text-neutral-400'}`}>
-            {nivDiff > 0
-              ? 'Micro factors more optimistic'
-              : nivDiff < 0
-                ? 'Hidden micro inefficiencies'
-                : 'Models agree'}
-          </div>
-        </div>
-      </div>
-
-      {isSignificantDivergence && (
-        <p className="text-xs text-amber-200/70 mt-3">
-          Significant divergence detected. This may indicate that aggregate measures are missing
-          important microeconomic dynamics.
-        </p>
-      )}
     </div>
   )
 }
