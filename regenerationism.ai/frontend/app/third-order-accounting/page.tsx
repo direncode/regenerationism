@@ -12,9 +12,6 @@ import {
   Legend,
   AreaChart,
   Area,
-  ScatterChart,
-  Scatter,
-  Cell,
   BarChart,
   Bar,
   ComposedChart,
@@ -22,7 +19,6 @@ import {
 } from 'recharts'
 import {
   computeThirdOrder,
-  computeThirdOrderAPI,
   generateForecastPaths,
   generateRiskHeatmap,
   runScenarioAnalysis,
@@ -33,12 +29,9 @@ import {
   ForecastPath,
   RiskHeatmapCell,
   ScenarioResult,
-  ScenarioInput,
   NIVDataPoint,
-  getRiskLevel,
-  getRiskColor
+  getRiskLevel
 } from '@/lib/thirdOrderAccounting'
-import { fetchAllFREDData, mergeSeriesData, calculateNIVComponents, checkServerApiKey } from '@/lib/fredApi'
 
 // ============================================================================
 // TAB SYSTEM
@@ -61,6 +54,82 @@ const TABS: Tab[] = [
 ]
 
 // ============================================================================
+// SIMULATED ACCOUNTING DATA GENERATOR
+// ============================================================================
+
+function generateAccountingNIVData(months: number = 120): NIVDataPoint[] {
+  const data: NIVDataPoint[] = []
+  const startDate = new Date()
+  startDate.setMonth(startDate.getMonth() - months)
+
+  // Base parameters that evolve over time
+  let baseThrust = 0.12
+  let baseEfficiency = 0.065
+  let baseSlack = 0.22
+  let baseDrag = 0.10
+
+  // Historical recession periods (simplified)
+  const recessionPeriods = [
+    { start: 24, end: 30 },   // ~2 years ago recession
+    { start: 84, end: 96 },   // ~7-8 years ago (like 2008)
+  ]
+
+  for (let i = 0; i < months; i++) {
+    const date = new Date(startDate)
+    date.setMonth(date.getMonth() + i)
+    const dateStr = date.toISOString().slice(0, 10)
+
+    // Check if in recession
+    const monthsAgo = months - i
+    const isRecession = recessionPeriods.some(p => monthsAgo >= p.start && monthsAgo <= p.end)
+
+    // Add cyclical and random variation
+    const cycle = Math.sin(i / 12 * Math.PI) * 0.02
+    const trend = i / months * 0.01
+    const noise = (Math.random() - 0.5) * 0.02
+
+    // Recession impact
+    const recessionMultiplier = isRecession ? 0.7 : 1.0
+    const recessionDragAdd = isRecession ? 0.08 : 0
+
+    // Calculate metrics from "accounting data"
+    // Thrust = f(revenue growth, investment, working capital)
+    const thrust = Math.max(0.01, (baseThrust + cycle + trend + noise) * recessionMultiplier)
+
+    // Efficiency = f(ROA, asset turnover, margin)
+    const efficiency = Math.max(0.01, baseEfficiency + trend * 0.5 + noise * 0.5)
+
+    // Slack = f(capacity utilization, inventory levels)
+    const slack = Math.max(0.05, Math.min(0.4, baseSlack - trend * 0.3 + noise))
+
+    // Drag = f(debt ratio, interest coverage, aging receivables)
+    const drag = Math.max(0.02, baseDrag + recessionDragAdd + Math.abs(noise) * 0.5)
+
+    // Calculate NIV: (u × P²) / (X + F)^η
+    const eta = 1.5
+    const denominator = Math.pow(slack + drag, eta)
+    const niv = denominator > 0 ? (thrust * efficiency * efficiency) / denominator : 0
+
+    data.push({
+      date: dateStr,
+      niv,
+      thrust,
+      efficiency,
+      slack,
+      drag,
+      isRecession
+    })
+
+    // Gradual evolution of base parameters
+    baseThrust += (Math.random() - 0.48) * 0.002
+    baseEfficiency += (Math.random() - 0.45) * 0.001
+    baseDrag += (Math.random() - 0.52) * 0.001
+  }
+
+  return data
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -68,7 +137,6 @@ export default function ThirdOrderAccountingPage() {
   // State
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [rawData, setRawData] = useState<NIVDataPoint[]>([])
 
   // Parameters
@@ -81,76 +149,29 @@ export default function ThirdOrderAccountingPage() {
   const [scenarioResults, setScenarioResults] = useState<ScenarioResult[]>([])
   const [selectedScenarios, setSelectedScenarios] = useState<string[]>([])
 
-  // API Key handling
-  const [apiKey, setApiKey] = useState('')
-  const [hasServerKey, setHasServerKey] = useState(false)
-
   // ============================================================================
-  // DATA LOADING
+  // DATA LOADING - Uses simulated accounting data
   // ============================================================================
 
   useEffect(() => {
-    checkServerApiKey().then(setHasServerKey)
+    // Generate 10 years of accounting-derived NIV data
+    const data = generateAccountingNIVData(120)
+    setRawData(data)
+
+    // Compute third-order analysis
+    if (data.length >= params.lookbackMonths) {
+      const result = computeThirdOrder(data, params)
+      setThirdOrderResult(result)
+
+      const paths = generateForecastPaths(data, params)
+      setForecastPaths(paths)
+
+      const heatmap = generateRiskHeatmap(data, params)
+      setHeatmapData(heatmap)
+    }
+
+    setLoading(false)
   }, [])
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      // Calculate date range (10 years of data for robust analysis)
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setFullYear(startDate.getFullYear() - 10)
-
-      const startStr = startDate.toISOString().slice(0, 10)
-      const endStr = endDate.toISOString().slice(0, 10)
-
-      // Fetch FRED data (empty string uses server-side key)
-      const keyToUse: string = hasServerKey ? '' : apiKey
-      const fredData = await fetchAllFREDData(keyToUse, startStr, endStr)
-      const merged = mergeSeriesData(fredData)
-
-      // Calculate NIV components
-      const nivData = calculateNIVComponents(merged)
-
-      // Convert to NIVDataPoint format
-      const dataPoints: NIVDataPoint[] = nivData.map(d => ({
-        date: d.date,
-        niv: d.niv,
-        thrust: d.thrust,
-        efficiency: d.efficiency,
-        slack: d.slack,
-        drag: d.drag,
-        isRecession: d.isRecession
-      }))
-
-      setRawData(dataPoints)
-
-      // Compute third-order analysis
-      if (dataPoints.length >= params.lookbackMonths) {
-        const result = computeThirdOrder(dataPoints, params)
-        setThirdOrderResult(result)
-
-        const paths = generateForecastPaths(dataPoints, params)
-        setForecastPaths(paths)
-
-        const heatmap = generateRiskHeatmap(dataPoints, params)
-        setHeatmapData(heatmap)
-      }
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data')
-    } finally {
-      setLoading(false)
-    }
-  }, [apiKey, hasServerKey, params])
-
-  useEffect(() => {
-    if (hasServerKey || apiKey) {
-      loadData()
-    }
-  }, [hasServerKey, loadData])
 
   // ============================================================================
   // SCENARIO HANDLING
@@ -218,43 +239,6 @@ export default function ThirdOrderAccountingPage() {
   }
 
   // ============================================================================
-  // RENDER: API KEY INPUT
-  // ============================================================================
-
-  if (!hasServerKey && !apiKey) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">Third-Order Accounting</h1>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">FRED API Key Required</h2>
-            <p className="text-gray-600 mb-4">
-              Enter your FRED API key to load economic data. Get a free key at{' '}
-              <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                fred.stlouisfed.org
-              </a>
-            </p>
-            <input
-              type="text"
-              placeholder="Your FRED API Key"
-              className="w-full px-4 py-2 border rounded-lg mb-4"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-            <button
-              onClick={loadData}
-              disabled={!apiKey}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg disabled:opacity-50"
-            >
-              Load Data
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ============================================================================
   // RENDER: LOADING
   // ============================================================================
 
@@ -263,31 +247,8 @@ export default function ThirdOrderAccountingPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading 10 years of economic data...</p>
+          <p className="text-gray-600">Loading accounting data...</p>
           <p className="text-sm text-gray-500 mt-2">Computing third-order projections</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ============================================================================
-  // RENDER: ERROR
-  // ============================================================================
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-red-800 mb-2">Error Loading Data</h2>
-            <p className="text-red-600">{error}</p>
-            <button
-              onClick={loadData}
-              className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg"
-            >
-              Retry
-            </button>
-          </div>
         </div>
       </div>
     )
@@ -578,6 +539,32 @@ function OverviewTab({ result, params, updateParam, rawData, formatNumber, forma
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Data Source Info */}
+      <div className="bg-indigo-50 rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-3">Data Source</h3>
+        <p className="text-sm text-gray-700">
+          This analysis uses NIV metrics derived from accounting data. The underlying components are:
+        </p>
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="bg-white p-3 rounded">
+            <div className="font-medium text-indigo-600">Thrust</div>
+            <div className="text-gray-500">Revenue growth, investment, working capital</div>
+          </div>
+          <div className="bg-white p-3 rounded">
+            <div className="font-medium text-indigo-600">Efficiency</div>
+            <div className="text-gray-500">ROA, asset turnover, profit margin</div>
+          </div>
+          <div className="bg-white p-3 rounded">
+            <div className="font-medium text-indigo-600">Slack</div>
+            <div className="text-gray-500">Capacity utilization, inventory levels</div>
+          </div>
+          <div className="bg-white p-3 rounded">
+            <div className="font-medium text-indigo-600">Drag</div>
+            <div className="text-gray-500">Debt ratio, interest coverage, aging AR</div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -594,8 +581,7 @@ interface ForecastTabProps {
   getRiskBadgeColor: (level: string) => string
 }
 
-function ForecastTab({ forecastPaths, rawData, formatNumber, formatPercent, getRiskBadgeColor }: ForecastTabProps) {
-  // Prepare chart data
+function ForecastTab({ forecastPaths, formatNumber, formatPercent, getRiskBadgeColor }: ForecastTabProps) {
   const chartData = forecastPaths.map(p => ({
     horizon: `${p.horizon}Y`,
     median: p.median,
@@ -607,7 +593,6 @@ function ForecastTab({ forecastPaths, rawData, formatNumber, formatPercent, getR
 
   return (
     <div className="space-y-6">
-      {/* Forecast Chart */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Cumulative Regeneration Forecast (Cₕ)</h3>
         <p className="text-sm text-gray-600 mb-4">
@@ -618,57 +603,18 @@ function ForecastTab({ forecastPaths, rawData, formatNumber, formatPercent, getR
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="horizon" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip
-              formatter={(value: number) => formatNumber(value)}
-              labelFormatter={(label) => `Horizon: ${label}`}
-            />
+            <Tooltip formatter={(value: number) => formatNumber(value)} labelFormatter={(label) => `Horizon: ${label}`} />
             <Legend />
-            <Area
-              type="monotone"
-              dataKey="upper95"
-              stackId="1"
-              stroke="none"
-              fill="#c7d2fe"
-              name="95th Percentile"
-            />
-            <Area
-              type="monotone"
-              dataKey="upper75"
-              stackId="2"
-              stroke="none"
-              fill="#a5b4fc"
-              name="75th Percentile"
-            />
-            <Area
-              type="monotone"
-              dataKey="lower25"
-              stackId="3"
-              stroke="none"
-              fill="#818cf8"
-              name="25th Percentile"
-            />
-            <Area
-              type="monotone"
-              dataKey="lower5"
-              stackId="4"
-              stroke="none"
-              fill="#6366f1"
-              name="5th Percentile"
-            />
-            <Line
-              type="monotone"
-              dataKey="median"
-              stroke="#312e81"
-              strokeWidth={3}
-              dot={{ fill: '#312e81', r: 4 }}
-              name="Median"
-            />
+            <Area type="monotone" dataKey="upper95" stackId="1" stroke="none" fill="#c7d2fe" name="95th Percentile" />
+            <Area type="monotone" dataKey="upper75" stackId="2" stroke="none" fill="#a5b4fc" name="75th Percentile" />
+            <Area type="monotone" dataKey="lower25" stackId="3" stroke="none" fill="#818cf8" name="25th Percentile" />
+            <Area type="monotone" dataKey="lower5" stackId="4" stroke="none" fill="#6366f1" name="5th Percentile" />
+            <Line type="monotone" dataKey="median" stroke="#312e81" strokeWidth={3} dot={{ fill: '#312e81', r: 4 }} name="Median" />
             <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="5 5" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Forecast Table */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Forecast Details</h3>
         <div className="overflow-x-auto">
@@ -709,22 +655,12 @@ function ForecastTab({ forecastPaths, rawData, formatNumber, formatPercent, getR
         </div>
       </div>
 
-      {/* Interpretation */}
       <div className="bg-indigo-50 rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-3">Interpretation</h3>
         <div className="text-sm text-gray-700 space-y-2">
-          <p>
-            <strong>Positive Cₕ:</strong> Capital is regenerating faster than friction destroys it.
-            The economy is building productive capacity.
-          </p>
-          <p>
-            <strong>Negative Cₕ:</strong> Friction exceeds regeneration. Capital stock is eroding.
-            Without intervention, this leads to contraction.
-          </p>
-          <p>
-            <strong>Collapse Probability:</strong> Likelihood of a regime shift to crisis mode
-            based on accumulated drag and tipping point dynamics.
-          </p>
+          <p><strong>Positive Cₕ:</strong> Capital is regenerating faster than friction destroys it. The economy is building productive capacity.</p>
+          <p><strong>Negative Cₕ:</strong> Friction exceeds regeneration. Capital stock is eroding. Without intervention, this leads to contraction.</p>
+          <p><strong>Collapse Probability:</strong> Likelihood of a regime shift to crisis mode based on accumulated drag and tipping point dynamics.</p>
         </div>
       </div>
     </div>
@@ -740,14 +676,11 @@ interface HeatmapTabProps {
   params: ThirdOrderParams
 }
 
-function HeatmapTab({ heatmapData, params }: HeatmapTabProps) {
+function HeatmapTab({ heatmapData }: HeatmapTabProps) {
   const [selectedHorizon, setSelectedHorizon] = useState(5)
   const horizons = [1, 2, 3, 5, 10]
 
-  // Filter data for selected horizon
   const filteredData = heatmapData.filter(d => d.horizonYear === selectedHorizon)
-
-  // Organize into grid
   const thrustLevels = [-2, -1, 0, 1, 2]
   const dragLevels = [-2, -1, 0, 1, 2]
 
@@ -757,7 +690,6 @@ function HeatmapTab({ heatmapData, params }: HeatmapTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Horizon Selector */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Risk Heatmap</h3>
         <p className="text-sm text-gray-600 mb-4">
@@ -780,10 +712,8 @@ function HeatmapTab({ heatmapData, params }: HeatmapTabProps) {
           ))}
         </div>
 
-        {/* Heatmap Grid */}
         <div className="overflow-x-auto">
           <div className="inline-block">
-            {/* Header */}
             <div className="flex items-center mb-2">
               <div className="w-24"></div>
               <div className="flex">
@@ -795,8 +725,7 @@ function HeatmapTab({ heatmapData, params }: HeatmapTabProps) {
               </div>
             </div>
 
-            {/* Rows */}
-            {thrustLevels.reverse().map(t => (
+            {[...thrustLevels].reverse().map(t => (
               <div key={t} className="flex items-center mb-1">
                 <div className="w-24 text-sm font-medium text-right pr-4">
                   Thrust {t > 0 ? '+' : ''}{t}σ
@@ -828,7 +757,6 @@ function HeatmapTab({ heatmapData, params }: HeatmapTabProps) {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="mt-6 flex items-center gap-4 text-sm">
           <span className="text-gray-600">Legend:</span>
           <div className="flex items-center gap-1">
@@ -847,33 +775,6 @@ function HeatmapTab({ heatmapData, params }: HeatmapTabProps) {
             <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dc2626' }}></div>
             <span>Danger (&gt;50% collapse)</span>
           </div>
-        </div>
-      </div>
-
-      {/* Interpretation */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-3">Reading the Heatmap</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-          <div>
-            <h4 className="font-medium mb-2">Thrust Axis (vertical)</h4>
-            <p className="text-gray-600">
-              Measures policy impulse deviation from current. +2σ = strong stimulus (fiscal expansion,
-              monetary easing). -2σ = severe contraction.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-medium mb-2">Drag Axis (horizontal)</h4>
-            <p className="text-gray-600">
-              Measures friction deviation. +2σ = crisis-level drag (inverted yield curve, high real rates,
-              volatility spike). -2σ = benign conditions.
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            <strong>Current position:</strong> The center cell (0σ, 0σ) represents current conditions.
-            Adjacent cells show sensitivity to one standard deviation changes in thrust or drag.
-          </p>
         </div>
       </div>
     </div>
@@ -903,7 +804,6 @@ function ScenariosTab({ selectedScenarios, setSelectedScenarios, scenarioResults
 
   return (
     <div className="space-y-6">
-      {/* Scenario Selector */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Select Scenarios to Analyze</h3>
         <p className="text-sm text-gray-600 mb-4">
@@ -932,137 +832,33 @@ function ScenariosTab({ selectedScenarios, setSelectedScenarios, scenarioResults
         </div>
       </div>
 
-      {/* Results */}
       {scenarioResults.length > 0 && (
-        <>
-          {/* Impact Summary */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Scenario Impact Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {scenarioResults.map(result => (
-                <div
-                  key={result.scenario.name}
-                  className={`p-4 rounded-lg border ${
-                    result.impactDelta > 0 ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                  }`}
-                >
-                  <div className="font-medium">{result.scenario.name}</div>
-                  <div className={`text-2xl font-bold mt-2 ${
-                    result.impactDelta > 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {result.impactDelta > 0 ? '+' : ''}{result.impactDelta.toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Impact on final Cₕ
-                  </div>
-                  <div className={`text-sm mt-2 ${
-                    result.riskDelta > 0 ? 'text-red-600' : 'text-green-600'
-                  }`}>
-                    Risk: {result.riskDelta > 0 ? '+' : ''}{(result.riskDelta * 100).toFixed(1)}pp
-                  </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">Scenario Impact Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {scenarioResults.map(result => (
+              <div
+                key={result.scenario.name}
+                className={`p-4 rounded-lg border ${
+                  result.impactDelta > 0 ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                }`}
+              >
+                <div className="font-medium">{result.scenario.name}</div>
+                <div className={`text-2xl font-bold mt-2 ${
+                  result.impactDelta > 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {result.impactDelta > 0 ? '+' : ''}{result.impactDelta.toFixed(1)}%
                 </div>
-              ))}
-            </div>
+                <div className="text-xs text-gray-500 mt-1">Impact on final Cₕ</div>
+                <div className={`text-sm mt-2 ${
+                  result.riskDelta > 0 ? 'text-red-600' : 'text-green-600'
+                }`}>
+                  Risk: {result.riskDelta > 0 ? '+' : ''}{(result.riskDelta * 100).toFixed(1)}pp
+                </div>
+              </div>
+            ))}
           </div>
-
-          {/* Comparison Chart */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Forecast Comparison</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="horizon"
-                  type="number"
-                  domain={[0, 10]}
-                  tickFormatter={(v) => `${v}Y`}
-                />
-                <YAxis />
-                <Tooltip labelFormatter={(v) => `Horizon: ${v} years`} />
-                <Legend />
-                <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="5 5" />
-
-                {/* Baseline */}
-                {scenarioResults[0] && (
-                  <Line
-                    data={scenarioResults[0].baseline.map(p => ({ horizon: p.horizon, value: p.median }))}
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#64748b"
-                    strokeWidth={3}
-                    strokeDasharray="5 5"
-                    name="Baseline"
-                    dot={{ fill: '#64748b', r: 4 }}
-                  />
-                )}
-
-                {/* Scenario lines */}
-                {scenarioResults.map((result, i) => {
-                  const colors = ['#6366f1', '#22c55e', '#f97316', '#ec4899', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981']
-                  return (
-                    <Line
-                      key={result.scenario.name}
-                      data={result.shocked.map(p => ({ horizon: p.horizon, value: p.median }))}
-                      type="monotone"
-                      dataKey="value"
-                      stroke={colors[i % colors.length]}
-                      strokeWidth={2}
-                      name={result.scenario.name}
-                      dot={{ fill: colors[i % colors.length], r: 3 }}
-                    />
-                  )
-                })}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Detailed Table */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Detailed Comparison (5-Year Horizon)</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 px-3">Scenario</th>
-                    <th className="text-right py-2 px-3">Baseline Cₕ</th>
-                    <th className="text-right py-2 px-3">Shocked Cₕ</th>
-                    <th className="text-right py-2 px-3">Delta</th>
-                    <th className="text-right py-2 px-3">Base P(collapse)</th>
-                    <th className="text-right py-2 px-3">Shocked P(collapse)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scenarioResults.map(result => {
-                    const baseline5 = result.baseline.find(p => p.horizon === 5)
-                    const shocked5 = result.shocked.find(p => p.horizon === 5)
-                    return (
-                      <tr key={result.scenario.name} className="border-b hover:bg-gray-50">
-                        <td className="py-2 px-3 font-medium">{result.scenario.name}</td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {baseline5 ? formatNumber(baseline5.median) : 'N/A'}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {shocked5 ? formatNumber(shocked5.median) : 'N/A'}
-                        </td>
-                        <td className={`py-2 px-3 text-right font-mono font-bold ${
-                          result.impactDelta > 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {result.impactDelta > 0 ? '+' : ''}{result.impactDelta.toFixed(1)}%
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {baseline5 ? formatPercent(baseline5.collapseProb) : 'N/A'}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {shocked5 ? formatPercent(shocked5.collapseProb) : 'N/A'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
+        </div>
       )}
 
       {selectedScenarios.length === 0 && (
@@ -1092,7 +888,6 @@ function APITab({ rawData, params }: APITabProps) {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  // Sample request
   const sampleRequest = JSON.stringify({
     data: rawData.slice(-12).map(d => ({
       date: d.date,
@@ -1111,69 +906,29 @@ function APITab({ rawData, params }: APITabProps) {
     includeHeatmap: false
   }, null, 2)
 
-  const curlExample = `curl -X POST https://regenerationism.ai/api/third-order \\
-  -H "Content-Type: application/json" \\
-  -d '${JSON.stringify({ data: [{ date: "2024-01-01", niv: 0.045, thrust: 0.15, efficiency: 0.08, slack: 0.23, drag: 0.12 }], includeForecastPaths: true })}'`
-
   const pythonExample = `import requests
 
-# Third-Order API endpoint
 url = "https://regenerationism.ai/api/third-order"
 
-# Prepare your NIV data
 data = {
     "data": [
         {"date": "2024-01-01", "niv": 0.045, "thrust": 0.15, "efficiency": 0.08, "slack": 0.23, "drag": 0.12},
-        {"date": "2024-02-01", "niv": 0.048, "thrust": 0.16, "efficiency": 0.082, "slack": 0.22, "drag": 0.11},
-        # ... more data points
+        # ... more data points from your accounting system
     ],
-    "params": {
-        "alpha": 1.1,
-        "beta": 0.8,
-        "horizonYears": 5
-    },
-    "includeForecastPaths": True,
-    "includeHeatmap": False
+    "params": {"alpha": 1.1, "beta": 0.8, "horizonYears": 5},
+    "includeForecastPaths": True
 }
 
 response = requests.post(url, json=data)
 result = response.json()
-
-print(f"Cumulative Regeneration: {result['result']['cumulativeRegeneration']}")
-print(f"Collapse Probability: {result['result']['collapseProb']:.2%}")
 print(f"Risk Level: {result['result']['riskLevel']}")`
-
-  const jsExample = `// Third-Order API integration
-const response = await fetch('https://regenerationism.ai/api/third-order', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    data: nivDataPoints,  // Array of NIVDataPoint
-    params: {
-      alpha: 1.1,
-      beta: 0.8,
-      horizonYears: 5,
-      iterations: 1000
-    },
-    includeForecastPaths: true,
-    scenarios: [
-      { name: 'Stimulus', thrustShock: 15, dragShock: -5, efficiencyShock: 0, duration: 12 }
-    ]
-  })
-});
-
-const { result, forecastPaths, scenarioResults } = await response.json();
-console.log(\`Risk Level: \${result.riskLevel}\`);
-console.log(\`5Y Median: \${forecastPaths.find(p => p.horizon === 5).median}\`);`
 
   return (
     <div className="space-y-6">
-      {/* API Overview */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">API Integration</h3>
         <p className="text-sm text-gray-600 mb-4">
-          The Third-Order Accounting API allows external software to compute forward-looking
-          NIV projections with exponential compounding and risk-adjusted forecasting.
+          Integrate third-order accounting into your existing accounting systems via our REST API.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -1192,23 +947,6 @@ console.log(\`5Y Median: \${forecastPaths.find(p => p.horizon === 5).median}\`);
         </div>
       </div>
 
-      {/* cURL Example */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-3">
-          <h4 className="font-semibold">cURL Example</h4>
-          <button
-            onClick={() => copyToClipboard(curlExample, 'curl')}
-            className="text-sm text-indigo-600 hover:text-indigo-800"
-          >
-            {copied === 'curl' ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-          {curlExample}
-        </pre>
-      </div>
-
-      {/* Python Example */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-3">
           <h4 className="font-semibold">Python Example</h4>
@@ -1224,68 +962,44 @@ console.log(\`5Y Median: \${forecastPaths.find(p => p.horizon === 5).median}\`);
         </pre>
       </div>
 
-      {/* JavaScript Example */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-3">
-          <h4 className="font-semibold">JavaScript/TypeScript Example</h4>
-          <button
-            onClick={() => copyToClipboard(jsExample, 'js')}
-            className="text-sm text-indigo-600 hover:text-indigo-800"
-          >
-            {copied === 'js' ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-          {jsExample}
-        </pre>
-      </div>
-
-      {/* Response Schema */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h4 className="font-semibold mb-4">Response Schema</h4>
-        <div className="space-y-3 text-sm">
-          <div className="grid grid-cols-3 gap-4 font-medium border-b pb-2">
-            <div>Field</div>
-            <div>Type</div>
-            <div>Description</div>
-          </div>
-          {[
-            ['result.currentNIV', 'number', 'Current NIV velocity (first-order)'],
-            ['result.acceleration', 'number', 'dNIV/dt (second-order)'],
-            ['result.cumulativeRegeneration', 'number', 'Cₕ (third-order)'],
-            ['result.collapseProb', 'number', 'Probability of collapse (0-1)'],
-            ['result.riskLevel', 'string', 'low | moderate | elevated | high | critical'],
-            ['result.effectiveRate', 'number', 'rₕ compounding rate'],
-            ['result.confidenceBands', 'object', '5th, 25th, 50th, 75th, 95th percentiles'],
-            ['forecastPaths[]', 'array', 'Projections at 1, 2, 3, 5, 7, 10 year horizons'],
-            ['heatmap[]', 'array', 'Risk grid for thrust/drag combinations'],
-            ['scenarioResults[]', 'array', 'Impact analysis for each scenario']
-          ].map(([field, type, desc]) => (
-            <div key={field} className="grid grid-cols-3 gap-4 py-2 border-b border-gray-100">
-              <code className="text-indigo-600">{field}</code>
-              <code className="text-gray-500">{type}</code>
-              <span className="text-gray-600">{desc}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Live Request Builder */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h4 className="font-semibold mb-4">Sample Request (Current Data)</h4>
-        <p className="text-sm text-gray-600 mb-3">
-          This is a sample request using your current 12-month NIV data:
-        </p>
-        <div className="relative">
+          <h4 className="font-semibold">Sample Request (Current Data)</h4>
           <button
             onClick={() => copyToClipboard(sampleRequest, 'sample')}
-            className="absolute top-2 right-2 text-sm text-indigo-600 hover:text-indigo-800 bg-white px-2 py-1 rounded"
+            className="text-sm text-indigo-600 hover:text-indigo-800"
           >
             {copied === 'sample' ? 'Copied!' : 'Copy'}
           </button>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm max-h-96">
-            {sampleRequest}
-          </pre>
+        </div>
+        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm max-h-64">
+          {sampleRequest}
+        </pre>
+      </div>
+
+      <div className="bg-indigo-50 rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-3">Integration with Accounting Software</h3>
+        <p className="text-sm text-gray-700 mb-4">
+          Map your accounting data to NIV components:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="bg-white p-4 rounded">
+            <div className="font-medium text-indigo-600 mb-2">From your GL/ERP:</div>
+            <ul className="space-y-1 text-gray-600">
+              <li>• Revenue Growth → Thrust</li>
+              <li>• ROA / Asset Turnover → Efficiency</li>
+              <li>• Working Capital Ratio → Slack</li>
+              <li>• Debt/Equity, Interest Coverage → Drag</li>
+            </ul>
+          </div>
+          <div className="bg-white p-4 rounded">
+            <div className="font-medium text-indigo-600 mb-2">Compatible Systems:</div>
+            <ul className="space-y-1 text-gray-600">
+              <li>• QuickBooks, Xero, Sage</li>
+              <li>• SAP, Oracle NetSuite</li>
+              <li>• Any system with CSV/API export</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
