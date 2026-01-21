@@ -12,6 +12,7 @@ import {
   Legend,
   BarChart,
   Bar,
+  Cell,
   ComposedChart,
   ReferenceLine,
   Area
@@ -891,9 +892,9 @@ export default function ThirdOrderAccountingPage() {
                       formatter={(value: number) => formatNumber(value, 4)}
                     />
                     <ReferenceLine y={0} stroke="#9ca3af" />
-                    <Bar dataKey="velocityAcceleration" fill={(entry: ThirdOrderBusinessMetrics) => entry.velocityAcceleration >= 0 ? '#10b981' : '#ef4444'}>
+                    <Bar dataKey="velocityAcceleration">
                       {thirdOrderMetrics.slice(-6).map((entry, index) => (
-                        <rect key={index} fill={entry.velocityAcceleration >= 0 ? '#10b981' : '#ef4444'} />
+                        <Cell key={index} fill={entry.velocityAcceleration >= 0 ? '#10b981' : '#ef4444'} />
                       ))}
                     </Bar>
                   </BarChart>
