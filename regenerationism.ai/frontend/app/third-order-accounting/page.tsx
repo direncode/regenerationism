@@ -315,15 +315,22 @@ function generateSampleData(): AccountingPeriod[] {
 // FORMAT HELPERS
 // ============================================================================
 
-const formatCurrency = (n: number) => {
+const formatCurrency = (n: number | null | undefined) => {
+  if (n == null || isNaN(n)) return '$0'
   if (Math.abs(n) >= 1e12) return `$${(n / 1e12).toFixed(1)}T`
   if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`
   if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
   if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(1)}K`
   return `$${n.toLocaleString()}`
 }
-const formatPercent = (n: number) => `${(n * 100).toFixed(1)}%`
-const formatNumber = (n: number, d = 4) => isNaN(n) || !isFinite(n) ? 'N/A' : n.toFixed(d)
+const formatPercent = (n: number | null | undefined) => {
+  if (n == null || isNaN(n)) return '0.0%'
+  return `${(n * 100).toFixed(1)}%`
+}
+const formatNumber = (n: number | null | undefined, d = 4) => {
+  if (n == null || isNaN(n) || !isFinite(n)) return 'N/A'
+  return n.toFixed(d)
+}
 
 const getRiskColor = (level: string) => {
   const colors: Record<string, string> = {
