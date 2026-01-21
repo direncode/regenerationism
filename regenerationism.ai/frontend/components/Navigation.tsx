@@ -12,6 +12,7 @@ const navLinks = [
   { href: '/custom-model', label: 'Custom Model' },
   { href: '/explorer', label: 'Explorer' },
   { href: '/micro-integration-experiment', label: 'Micro Integration' },
+  { href: '/third-order-accounting', label: 'Third-Order' },
   { href: '/oos-tests', label: 'OOS Tests' },
   { href: '/api-docs', label: 'API' },
 ]

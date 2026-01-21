@@ -1,0 +1,57 @@
+{
+  "name": "@regenerationism/third-order-sdk",
+  "version": "1.0.0",
+  "description": "Third-Order Accounting SDK for NIV economic analysis - exponential compounding and risk-adjusted forecasting",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "economics",
+    "niv",
+    "national-impact-velocity",
+    "third-order-accounting",
+    "macroeconomics",
+    "forecasting",
+    "monte-carlo",
+    "risk-analysis",
+    "regenerationism"
+  ],
+  "author": "Regenerationism",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/direncode/regenerationism"
+  },
+  "homepage": "https://regenerationism.ai",
+  "bugs": {
+    "url": "https://github.com/direncode/regenerationism/issues"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
