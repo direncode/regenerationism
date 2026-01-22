@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regenerationism NIV Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --accent: #22d3ee;
+      --accent-dark: #0891b2;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      overflow: hidden;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #171717;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #404040;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #525252;
+    }
+
+    /* Title bar drag region */
+    .titlebar {
+      -webkit-app-region: drag;
+    }
+    .titlebar button, .titlebar input, .titlebar select {
+      -webkit-app-region: no-drag;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Chart container */
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <!-- Title Bar -->
+  <div class="titlebar h-10 bg-neutral-900 border-b border-neutral-800 flex items-center px-4">
+    <div class="flex items-center gap-3">
+      <div class="w-6 h-6 rounded bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-xs font-bold">R</div>
+      <span class="text-sm font-medium text-neutral-300">Regenerationism NIV Analyzer</span>
+    </div>
+    <div class="ml-auto text-xs text-neutral-500" id="version-display">v1.0.0</div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="flex h-[calc(100vh-40px)]">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-neutral-900 border-r border-neutral-800 flex flex-col">
+      <!-- Company Selector -->
+      <div class="p-4 border-b border-neutral-800">
+        <label class="text-xs text-neutral-500 mb-2 block">Data Source</label>
+        <select id="company-select" class="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-sm text-white">
+          <option value="">Select S&P 500 Company...</option>
+        </select>
+        <div id="company-info" class="mt-2 text-xs text-neutral-500 hidden">
+          <span id="company-sector"></span> | <span id="company-mcap"></span>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 p-2 overflow-y-auto">
+        <div class="text-xs text-neutral-500 px-3 py-2 uppercase tracking-wider">Analysis</div>
+        <button data-tab="overview" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-neutral-800 flex items-center gap-3 mb-1 active">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          NIV Overview
+        </button>
+        <button data-tab="components" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-neutral-800 flex items-center gap-3 mb-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          Components
+        </button>
+        <button data-tab="engine" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-neutral-800 flex items-center gap-3 mb-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          Third-Order Engine
+        </button>
+
+        <div class="text-xs text-neutral-500 px-3 py-2 mt-4 uppercase tracking-wider">Data</div>
+        <button data-tab="sp500" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-neutral-800 flex items-center gap-3 mb-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+          S&P 500 Analysis
+        </button>
+        <button data-tab="provenance" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-neutral-800 flex items-center gap-3 mb-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Data Provenance
+        </button>
+
+        <div class="text-xs text-neutral-500 px-3 py-2 mt-4 uppercase tracking-wider">Intelligence</div>
+        <button data-tab="ai-engine" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-neutral-800 flex items-center gap-3 mb-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+          AI Decision Engine
+        </button>
+      </nav>
+
+      <!-- Status -->
+      <div class="p-4 border-t border-neutral-800">
+        <div class="flex items-center gap-2 text-xs">
+          <div id="status-indicator" class="w-2 h-2 rounded-full bg-emerald-400"></div>
+          <span id="status-text" class="text-neutral-500">Ready</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6">
+      <!-- Overview Tab -->
+      <div id="tab-overview" class="tab-content">
+        <h1 class="text-2xl font-bold mb-6">NIV Overview</h1>
+
+        <!-- NIV Formula Card -->
+        <div class="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 border border-cyan-500/30 rounded-xl p-6 mb-6">
+          <h2 class="text-lg font-semibold text-cyan-400 mb-3">National Impact Velocity Formula</h2>
+          <div class="font-mono text-2xl text-center py-4 text-cyan-300">
+            NIV = (T x E<sup>2</sup>) / (S + D)<sup>n</sup>
+          </div>
+          <div class="grid grid-cols-4 gap-4 mt-4 text-sm">
+            <div class="text-center">
+              <div class="text-cyan-400 font-bold">T</div>
+              <div class="text-neutral-500">Thrust</div>
+            </div>
+            <div class="text-center">
+              <div class="text-purple-400 font-bold">E</div>
+              <div class="text-neutral-500">Efficiency</div>
+            </div>
+            <div class="text-center">
+              <div class="text-emerald-400 font-bold">S</div>
+              <div class="text-neutral-500">Slack</div>
+            </div>
+            <div class="text-center">
+              <div class="text-red-400 font-bold">D</div>
+              <div class="text-neutral-500">Drag</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current NIV Metrics -->
+        <div id="niv-metrics" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500 mb-1">Current NIV</div>
+            <div id="current-niv" class="text-3xl font-mono font-bold text-cyan-400">--</div>
+          </div>
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500 mb-1">Effective Rate (r<sub>h</sub>)</div>
+            <div id="effective-rate" class="text-3xl font-mono font-bold text-purple-400">--</div>
+          </div>
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500 mb-1">Collapse Prob (p<sub>h</sub>)</div>
+            <div id="collapse-prob" class="text-3xl font-mono font-bold text-amber-400">--</div>
+          </div>
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500 mb-1">Cumulative C<sub>h</sub></div>
+            <div id="cumulative-ch" class="text-3xl font-mono font-bold text-emerald-400">--</div>
+          </div>
+        </div>
+
+        <!-- Third Order Formula -->
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+          <h3 class="text-lg font-semibold mb-4">Third-Order Projection</h3>
+          <div class="font-mono text-xl text-center py-4 text-amber-300">
+            C<sub>h</sub> = NIV<sub>0</sub> x e<sup>(r<sub>h</sub> x h)</sup> x (1 - p<sub>h</sub>)
+          </div>
+          <p class="text-sm text-neutral-500 text-center mt-2">
+            Cumulative regenerated capital after horizon h years, accounting for collapse probability
+          </p>
+        </div>
+      </div>
+
+      <!-- Components Tab -->
+      <div id="tab-components" class="tab-content hidden">
+        <h1 class="text-2xl font-bold mb-6">Component Analysis</h1>
+
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Thrust -->
+          <div class="bg-neutral-900 border border-cyan-500/30 rounded-xl p-5">
+            <h3 class="text-lg font-semibold text-cyan-400 mb-4">Thrust (T)</h3>
+            <div id="thrust-value" class="text-4xl font-mono font-bold text-cyan-400 mb-4">--</div>
+            <div class="space-y-2 text-sm text-neutral-400">
+              <p>Growth momentum and capital generation velocity</p>
+              <div class="mt-4">
+                <div class="text-xs text-neutral-500 mb-1">Derived from:</div>
+                <ul class="list-disc list-inside text-xs">
+                  <li>Revenue growth rate</li>
+                  <li>Operating cash flow / Revenue</li>
+                  <li>Reinvestment rate</li>
+                </ul>
+              </div>
+            </div>
+            <input type="range" id="thrust-slider" min="0" max="100" value="50" class="w-full mt-4 accent-cyan-400">
+          </div>
+
+          <!-- Efficiency -->
+          <div class="bg-neutral-900 border border-purple-500/30 rounded-xl p-5">
+            <h3 class="text-lg font-semibold text-purple-400 mb-4">Efficiency (E)</h3>
+            <div id="efficiency-value" class="text-4xl font-mono font-bold text-purple-400 mb-4">--</div>
+            <div class="space-y-2 text-sm text-neutral-400">
+              <p>Asset productivity and operational excellence</p>
+              <div class="mt-4">
+                <div class="text-xs text-neutral-500 mb-1">Derived from:</div>
+                <ul class="list-disc list-inside text-xs">
+                  <li>Asset turnover ratio</li>
+                  <li>Return on assets (ROA)</li>
+                  <li>Operating margin</li>
+                </ul>
+              </div>
+            </div>
+            <input type="range" id="efficiency-slider" min="0" max="100" value="50" class="w-full mt-4 accent-purple-400">
+          </div>
+
+          <!-- Slack -->
+          <div class="bg-neutral-900 border border-emerald-500/30 rounded-xl p-5">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-4">Slack (S)</h3>
+            <div id="slack-value" class="text-4xl font-mono font-bold text-emerald-400 mb-4">--</div>
+            <div class="space-y-2 text-sm text-neutral-400">
+              <p>Liquidity buffer and financial resilience</p>
+              <div class="mt-4">
+                <div class="text-xs text-neutral-500 mb-1">Derived from:</div>
+                <ul class="list-disc list-inside text-xs">
+                  <li>Current ratio</li>
+                  <li>Cash to revenue ratio</li>
+                  <li>Debt capacity headroom</li>
+                </ul>
+              </div>
+            </div>
+            <input type="range" id="slack-slider" min="0" max="100" value="50" class="w-full mt-4 accent-emerald-400">
+          </div>
+
+          <!-- Drag -->
+          <div class="bg-neutral-900 border border-red-500/30 rounded-xl p-5">
+            <h3 class="text-lg font-semibold text-red-400 mb-4">Drag (D)</h3>
+            <div id="drag-value" class="text-4xl font-mono font-bold text-red-400 mb-4">--</div>
+            <div class="space-y-2 text-sm text-neutral-400">
+              <p>Friction forces impeding regeneration</p>
+              <div class="mt-4">
+                <div class="text-xs text-neutral-500 mb-1">Derived from:</div>
+                <ul class="list-disc list-inside text-xs">
+                  <li>Debt service ratio</li>
+                  <li>Interest burden</li>
+                  <li>Operating inefficiency</li>
+                </ul>
+              </div>
+            </div>
+            <input type="range" id="drag-slider" min="0" max="100" value="50" class="w-full mt-4 accent-red-400">
+          </div>
+        </div>
+      </div>
+
+      <!-- Third-Order Engine Tab -->
+      <div id="tab-engine" class="tab-content hidden">
+        <h1 class="text-2xl font-bold mb-6">Third-Order Engine</h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Projection Chart -->
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+            <h3 class="text-lg font-semibold mb-4">5-Year C<sub>h</sub> Projection</h3>
+            <div class="chart-container">
+              <canvas id="projection-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Parameters -->
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+            <h3 class="text-lg font-semibold mb-4">Model Parameters</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm text-neutral-400">Eta (n) - Sensitivity</label>
+                <input type="number" id="param-eta" value="1.5" step="0.1" min="1" max="3" class="w-full mt-1 px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white">
+              </div>
+              <div>
+                <label class="text-sm text-neutral-400">Alpha (a) - NIV Weight</label>
+                <input type="number" id="param-alpha" value="1.1" step="0.1" min="0.5" max="2" class="w-full mt-1 px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white">
+              </div>
+              <div>
+                <label class="text-sm text-neutral-400">Beta (b) - Drag Weight</label>
+                <input type="number" id="param-beta" value="0.8" step="0.1" min="0.1" max="1.5" class="w-full mt-1 px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white">
+              </div>
+              <div>
+                <label class="text-sm text-neutral-400">Horizon (years)</label>
+                <input type="number" id="param-horizon" value="5" step="1" min="1" max="10" class="w-full mt-1 px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white">
+              </div>
+              <button id="recalculate-btn" class="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium">
+                Recalculate Projection
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Projection Table -->
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-5 mt-6">
+          <h3 class="text-lg font-semibold mb-4">Year-by-Year Projection</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-neutral-500 border-b border-neutral-800">
+                  <th class="text-left py-2 px-3">Year</th>
+                  <th class="text-right py-2 px-3">NIV</th>
+                  <th class="text-right py-2 px-3">r<sub>h</sub></th>
+                  <th class="text-right py-2 px-3">p<sub>h</sub></th>
+                  <th class="text-right py-2 px-3">C<sub>h</sub></th>
+                  <th class="text-right py-2 px-3">Growth</th>
+                </tr>
+              </thead>
+              <tbody id="projection-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- S&P 500 Tab -->
+      <div id="tab-sp500" class="tab-content hidden">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">S&P 500 Analysis</h1>
+          <button id="fetch-sp500-btn" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg">
+            Fetch Data
+          </button>
+        </div>
+
+        <!-- Aggregate Stats -->
+        <div id="sp500-stats" class="grid grid-cols-5 gap-4 mb-6 hidden">
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500">Avg NIV</div>
+            <div id="sp500-avg-niv" class="text-2xl font-mono font-bold text-cyan-400">--</div>
+          </div>
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500">Avg Thrust</div>
+            <div id="sp500-avg-thrust" class="text-2xl font-mono font-bold text-cyan-400">--</div>
+          </div>
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500">Avg Efficiency</div>
+            <div id="sp500-avg-efficiency" class="text-2xl font-mono font-bold text-purple-400">--</div>
+          </div>
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500">Avg Slack</div>
+            <div id="sp500-avg-slack" class="text-2xl font-mono font-bold text-emerald-400">--</div>
+          </div>
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div class="text-xs text-neutral-500">Avg Drag</div>
+            <div id="sp500-avg-drag" class="text-2xl font-mono font-bold text-red-400">--</div>
+          </div>
+        </div>
+
+        <!-- Company Table -->
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold mb-4">Companies Ranked by NIV</h3>
+          <div class="overflow-x-auto max-h-96">
+            <table class="w-full text-sm">
+              <thead class="sticky top-0 bg-neutral-900">
+                <tr class="text-neutral-500 border-b border-neutral-800">
+                  <th class="text-left py-2 px-3">Symbol</th>
+                  <th class="text-left py-2 px-3">Name</th>
+                  <th class="text-left py-2 px-3">Sector</th>
+                  <th class="text-right py-2 px-3">NIV</th>
+                  <th class="text-right py-2 px-3">Thrust</th>
+                  <th class="text-right py-2 px-3">Efficiency</th>
+                  <th class="text-right py-2 px-3">Slack</th>
+                  <th class="text-right py-2 px-3">Drag</th>
+                </tr>
+              </thead>
+              <tbody id="sp500-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Provenance Tab -->
+      <div id="tab-provenance" class="tab-content hidden">
+        <h1 class="text-2xl font-bold mb-6">Data Provenance</h1>
+
+        <div id="provenance-empty" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-6 text-center">
+          <p class="text-amber-300">Select an S&P 500 company from the sidebar to view financial data provenance.</p>
+        </div>
+
+        <div id="provenance-content" class="hidden">
+          <!-- Company Header -->
+          <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-5 mb-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 id="provenance-company-name" class="text-xl font-bold text-white"></h2>
+                <p id="provenance-company-sector" class="text-sm text-neutral-400"></p>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-neutral-500">Market Cap</div>
+                <div id="provenance-mcap" class="text-lg font-mono text-cyan-400"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <!-- Income Statement -->
+            <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+              <h3 class="text-lg font-semibold mb-4">Income Statement</h3>
+              <div id="income-statement" class="space-y-2"></div>
+            </div>
+
+            <!-- Balance Sheet -->
+            <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+              <h3 class="text-lg font-semibold mb-4">Balance Sheet</h3>
+              <div id="balance-sheet" class="space-y-2"></div>
+            </div>
+          </div>
+
+          <!-- NIV Derivation -->
+          <div class="bg-neutral-900 border border-cyan-500/30 rounded-xl p-5 mt-6">
+            <h3 class="text-lg font-semibold mb-4">NIV Component Derivation</h3>
+            <div id="niv-derivation" class="grid grid-cols-4 gap-4"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Engine Tab -->
+      <div id="tab-ai-engine" class="tab-content hidden">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">AI Decision Engine</h1>
+          <button id="generate-ai-btn" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg">
+            Generate Analysis
+          </button>
+        </div>
+
+        <div id="ai-empty" class="bg-purple-500/10 border border-purple-500/30 rounded-xl p-6 text-center">
+          <p class="text-purple-300">Click "Generate Analysis" to receive AI-powered regeneration insights and action plans.</p>
+        </div>
+
+        <div id="ai-content" class="hidden space-y-6">
+          <!-- State Comparison -->
+          <div class="grid grid-cols-2 gap-6">
+            <div class="bg-neutral-900 border border-red-500/30 rounded-xl p-5">
+              <h3 class="text-lg font-semibold text-red-400 mb-4">Current State</h3>
+              <div id="ai-current-state" class="space-y-2"></div>
+            </div>
+            <div class="bg-neutral-900 border border-emerald-500/30 rounded-xl p-5">
+              <h3 class="text-lg font-semibold text-emerald-400 mb-4">Optimized State</h3>
+              <div id="ai-optimized-state" class="space-y-2"></div>
+            </div>
+          </div>
+
+          <!-- Insights -->
+          <div class="bg-neutral-900 border border-amber-500/30 rounded-xl p-5">
+            <h3 class="text-lg font-semibold text-amber-400 mb-4">AI Insights</h3>
+            <div id="ai-insights" class="space-y-3"></div>
+          </div>
+
+          <!-- Action Plans -->
+          <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+            <h3 class="text-lg font-semibold mb-4">Recommended Action Plans</h3>
+            <div id="ai-action-plans" class="space-y-4"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
