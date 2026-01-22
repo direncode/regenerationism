@@ -133,11 +133,13 @@ function generateDecisionTree(input: NIVInput): DecisionNode {
     .filter(c => c.gap > 0)
     .sort((a, b) => b.potential - a.potential)
 
+  const nivValue = input.niv ?? calculateNIV(input.thrust, input.efficiency, input.slack, input.drag)
+
   const rootNode: DecisionNode = {
     id: 'root',
     type: 'root',
     label: 'Regeneration Optimization',
-    description: `Current NIV: ${input.niv.toFixed(4)} | Target: Maximize Cₕ`,
+    description: `Current NIV: ${nivValue.toFixed(4)} | Target: Maximize Cₕ`,
     impact: 0,
     probability: 1,
     timeframe: 'Strategic',
@@ -168,7 +170,8 @@ function generateComponentBranch(
   if (name === 'slack') newInput.slack = improvedValue
   if (name === 'drag') newInput.drag = improvedValue
 
-  const currentCh = calculateThirdOrder(input.niv, input.drag).cumulativeRegen
+  const currentNiv = input.niv ?? calculateNIV(input.thrust, input.efficiency, input.slack, input.drag)
+  const currentCh = calculateThirdOrder(currentNiv, input.drag).cumulativeRegen
   const newNiv = calculateNIV(newInput.thrust, newInput.efficiency, newInput.slack, newInput.drag)
   const newCh = calculateThirdOrder(newNiv, newInput.drag).cumulativeRegen
   const impact = newCh - currentCh
@@ -587,7 +590,8 @@ function createPlanForComponent(
   if (component === 'slack') newInput.slack = improvedValue
   if (component === 'drag') newInput.drag = improvedValue
 
-  const currentCh = calculateThirdOrder(input.niv, input.drag)
+  const currentNiv = input.niv ?? calculateNIV(input.thrust, input.efficiency, input.slack, input.drag)
+  const currentCh = calculateThirdOrder(currentNiv, input.drag)
   const newNiv = calculateNIV(newInput.thrust, newInput.efficiency, newInput.slack, newInput.drag)
   const newCh = calculateThirdOrder(newNiv, newInput.drag)
 
@@ -597,7 +601,7 @@ function createPlanForComponent(
     category: component,
     ...template,
     expectedImpact: {
-      nivDelta: newNiv - input.niv,
+      nivDelta: newNiv - currentNiv,
       chDelta: newCh.cumulativeRegen - currentCh.cumulativeRegen,
       riskReduction: currentCh.collapseProb - newCh.collapseProb
     }
@@ -609,10 +613,11 @@ function generateInsights(input: NIVInput, currentState: DecisionAnalysis['curre
   const { thrust, efficiency, slack, drag, companyName, sector } = input
   const entityName = companyName || 'the business'
   const sectorContext = sector ? ` in the ${sector} sector` : ''
+  const nivValue = input.niv ?? calculateNIV(thrust, efficiency, slack, drag)
 
   // Company-specific header if available
   if (companyName) {
-    insights.push(`Analysis for ${companyName}${sectorContext}: NIV score of ${(input.niv ?? ((thrust * Math.pow(efficiency, 2)) / Math.pow(Math.max(0.1, slack + drag), 1.5))).toFixed(4)} indicates ${input.niv > 0.035 ? 'strong' : input.niv > 0.015 ? 'moderate' : 'weak'} regeneration potential.`)
+    insights.push(`Analysis for ${companyName}${sectorContext}: NIV score of ${nivValue.toFixed(4)} indicates ${nivValue > 0.035 ? 'strong' : nivValue > 0.015 ? 'moderate' : 'weak'} regeneration potential.`)
   }
 
   // Component-specific insights
@@ -662,12 +667,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const normalizedThrust = Math.max(0, Math.min(1, thrust))
+    const normalizedEfficiency = Math.max(0, Math.min(1, efficiency))
+    const normalizedSlack = Math.max(0, Math.min(1, slack))
+    const normalizedDrag = Math.max(0, Math.min(1, drag))
+    const calculatedNiv = calculateNIV(normalizedThrust, normalizedEfficiency, normalizedSlack, normalizedDrag)
+
     const input: NIVInput = {
-      thrust: Math.max(0, Math.min(1, thrust)),
-      efficiency: Math.max(0, Math.min(1, efficiency)),
-      slack: Math.max(0, Math.min(1, slack)),
-      drag: Math.max(0, Math.min(1, drag)),
-      niv: calculateNIV(thrust, efficiency, slack, drag),
+      thrust: normalizedThrust,
+      efficiency: normalizedEfficiency,
+      slack: normalizedSlack,
+      drag: normalizedDrag,
+      niv: calculatedNiv,
       companySymbol,
       companyName,
       sector,
@@ -675,9 +686,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Current state analysis
-    const current = calculateThirdOrder(input.niv, input.drag)
+    const current = calculateThirdOrder(calculatedNiv, normalizedDrag)
     const currentState = {
-      niv: input.niv,
+      niv: calculatedNiv,
       effectiveRate: current.effectiveRate,
       collapseProb: current.collapseProb,
       cumulativeRegen: current.cumulativeRegen,
