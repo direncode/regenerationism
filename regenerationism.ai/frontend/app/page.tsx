@@ -63,21 +63,21 @@ export default function Home() {
             </p>
 
             <div className="flex flex-wrap justify-center gap-4 mb-8">
-              <a
-                href="/downloads/RegenerationismNIV-Setup-1.0.0.exe"
+              <Link
+                href="/downloads"
                 className="px-8 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition shadow-medium flex items-center gap-3"
               >
                 <Download className="w-5 h-5" />
                 Download for Windows
                 <span className="text-xs bg-white/20 px-2 py-0.5 rounded">64-bit</span>
-              </a>
-              <a
-                href="/downloads/RegenerationismNIV-1.0.0-portable.exe"
+              </Link>
+              <Link
+                href="/downloads"
                 className="px-8 py-4 bg-neutral-900 border border-neutral-700 text-neutral-200 font-semibold rounded-xl hover:border-neutral-600 hover:bg-neutral-800 transition shadow-soft flex items-center gap-2"
               >
                 <Download className="w-5 h-5" />
                 Portable Version
-              </a>
+              </Link>
             </div>
 
             <div className="flex justify-center gap-8 text-sm text-neutral-500">
@@ -294,13 +294,13 @@ export default function Home() {
             </p>
 
             <div className="flex flex-wrap justify-center gap-4">
-              <a
-                href="/downloads/RegenerationismNIV-Setup-1.0.0.exe"
+              <Link
+                href="/downloads"
                 className="px-8 py-4 bg-white text-purple-600 font-semibold rounded-xl hover:bg-purple-50 transition shadow-medium flex items-center gap-2"
               >
                 <Download className="w-5 h-5" />
                 Download Now
-              </a>
+              </Link>
               <Link
                 href="/third-order-accounting"
                 className="px-8 py-4 bg-purple-500/20 text-white border border-white/30 font-semibold rounded-xl hover:bg-purple-500/30 transition"

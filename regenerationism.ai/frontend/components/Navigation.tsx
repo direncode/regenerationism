@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, Menu, X, ExternalLink, FileText } from 'lucide-react'
+import { Activity, Menu, X, ExternalLink, FileText, Download } from 'lucide-react'
 
 const navLinks = [
   { href: '/', label: 'Home' },
+  { href: '/downloads', label: 'Download', highlight: true },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/methodology', label: 'Methodology' },
   { href: '/custom-model', label: 'Custom Model' },
@@ -41,12 +42,15 @@ export default function Navigation() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition flex items-center gap-1.5 ${
                   pathname === link.href
                     ? 'text-accent-400 bg-accent-500/10'
+                    : link.highlight
+                    ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10'
                     : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800'
                 }`}
               >
+                {link.highlight && <Download className="w-3.5 h-3.5" />}
                 {link.label}
               </Link>
             ))}
