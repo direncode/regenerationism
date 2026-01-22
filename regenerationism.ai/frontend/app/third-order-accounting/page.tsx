@@ -338,24 +338,121 @@ function generateSampleData(): AccountingPeriod[] {
 }
 
 // ============================================================================
-// FORMAT HELPERS
+// FORMAT HELPERS - GAAP/IFRS COMPLIANT
 // ============================================================================
 
-const formatCurrency = (n: number | null | undefined) => {
-  if (n == null || isNaN(n)) return '$0'
-  if (Math.abs(n) >= 1e12) return `$${(n / 1e12).toFixed(1)}T`
-  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`
-  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
-  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(1)}K`
-  return `$${n.toLocaleString()}`
+/**
+ * Accounting-standard currency formatting
+ * - Uses parentheses for negative numbers (standard accounting convention)
+ * - Consistent decimal places
+ * - Proper thousands separators
+ */
+const formatCurrency = (n: number | null | undefined, showCents = false) => {
+  if (n == null || isNaN(n)) return '$--'
+  const abs = Math.abs(n)
+  const formatted = showCents
+    ? abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : abs >= 1e12 ? `${(abs / 1e12).toFixed(1)}T`
+    : abs >= 1e9 ? `${(abs / 1e9).toFixed(1)}B`
+    : abs >= 1e6 ? `${(abs / 1e6).toFixed(1)}M`
+    : abs >= 1e3 ? `${(abs / 1e3).toFixed(1)}K`
+    : abs.toLocaleString('en-US')
+  return n < 0 ? `($${formatted})` : `$${formatted}`
 }
-const formatPercent = (n: number | null | undefined) => {
-  if (n == null || isNaN(n)) return '0.0%'
-  return `${(n * 100).toFixed(1)}%`
+
+/**
+ * Accounting-standard currency for financial statements
+ * Shows full numbers with thousands separators, parentheses for negatives
+ */
+const formatStatementCurrency = (n: number | null | undefined) => {
+  if (n == null || isNaN(n)) return '--'
+  const abs = Math.abs(n)
+  const formatted = abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  return n < 0 ? `(${formatted})` : formatted
 }
+
+const formatPercent = (n: number | null | undefined, decimals = 1) => {
+  if (n == null || isNaN(n)) return '--%'
+  const value = n * 100
+  return value < 0 ? `(${Math.abs(value).toFixed(decimals)}%)` : `${value.toFixed(decimals)}%`
+}
+
 const formatNumber = (n: number | null | undefined, d = 4) => {
   if (n == null || isNaN(n) || !isFinite(n)) return 'N/A'
   return n.toFixed(d)
+}
+
+const formatRatio = (n: number | null | undefined) => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '--'
+  return n.toFixed(2) + 'x'
+}
+
+/**
+ * Standard financial statement date formatting
+ */
+const formatStatementDate = (period: string, type: 'balance' | 'income' | 'cash' = 'income') => {
+  const [year, month] = period.split('-')
+  const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December']
+  const monthName = monthNames[parseInt(month)] || month
+
+  if (type === 'balance') {
+    return `As of ${monthName} ${parseInt(month) === 12 ? '31' : '30'}, ${year}`
+  }
+  return `For the Period Ended ${monthName} ${parseInt(month) === 12 ? '31' : '30'}, ${year}`
+}
+
+/**
+ * Calculate comprehensive financial ratios per GAAP standards
+ */
+const calculateFinancialRatios = (data: AccountingPeriod) => {
+  const totalAssets = data.cash + data.accountsReceivable + data.inventory + data.fixedAssets
+  const currentAssets = data.cash + data.accountsReceivable + data.inventory
+  const currentLiabilities = data.accountsPayable + data.shortTermDebt
+  const totalLiabilities = currentLiabilities + data.longTermDebt
+  const grossProfit = data.revenue - data.costOfGoodsSold
+  const operatingIncome = grossProfit - data.operatingExpenses
+  const ebit = operatingIncome
+  const ebitda = ebit + data.depreciation
+  const netIncome = ebit - data.interestExpense - data.taxes
+
+  return {
+    // Liquidity Ratios
+    currentRatio: currentLiabilities > 0 ? currentAssets / currentLiabilities : null,
+    quickRatio: currentLiabilities > 0 ? (data.cash + data.accountsReceivable) / currentLiabilities : null,
+    cashRatio: currentLiabilities > 0 ? data.cash / currentLiabilities : null,
+    workingCapital: currentAssets - currentLiabilities,
+
+    // Profitability Ratios
+    grossMargin: data.revenue > 0 ? grossProfit / data.revenue : null,
+    operatingMargin: data.revenue > 0 ? operatingIncome / data.revenue : null,
+    netMargin: data.revenue > 0 ? netIncome / data.revenue : null,
+    returnOnAssets: totalAssets > 0 ? netIncome / totalAssets : null,
+    returnOnEquity: data.equity > 0 ? netIncome / data.equity : null,
+
+    // Leverage Ratios
+    debtToEquity: data.equity > 0 ? totalLiabilities / data.equity : null,
+    debtToAssets: totalAssets > 0 ? totalLiabilities / totalAssets : null,
+    interestCoverage: data.interestExpense > 0 ? ebit / data.interestExpense : null,
+
+    // Activity Ratios
+    assetTurnover: totalAssets > 0 ? data.revenue / totalAssets : null,
+    inventoryTurnover: data.inventory > 0 ? data.costOfGoodsSold / data.inventory : null,
+    receivablesTurnover: data.accountsReceivable > 0 ? data.revenue / data.accountsReceivable : null,
+    daysReceivables: data.accountsReceivable > 0 ? (data.accountsReceivable / data.revenue) * 365 : null,
+    daysInventory: data.inventory > 0 ? (data.inventory / data.costOfGoodsSold) * 365 : null,
+
+    // Computed Values
+    grossProfit,
+    operatingIncome,
+    ebit,
+    ebitda,
+    netIncome,
+    totalAssets,
+    currentAssets,
+    currentLiabilities,
+    totalLiabilities
+  }
 }
 
 const getRiskColor = (level: string) => {
@@ -391,7 +488,7 @@ const getPriorityColor = (priority: string) => {
 export default function ThirdOrderAccountingPage() {
   const [accountingData, setAccountingData] = useState<AccountingPeriod[]>(generateSampleData)
   const [selectedPeriod, setSelectedPeriod] = useState(11)
-  const [activeTab, setActiveTab] = useState<'overview' | 'components' | 'engine' | 'sp500' | 'ai-engine' | 'provenance'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'statements' | 'components' | 'engine' | 'sp500' | 'ai-engine' | 'provenance'>('overview')
   const [editMode, setEditMode] = useState(false)
 
   // S&P 500 State
@@ -536,6 +633,7 @@ export default function ThirdOrderAccountingPage() {
           <div className="flex gap-1 overflow-x-auto">
             {[
               { id: 'overview', label: 'NIV Overview' },
+              { id: 'statements', label: 'Financial Statements' },
               { id: 'components', label: 'Component Mapping' },
               { id: 'engine', label: 'Third-Order Engine' },
               { id: 'sp500', label: 'S&P 500 Analysis' },
@@ -693,6 +791,421 @@ export default function ThirdOrderAccountingPage() {
             </div>
           </div>
         )}
+
+        {/* Tab: Financial Statements - GAAP/IFRS Compliant */}
+        {activeTab === 'statements' && (() => {
+          const ratios = calculateFinancialRatios(currentData)
+          const prevData = selectedPeriod > 0 ? accountingData[selectedPeriod - 1] : null
+          const prevRatios = prevData ? calculateFinancialRatios(prevData) : null
+
+          return (
+            <div className="space-y-6">
+              {/* Professional Header */}
+              <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Consolidated Financial Statements</h2>
+                    <p className="text-sm text-neutral-400 mt-1">Prepared in accordance with Generally Accepted Accounting Principles (GAAP)</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/30">
+                      UNAUDITED
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="bg-neutral-800/50 rounded-lg p-3">
+                    <div className="text-neutral-500 text-xs">Reporting Entity</div>
+                    <div className="text-white font-medium">Sample Business Entity</div>
+                  </div>
+                  <div className="bg-neutral-800/50 rounded-lg p-3">
+                    <div className="text-neutral-500 text-xs">Reporting Period</div>
+                    <div className="text-white font-medium">{currentData.period}</div>
+                  </div>
+                  <div className="bg-neutral-800/50 rounded-lg p-3">
+                    <div className="text-neutral-500 text-xs">Currency</div>
+                    <div className="text-white font-medium">United States Dollars (USD)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Income Statement - Multi-Step Format (GAAP Standard) */}
+              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+                <div className="bg-neutral-800 px-6 py-4 border-b border-neutral-700">
+                  <h3 className="text-lg font-bold text-white">Statement of Operations</h3>
+                  <p className="text-sm text-neutral-400">{formatStatementDate(currentData.period, 'income')}</p>
+                  <p className="text-xs text-neutral-500 mt-1">(In United States Dollars)</p>
+                </div>
+                <div className="p-6">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-neutral-500 text-xs uppercase">
+                        <th className="text-left py-2">Description</th>
+                        <th className="text-right py-2 w-32">Current Period</th>
+                        {prevData && <th className="text-right py-2 w-32">Prior Period</th>}
+                        {prevData && <th className="text-right py-2 w-24">Change %</th>}
+                        <th className="text-right py-2 w-20">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-mono">
+                      {/* Revenue Section */}
+                      <tr className="border-t border-neutral-800">
+                        <td className="py-2 text-white font-semibold">Revenue</td>
+                        <td className="py-2 text-right text-white">{formatStatementCurrency(currentData.revenue)}</td>
+                        {prevData && <td className="py-2 text-right text-neutral-400">{formatStatementCurrency(prevData.revenue)}</td>}
+                        {prevData && <td className={`py-2 text-right ${currentData.revenue >= prevData.revenue ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatPercent((currentData.revenue - prevData.revenue) / prevData.revenue)}
+                        </td>}
+                        <td className="py-2 text-right text-neutral-600">1</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 pl-4 text-neutral-400">Cost of Goods Sold</td>
+                        <td className="py-2 text-right text-neutral-300">({formatStatementCurrency(currentData.costOfGoodsSold).replace(/[()]/g, '')})</td>
+                        {prevData && <td className="py-2 text-right text-neutral-500">({formatStatementCurrency(prevData.costOfGoodsSold).replace(/[()]/g, '')})</td>}
+                        {prevData && <td className="py-2 text-right text-neutral-500">--</td>}
+                        <td className="py-2 text-right text-neutral-600">2</td>
+                      </tr>
+                      <tr className="border-t border-neutral-700 bg-neutral-800/30">
+                        <td className="py-2 text-white font-semibold">Gross Profit</td>
+                        <td className="py-2 text-right text-white font-semibold">{formatStatementCurrency(ratios.grossProfit)}</td>
+                        {prevData && prevRatios && <td className="py-2 text-right text-neutral-400">{formatStatementCurrency(prevRatios.grossProfit)}</td>}
+                        {prevData && prevRatios && <td className={`py-2 text-right ${ratios.grossProfit >= prevRatios.grossProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatPercent((ratios.grossProfit - prevRatios.grossProfit) / Math.abs(prevRatios.grossProfit || 1))}
+                        </td>}
+                        <td className="py-2 text-right text-neutral-600"></td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 pl-4 text-neutral-400">Operating Expenses</td>
+                        <td className="py-2 text-right text-neutral-300">({formatStatementCurrency(currentData.operatingExpenses).replace(/[()]/g, '')})</td>
+                        {prevData && <td className="py-2 text-right text-neutral-500">({formatStatementCurrency(prevData.operatingExpenses).replace(/[()]/g, '')})</td>}
+                        {prevData && <td className="py-2 text-right text-neutral-500">--</td>}
+                        <td className="py-2 text-right text-neutral-600">3</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 pl-4 text-neutral-400">Depreciation & Amortization</td>
+                        <td className="py-2 text-right text-neutral-300">({formatStatementCurrency(currentData.depreciation).replace(/[()]/g, '')})</td>
+                        {prevData && <td className="py-2 text-right text-neutral-500">({formatStatementCurrency(prevData.depreciation).replace(/[()]/g, '')})</td>}
+                        {prevData && <td className="py-2 text-right text-neutral-500">--</td>}
+                        <td className="py-2 text-right text-neutral-600">4</td>
+                      </tr>
+                      <tr className="border-t border-neutral-700 bg-neutral-800/30">
+                        <td className="py-2 text-white font-semibold">Operating Income (EBIT)</td>
+                        <td className="py-2 text-right text-white font-semibold">{formatStatementCurrency(ratios.operatingIncome)}</td>
+                        {prevData && prevRatios && <td className="py-2 text-right text-neutral-400">{formatStatementCurrency(prevRatios.operatingIncome)}</td>}
+                        {prevData && prevRatios && <td className={`py-2 text-right ${ratios.operatingIncome >= prevRatios.operatingIncome ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatPercent((ratios.operatingIncome - prevRatios.operatingIncome) / Math.abs(prevRatios.operatingIncome || 1))}
+                        </td>}
+                        <td className="py-2 text-right text-neutral-600"></td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 pl-4 text-neutral-400">Interest Expense</td>
+                        <td className="py-2 text-right text-neutral-300">({formatStatementCurrency(currentData.interestExpense).replace(/[()]/g, '')})</td>
+                        {prevData && <td className="py-2 text-right text-neutral-500">({formatStatementCurrency(prevData.interestExpense).replace(/[()]/g, '')})</td>}
+                        {prevData && <td className="py-2 text-right text-neutral-500">--</td>}
+                        <td className="py-2 text-right text-neutral-600">5</td>
+                      </tr>
+                      <tr className="border-t border-neutral-700">
+                        <td className="py-2 text-white">Income Before Taxes</td>
+                        <td className="py-2 text-right text-white">{formatStatementCurrency(ratios.operatingIncome - currentData.interestExpense)}</td>
+                        {prevData && prevRatios && <td className="py-2 text-right text-neutral-400">{formatStatementCurrency(prevRatios.operatingIncome - prevData.interestExpense)}</td>}
+                        {prevData && <td className="py-2 text-right text-neutral-500">--</td>}
+                        <td className="py-2 text-right text-neutral-600"></td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 pl-4 text-neutral-400">Income Tax Expense</td>
+                        <td className="py-2 text-right text-neutral-300">({formatStatementCurrency(currentData.taxes).replace(/[()]/g, '')})</td>
+                        {prevData && <td className="py-2 text-right text-neutral-500">({formatStatementCurrency(prevData.taxes).replace(/[()]/g, '')})</td>}
+                        {prevData && <td className="py-2 text-right text-neutral-500">--</td>}
+                        <td className="py-2 text-right text-neutral-600">6</td>
+                      </tr>
+                      <tr className="border-t-2 border-neutral-600 bg-cyan-900/20">
+                        <td className="py-3 text-cyan-400 font-bold">Net Income</td>
+                        <td className="py-3 text-right text-cyan-400 font-bold text-lg">{formatStatementCurrency(ratios.netIncome)}</td>
+                        {prevData && prevRatios && <td className="py-3 text-right text-cyan-400/70">{formatStatementCurrency(prevRatios.netIncome)}</td>}
+                        {prevData && prevRatios && <td className={`py-3 text-right font-bold ${ratios.netIncome >= prevRatios.netIncome ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatPercent((ratios.netIncome - prevRatios.netIncome) / Math.abs(prevRatios.netIncome || 1))}
+                        </td>}
+                        <td className="py-3 text-right text-neutral-600"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div className="mt-4 pt-4 border-t border-neutral-800 grid grid-cols-4 gap-4 text-center">
+                    <div>
+                      <div className="text-xs text-neutral-500">Gross Margin</div>
+                      <div className="text-lg font-bold text-white">{formatPercent(ratios.grossMargin)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-neutral-500">Operating Margin</div>
+                      <div className="text-lg font-bold text-white">{formatPercent(ratios.operatingMargin)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-neutral-500">Net Margin</div>
+                      <div className="text-lg font-bold text-white">{formatPercent(ratios.netMargin)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-neutral-500">EBITDA</div>
+                      <div className="text-lg font-bold text-white">{formatCurrency(ratios.ebitda)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Balance Sheet - Classified Format (GAAP Standard) */}
+              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+                <div className="bg-neutral-800 px-6 py-4 border-b border-neutral-700">
+                  <h3 className="text-lg font-bold text-white">Statement of Financial Position</h3>
+                  <p className="text-sm text-neutral-400">{formatStatementDate(currentData.period, 'balance')}</p>
+                  <p className="text-xs text-neutral-500 mt-1">(In United States Dollars)</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Assets */}
+                    <div>
+                      <h4 className="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-neutral-700 pb-2">Assets</h4>
+                      <table className="w-full text-sm font-mono">
+                        <tbody>
+                          <tr><td colSpan={2} className="py-2 text-neutral-400 font-semibold">Current Assets:</td></tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Cash and Cash Equivalents</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.cash)}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Accounts Receivable, net</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.accountsReceivable)}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Inventory</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.inventory)}</td>
+                          </tr>
+                          <tr className="border-t border-neutral-800">
+                            <td className="py-2 pl-4 text-white font-semibold">Total Current Assets</td>
+                            <td className="py-2 text-right text-white font-semibold">{formatStatementCurrency(ratios.currentAssets)}</td>
+                          </tr>
+                          <tr><td colSpan={2} className="py-2 text-neutral-400 font-semibold">Non-Current Assets:</td></tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Property, Plant & Equipment, net</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.fixedAssets)}</td>
+                          </tr>
+                          <tr className="border-t-2 border-neutral-600 bg-emerald-900/20">
+                            <td className="py-3 text-emerald-400 font-bold">Total Assets</td>
+                            <td className="py-3 text-right text-emerald-400 font-bold text-lg">{formatStatementCurrency(ratios.totalAssets)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Liabilities & Equity */}
+                    <div>
+                      <h4 className="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-neutral-700 pb-2">Liabilities & Stockholders Equity</h4>
+                      <table className="w-full text-sm font-mono">
+                        <tbody>
+                          <tr><td colSpan={2} className="py-2 text-neutral-400 font-semibold">Current Liabilities:</td></tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Accounts Payable</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.accountsPayable)}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Short-Term Debt</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.shortTermDebt)}</td>
+                          </tr>
+                          <tr className="border-t border-neutral-800">
+                            <td className="py-2 pl-4 text-white font-semibold">Total Current Liabilities</td>
+                            <td className="py-2 text-right text-white font-semibold">{formatStatementCurrency(ratios.currentLiabilities)}</td>
+                          </tr>
+                          <tr><td colSpan={2} className="py-2 text-neutral-400 font-semibold">Non-Current Liabilities:</td></tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Long-Term Debt</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.longTermDebt)}</td>
+                          </tr>
+                          <tr className="border-t border-neutral-800">
+                            <td className="py-2 text-white font-semibold">Total Liabilities</td>
+                            <td className="py-2 text-right text-white font-semibold">{formatStatementCurrency(ratios.totalLiabilities)}</td>
+                          </tr>
+                          <tr><td colSpan={2} className="py-2 text-neutral-400 font-semibold">Stockholders Equity:</td></tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Retained Earnings</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.retainedEarnings)}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-1 pl-4 text-neutral-300">Common Equity</td>
+                            <td className="py-1 text-right text-white">{formatStatementCurrency(currentData.equity - currentData.retainedEarnings)}</td>
+                          </tr>
+                          <tr className="border-t border-neutral-800">
+                            <td className="py-2 pl-4 text-white font-semibold">Total Equity</td>
+                            <td className="py-2 text-right text-white font-semibold">{formatStatementCurrency(currentData.equity)}</td>
+                          </tr>
+                          <tr className="border-t-2 border-neutral-600 bg-emerald-900/20">
+                            <td className="py-3 text-emerald-400 font-bold">Total Liabilities & Equity</td>
+                            <td className="py-3 text-right text-emerald-400 font-bold text-lg">{formatStatementCurrency(ratios.totalLiabilities + currentData.equity)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {/* Balance Check */}
+                  <div className={`mt-4 p-3 rounded-lg text-center text-sm ${Math.abs(ratios.totalAssets - (ratios.totalLiabilities + currentData.equity)) < 1 ? 'bg-emerald-900/20 text-emerald-400' : 'bg-red-900/20 text-red-400'}`}>
+                    {Math.abs(ratios.totalAssets - (ratios.totalLiabilities + currentData.equity)) < 1
+                      ? 'Balance Sheet is in balance (Assets = Liabilities + Equity)'
+                      : `Warning: Balance sheet out of balance by ${formatCurrency(ratios.totalAssets - (ratios.totalLiabilities + currentData.equity))}`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Ratios - Comprehensive Analysis */}
+              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+                <div className="bg-neutral-800 px-6 py-4 border-b border-neutral-700">
+                  <h3 className="text-lg font-bold text-white">Financial Ratio Analysis</h3>
+                  <p className="text-sm text-neutral-400">Key performance indicators per standard accounting practice</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {/* Liquidity Ratios */}
+                    <div>
+                      <h4 className="text-sm font-bold text-cyan-400 uppercase tracking-wide mb-4">Liquidity</h4>
+                      <div className="space-y-3">
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Current Ratio</span>
+                            <span className="font-mono text-white font-bold">{formatRatio(ratios.currentRatio)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Target: {'>'}1.5x</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Quick Ratio</span>
+                            <span className="font-mono text-white font-bold">{formatRatio(ratios.quickRatio)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Target: {'>'}1.0x</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Cash Ratio</span>
+                            <span className="font-mono text-white font-bold">{formatRatio(ratios.cashRatio)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Target: {'>'}0.2x</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Profitability Ratios */}
+                    <div>
+                      <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wide mb-4">Profitability</h4>
+                      <div className="space-y-3">
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">ROE</span>
+                            <span className="font-mono text-white font-bold">{formatPercent(ratios.returnOnEquity)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Return on Equity</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">ROA</span>
+                            <span className="font-mono text-white font-bold">{formatPercent(ratios.returnOnAssets)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Return on Assets</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Net Margin</span>
+                            <span className="font-mono text-white font-bold">{formatPercent(ratios.netMargin)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Net Income / Revenue</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Leverage Ratios */}
+                    <div>
+                      <h4 className="text-sm font-bold text-orange-400 uppercase tracking-wide mb-4">Leverage</h4>
+                      <div className="space-y-3">
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Debt/Equity</span>
+                            <span className="font-mono text-white font-bold">{formatRatio(ratios.debtToEquity)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Target: {'<'}2.0x</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Debt/Assets</span>
+                            <span className="font-mono text-white font-bold">{formatPercent(ratios.debtToAssets)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Target: {'<'}60%</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Interest Coverage</span>
+                            <span className="font-mono text-white font-bold">{formatRatio(ratios.interestCoverage)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Target: {'>'}3.0x</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Activity Ratios */}
+                    <div>
+                      <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-wide mb-4">Activity</h4>
+                      <div className="space-y-3">
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">Asset Turnover</span>
+                            <span className="font-mono text-white font-bold">{formatRatio(ratios.assetTurnover)}</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Revenue / Assets</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">DSO</span>
+                            <span className="font-mono text-white font-bold">{ratios.daysReceivables?.toFixed(0) || '--'} days</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Days Sales Outstanding</div>
+                        </div>
+                        <div className="bg-neutral-800/50 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-300">DIO</span>
+                            <span className="font-mono text-white font-bold">{ratios.daysInventory?.toFixed(0) || '--'} days</span>
+                          </div>
+                          <div className="text-xs text-neutral-500 mt-1">Days Inventory On-hand</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes to Financial Statements */}
+              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+                <div className="bg-neutral-800 px-6 py-4 border-b border-neutral-700">
+                  <h3 className="text-lg font-bold text-white">Notes to Financial Statements</h3>
+                </div>
+                <div className="p-6 text-sm text-neutral-400 space-y-4">
+                  <div>
+                    <span className="text-white font-semibold">Note 1 - Revenue Recognition:</span> Revenue is recognized when control of goods or services transfers to the customer, in accordance with ASC 606.
+                  </div>
+                  <div>
+                    <span className="text-white font-semibold">Note 2 - Cost of Goods Sold:</span> COGS includes direct materials, direct labor, and manufacturing overhead allocated to products sold during the period.
+                  </div>
+                  <div>
+                    <span className="text-white font-semibold">Note 3 - Operating Expenses:</span> Includes selling, general and administrative expenses, research and development costs, and other operating costs.
+                  </div>
+                  <div>
+                    <span className="text-white font-semibold">Note 4 - Depreciation:</span> Property, plant, and equipment are depreciated using the straight-line method over their estimated useful lives.
+                  </div>
+                  <div>
+                    <span className="text-white font-semibold">Note 5 - Interest Expense:</span> Interest expense includes interest on short-term and long-term debt obligations.
+                  </div>
+                  <div>
+                    <span className="text-white font-semibold">Note 6 - Income Taxes:</span> The effective tax rate applied is based on applicable federal and state income tax rates.
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-neutral-800">
+                    <span className="text-amber-400 font-semibold">Disclaimer:</span> These financial statements are unaudited and prepared for analytical purposes using the Third-Order Accounting framework. They should not be relied upon for investment decisions without independent verification.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Tab: Component Mapping */}
         {activeTab === 'components' && (
