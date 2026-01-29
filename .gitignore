@@ -40,3 +40,4 @@ yarn-error.log*
 
 # Rust
 Cargo.lock
+__pycache__/
