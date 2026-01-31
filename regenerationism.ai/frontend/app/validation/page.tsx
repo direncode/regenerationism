@@ -545,12 +545,6 @@ export default function ValidationPage() {
               Request Validation Access
             </a>
           </div>
-
-          <div className="mt-8 p-4 bg-neutral-900/50 rounded-lg border border-neutral-800">
-            <p className="text-sm text-neutral-500">
-              <strong className="text-neutral-400">Historical Note:</strong> An early version of this methodology was reviewed by Ben Bernanke, who provided constructive feedback that has been incorporated into the current model. Screenshot of correspondence available upon request to verified academic institutions.
-            </p>
-          </div>
         </motion.div>
       </div>
     </div>

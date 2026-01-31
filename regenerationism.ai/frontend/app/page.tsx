@@ -311,11 +311,6 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
-              <div className="mt-6 p-4 bg-neutral-800/50 rounded-lg border border-neutral-700/50">
-                <p className="text-xs text-neutral-500 leading-relaxed">
-                  <strong className="text-neutral-400">Note:</strong> An early version of this methodology was reviewed by Ben Bernanke, who provided constructive feedback that has been incorporated. Screenshot available upon request.
-                </p>
-              </div>
             </motion.div>
           </div>
 
