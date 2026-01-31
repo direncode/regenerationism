@@ -12,6 +12,7 @@ const navLinks = [
   { href: '/custom-model', label: 'Custom Model' },
   { href: '/explorer', label: 'Explorer' },
   { href: '/oos-tests', label: 'OOS Tests' },
+  { href: '/validation', label: 'Validation' },
   { href: '/api-docs', label: 'API' },
 ]
 

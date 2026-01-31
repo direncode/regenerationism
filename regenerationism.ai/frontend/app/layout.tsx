@@ -3,6 +3,7 @@ import './globals.css'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AuditLogButton from '@/components/AuditLogButton'
+import DemoBanner from '@/components/DemoBanner'
 
 export const metadata: Metadata = {
   title: 'Regenerationism | NIV Macro Crisis Detection',
@@ -31,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col antialiased font-sans">
+        <DemoBanner />
         <Navigation />
         <main className="flex-1">
           {children}

@@ -13,6 +13,12 @@ import {
   Sparkles,
   LineChart,
   FlaskConical,
+  CheckCircle,
+  Download,
+  Github,
+  FileCode,
+  ExternalLink,
+  Mail,
 } from 'lucide-react'
 
 // Static demo data for component cards
@@ -210,6 +216,147 @@ export default function Home() {
               description="Updated monthly from FRED data"
             />
           </div>
+        </div>
+      </section>
+
+      {/* Validation & Reproducibility Section */}
+      <section className="py-20 px-6 bg-neutral-950">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm font-medium text-emerald-300">Open & Reproducible</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-100 mb-4">
+              Validation & Reproducibility
+            </h2>
+            <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
+              This tool runs on public FRED data — anyone can reproduce results. Full transparency for academic review.
+            </p>
+          </motion.div>
+
+          {/* Reproducibility Steps */}
+          <div className="grid md:grid-cols-2 gap-6 mb-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="card p-6"
+            >
+              <h3 className="text-lg font-bold text-neutral-100 mb-4 flex items-center gap-2">
+                <FileCode className="w-5 h-5 text-emerald-400" />
+                Step-by-Step Reproduction
+              </h3>
+              <ol className="space-y-3 text-neutral-400 text-sm">
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-800 text-neutral-300 text-xs flex items-center justify-center font-bold">1</span>
+                  <span>Pull FRED series: GPDIC1, M2SL, FEDFUNDS, GDPC1, TCU, T10Y3M, CPIAUCSL</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-800 text-neutral-300 text-xs flex items-center justify-center font-bold">2</span>
+                  <span>Compute YoY growth rates, monthly deltas, and 12-month volatility</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-800 text-neutral-300 text-xs flex items-center justify-center font-bold">3</span>
+                  <span>Apply NIV formula: NIV = (u × P²) / (X + F)^η</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-800 text-neutral-300 text-xs flex items-center justify-center font-bold">4</span>
+                  <span>Compare your results to the dashboard values</span>
+                </li>
+              </ol>
+              <Link
+                href="/validation"
+                className="inline-flex items-center gap-2 mt-6 text-sm text-emerald-400 font-medium hover:text-emerald-300 transition"
+              >
+                Full validation guide with code
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="card p-6"
+            >
+              <h3 className="text-lg font-bold text-neutral-100 mb-4 flex items-center gap-2">
+                <Download className="w-5 h-5 text-blue-400" />
+                Quick Verification
+              </h3>
+              <div className="space-y-4 text-neutral-400 text-sm">
+                <p>
+                  Download sample FRED data and Python/Excel code to verify NIV calculations independently:
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/validation"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-300 hover:border-neutral-600 transition text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Sample CSV
+                  </Link>
+                  <Link
+                    href="/validation#python"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-300 hover:border-neutral-600 transition text-sm"
+                  >
+                    <FileCode className="w-4 h-4" />
+                    Python Notebook
+                  </Link>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-neutral-800/50 rounded-lg border border-neutral-700/50">
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  <strong className="text-neutral-400">Note:</strong> An early version of this methodology was reviewed by Ben Bernanke, who provided constructive feedback that has been incorporated. Screenshot available upon request.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Open Source & Academic Outreach */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="card p-6 border border-accent-500/20"
+          >
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-100 mb-2 flex items-center gap-2">
+                  <Github className="w-5 h-5" />
+                  Open Source Repository
+                </h3>
+                <p className="text-neutral-400 text-sm">
+                  Full source code available. Request access for collaboration or academic review.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href="https://github.com/direncode/regenerationism"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-300 hover:border-neutral-600 transition text-sm"
+                >
+                  <Github className="w-4 h-4" />
+                  View on GitHub
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <a
+                  href="mailto:contact@regenerationism.ai?subject=Academic%20Validation%20Request"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent-500/10 border border-accent-500/30 rounded-lg text-accent-300 hover:bg-accent-500/20 transition text-sm"
+                >
+                  <Mail className="w-4 h-4" />
+                  Request Validation Access
+                </a>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
