@@ -162,8 +162,8 @@ export default function OOSTestsPage() {
   const tests = [
     {
       id: 'recession' as TestType,
-      name: 'Recession Prediction',
-      description: 'Can NIV predict recessions better than the Fed yield curve?',
+      name: 'Crisis Prediction',
+      description: 'Can NIV predict systemic stress better than the Fed yield curve?',
       icon: AlertTriangle,
       color: 'red',
     },
@@ -228,7 +228,7 @@ export default function OOSTestsPage() {
             <div className="space-y-3">
               <h3 className="font-semibold text-regen-400">Test Procedures</h3>
               <div className="space-y-2 text-gray-300">
-                <p><strong className="text-white">Recession Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as recession predictors.</p>
+                <p><strong className="text-white">Crisis Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as systemic stress predictors.</p>
                 <p><strong className="text-white">Parameter Optimization:</strong> Grid search over smoothing windows (3-18 months) and lag periods (0-12 months).</p>
                 <p><strong className="text-white">Forensic Analysis:</strong> Decomposition of model weights, correlation analysis, and contribution attribution.</p>
               </div>
@@ -431,7 +431,7 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
           NIV outperforms the Fed Yield Curve by{' '}
           <span className="text-green-400">{improvementPct}%</span>
-          {' '}in Recession Detection Accuracy
+          {' '}in Crisis Detection Accuracy
         </h2>
         <div className="flex justify-center gap-8 text-xl font-mono">
           <div>
@@ -451,7 +451,7 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Award className="w-6 h-6 text-yellow-400" />
-            Recession Prediction Scoreboard (AUC)
+            Crisis Prediction Scoreboard (AUC)
           </h3>
           <button
             onClick={exportCSV}
@@ -491,7 +491,7 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
 
       {/* Probability Chart */}
       <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-lg font-bold mb-4">Recession Probability Over Time (12-Month Warning)</h3>
+        <h3 className="text-lg font-bold mb-4">Crisis Probability Over Time (12-Month Warning)</h3>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>

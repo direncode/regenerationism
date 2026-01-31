@@ -7,7 +7,7 @@ const endpoints = [
   {
     method: 'GET',
     path: '/api/v1/latest',
-    description: 'Get current NIV score and recession probability',
+    description: 'Get current NIV score and crisis probability',
     response: `{
   "date": "2026-01-15",
   "niv_score": 12.4,

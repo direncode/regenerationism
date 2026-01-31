@@ -7,12 +7,12 @@ import DemoBanner from '@/components/DemoBanner'
 
 export const metadata: Metadata = {
   title: 'Regenerationism | NIV Macro Crisis Detection',
-  description: 'National Impact Velocity (NIV) - Real-time recession probability and economic crisis detection. Outperforms the Fed Yield Curve with 0.85 AUC.',
-  keywords: ['recession', 'economics', 'macro', 'NIV', 'crisis detection', 'yield curve', 'Federal Reserve'],
+  description: 'National Impact Velocity (NIV) - Real-time systemic stress indicator for macro crisis detection. Outperforms the Fed Yield Curve with 0.85 AUC.',
+  keywords: ['crisis detection', 'systemic stress', 'economics', 'macro', 'NIV', 'yield curve', 'Federal Reserve'],
   authors: [{ name: 'Diren Akkocdemir' }],
   openGraph: {
     title: 'Regenerationism | NIV Macro Crisis Detection',
-    description: 'Real-time recession probability. Outperforms the Fed.',
+    description: 'Real-time systemic stress indicator. Outperforms the Fed.',
     url: 'https://regenerationism.ai',
     siteName: 'Regenerationism',
     type: 'website',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Regenerationism | NIV',
-    description: 'Real-time recession probability. Outperforms the Fed.',
+    description: 'Real-time systemic stress indicator. Outperforms the Fed.',
   },
 }
 

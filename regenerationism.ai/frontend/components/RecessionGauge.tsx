@@ -63,7 +63,7 @@ export default function RecessionGauge({ probability, alertLevel }: RecessionGau
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-sm text-gray-400 uppercase tracking-wider mb-2">
-          Recession Risk
+          Crisis Risk
         </span>
         <motion.span
           className="big-number"

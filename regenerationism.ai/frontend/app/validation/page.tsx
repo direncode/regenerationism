@@ -483,7 +483,7 @@ export default function ValidationPage() {
               <ul className="text-sm text-neutral-400 space-y-2">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400">1.</span>
-                  Walk-forward analysis with 12-month recession warning window
+                  Walk-forward analysis with 12-month crisis warning window
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400">2.</span>
@@ -491,11 +491,11 @@ export default function ValidationPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400">3.</span>
-                  Evaluate using ROC-AUC on NBER recession dates
+                  Evaluate using ROC-AUC on NBER crisis dates
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400">4.</span>
-                  Test covers 2001, 2008, 2020 recessions (not seen during training)
+                  Test covers 2001, 2008, 2020 crises (not seen during training)
                 </li>
               </ul>
             </div>
