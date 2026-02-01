@@ -151,7 +151,7 @@ export default function ExplorerPage() {
   // Still checking server key
   if (checkingServerKey) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -160,7 +160,7 @@ export default function ExplorerPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center">
             <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
             <p className="text-gray-400">Initializing...</p>
           </div>
@@ -172,7 +172,7 @@ export default function ExplorerPage() {
   // No API key configured (and server doesn't have one)
   if (!hasServerKey && (!apiSettings.fredApiKey || !apiSettings.useLiveData)) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -181,7 +181,7 @@ export default function ExplorerPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center">
             <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
             <p className="text-gray-400">Unable to load data</p>
           </div>
@@ -193,7 +193,7 @@ export default function ExplorerPage() {
   // Loading state
   if (loading && data.length === 0) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -202,7 +202,7 @@ export default function ExplorerPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center">
             <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
             <p className="text-gray-400">{loadingProgress || 'Loading historical FRED data...'}</p>
             <p className="text-sm text-gray-500 mt-2">This may take a moment for 60+ years of data</p>
@@ -215,7 +215,7 @@ export default function ExplorerPage() {
   // Error state
   if (error && data.length === 0) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -224,14 +224,14 @@ export default function ExplorerPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2 text-red-400">Failed to Load Data</h2>
             <p className="text-gray-400 mb-6">{error}</p>
 
             <button
               onClick={loadAllData}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-black border border-white/10 rounded-lg hover:bg-white/10 transition"
             >
               <RefreshCw className="w-4 h-4" />
               Try Again
@@ -245,14 +245,15 @@ export default function ExplorerPage() {
   const isShowingAll = startDate === '1961-01' && endDate === getDefaultEndDate()
 
   return (
-    <div className="min-h-screen py-8 px-6">
+    <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Historical Explorer</h1>
-            <p className="text-gray-400">
-              NIV data from FRED ({data.length > 0 ? `${data[0]?.date} - ${data[data.length - 1]?.date}` : 'Loading...'})
+            <p className="text-caption uppercase text-gray-500 mb-2">Historical Data</p>
+            <h1 className="section-headline text-white">NIV Explorer</h1>
+            <p className="text-lg text-gray-400 mt-2">
+              {data.length > 0 ? `${data[0]?.date} - ${data[data.length - 1]?.date}` : 'Loading...'}
             </p>
           </div>
           <button
@@ -266,7 +267,7 @@ export default function ExplorerPage() {
         </div>
 
         {/* Filters */}
-        <div className="glass-card rounded-xl p-4 mb-6">
+        <div className="border border-white/10 bg-[#0a0a0a] p-4 mb-6">
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gray-400" />
@@ -274,14 +275,14 @@ export default function ExplorerPage() {
                 type="month"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-dark-600 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="bg-black border border-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm"
               />
               <span className="text-gray-400">to</span>
               <input
                 type="month"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-dark-600 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="bg-black border border-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm"
               />
             </div>
 
@@ -292,7 +293,7 @@ export default function ExplorerPage() {
                 className={`px-3 py-1 text-sm rounded-lg transition flex items-center gap-1.5 ${
                   isShowingAll
                     ? 'bg-regen-500/20 text-regen-400 border border-regen-500/30'
-                    : 'bg-dark-600 hover:bg-dark-500'
+                    : 'bg-black border border-white/10 hover:bg-white/10'
                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {loading && <Loader2 className="w-3 h-3 animate-spin" />}
@@ -303,7 +304,7 @@ export default function ExplorerPage() {
         </div>
 
         {/* Main Chart */}
-        <div className="glass-card rounded-2xl p-6">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h3 className="text-lg font-bold mb-4">NIV Score Over Time</h3>
           <div className="h-[500px]">
             {data.length > 0 ? (

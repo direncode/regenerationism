@@ -239,7 +239,7 @@ Visit /validation for step-by-step reproduction guide
   // Still checking server key
   if (checkingServerKey) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -248,7 +248,7 @@ Visit /validation for step-by-step reproduction guide
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
             <p className="text-gray-400 mb-2">Initializing connection to FRED API...</p>
             <p className="text-xs text-gray-500">Checking server configuration</p>
@@ -261,7 +261,7 @@ Visit /validation for step-by-step reproduction guide
   // No API key configured (and server doesn't have one)
   if (!hasServerKey && (!apiSettings.fredApiKey || !apiSettings.useLiveData)) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -270,7 +270,7 @@ Visit /validation for step-by-step reproduction guide
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-300 mb-2">Unable to Load Data</h2>
             <p className="text-gray-400 mb-6">
@@ -279,7 +279,7 @@ Visit /validation for step-by-step reproduction guide
             <div className="space-y-3">
               <button
                 onClick={() => window.location.reload()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-black border border-white/10 rounded-lg hover:bg-dark-500 transition"
               >
                 <RefreshCw className="w-4 h-4" />
                 Retry Connection
@@ -304,7 +304,7 @@ Visit /validation for step-by-step reproduction guide
   // Loading state
   if (loading && !data) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -313,7 +313,7 @@ Visit /validation for step-by-step reproduction guide
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-300 mb-2">Loading Live FRED Data</h2>
             <p className="text-gray-400 mb-4">Fetching 8 economic series from Federal Reserve...</p>
@@ -329,7 +329,7 @@ Visit /validation for step-by-step reproduction guide
   // Error state
   if (error && !data) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -338,7 +338,7 @@ Visit /validation for step-by-step reproduction guide
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2 text-red-400">Failed to Load Data</h2>
             <p className="text-gray-400 mb-6">{error}</p>
@@ -346,7 +346,7 @@ Visit /validation for step-by-step reproduction guide
             <div className="space-y-3">
               <button
                 onClick={refresh}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-black border border-white/10 rounded-lg hover:bg-dark-500 transition"
               >
                 <RefreshCw className="w-4 h-4" />
                 Try Again
@@ -382,13 +382,13 @@ Visit /validation for step-by-step reproduction guide
   const statusLabel = data.niv_score > 5 ? 'EXPANSION' : data.niv_score > 2 ? 'CAUTION' : data.niv_score > 0 ? 'SLOWDOWN' : 'CONTRACTION'
 
   return (
-    <div className="min-h-screen py-8 px-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="bg-black min-h-screen pt-24 pb-16">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">NIV Dashboard</h1>
-            <p className="text-gray-400">Real-time macro crisis detection</p>
+            <p className="text-caption uppercase text-gray-500 mb-2">Real-time Monitoring</p>
+            <h1 className="section-headline text-white">NIV Dashboard</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-gray-500">
@@ -397,7 +397,7 @@ Visit /validation for step-by-step reproduction guide
             <button
               onClick={refresh}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-black border border-white/10 rounded-lg hover:bg-dark-500 transition disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
@@ -411,17 +411,17 @@ Visit /validation for step-by-step reproduction guide
                 <Download className="w-4 h-4" />
                 Download
               </button>
-              <div className="absolute right-0 mt-2 w-56 bg-dark-700 border border-dark-600 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <div className="absolute right-0 mt-2 w-56 bg-[#0a0a0a] border border-white/10 border border-dark-600 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                 <button
                   onClick={exportCSV}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-300 hover:bg-dark-600 transition"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-300 hover:bg-black border border-white/10 transition"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                   Download CSV
                 </button>
                 <button
                   onClick={exportDetailedCSV}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-300 hover:bg-dark-600 transition border-t border-dark-600"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-300 hover:bg-black border border-white/10 transition border-t border-dark-600"
                 >
                   <Download className="w-4 h-4 text-blue-400" />
                   Full Export (with formulas)
@@ -441,7 +441,7 @@ Visit /validation for step-by-step reproduction guide
         {/* Main Grid */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           {/* NIV Score Display - Takes 1 column */}
-          <div className="glass-card rounded-2xl p-6 flex flex-col items-center justify-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-6 flex flex-col items-center justify-center">
             <span className="text-sm text-gray-400 uppercase tracking-wider mb-2">
               NIV Score
             </span>
@@ -466,7 +466,7 @@ Visit /validation for step-by-step reproduction guide
           </div>
 
           {/* NIV Score + Trend - Takes 2 columns */}
-          <div className="lg:col-span-2 glass-card rounded-2xl p-6">
+          <div className="lg:col-span-2 border border-white/10 bg-[#0a0a0a] p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold">NIV Trend</h3>
@@ -561,12 +561,12 @@ Visit /validation for step-by-step reproduction guide
         </div>
 
         {/* NIV vs Fed Comparison */}
-        <div className="glass-card rounded-2xl p-6">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h3 className="text-lg font-bold mb-6">NIV vs Fed Yield Curve</h3>
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* NIV Signal */}
-            <div className="text-center p-6 bg-dark-700 rounded-xl">
+            <div className="text-center p-6 bg-[#0a0a0a] border border-white/10 rounded-xl">
               <Activity className="w-10 h-10 text-regen-400 mx-auto mb-4" />
               <h4 className="font-bold mb-2">NIV Signal</h4>
               <div className={`text-2xl font-bold ${
@@ -580,7 +580,7 @@ Visit /validation for step-by-step reproduction guide
             </div>
 
             {/* Fed Signal */}
-            <div className="text-center p-6 bg-dark-700 rounded-xl">
+            <div className="text-center p-6 bg-[#0a0a0a] border border-white/10 rounded-xl">
               <BarChart3 className="w-10 h-10 text-blue-400 mx-auto mb-4" />
               <h4 className="font-bold mb-2">Fed Yield Curve</h4>
               <div className={`text-2xl font-bold ${
@@ -640,7 +640,7 @@ function ComponentCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card rounded-xl p-6 relative"
+      className="border border-white/10 bg-[#0a0a0a] p-6 relative"
     >
       <div className="flex items-center justify-between mb-4">
         <div style={{ color }}>{icon}</div>
@@ -669,7 +669,7 @@ function ComponentCard({
 
       {/* Tooltip */}
       {tooltip && showTooltip && (
-        <div className="absolute z-50 bottom-full left-0 mb-2 w-72 bg-dark-700 border border-dark-600 rounded-lg shadow-xl p-4">
+        <div className="absolute z-50 bottom-full left-0 mb-2 w-72 bg-[#0a0a0a] border border-white/10 border border-dark-600 rounded-lg shadow-xl p-4">
           <div className="text-xs space-y-3">
             <div>
               <span className="text-gray-500 block mb-1">Formula:</span>
@@ -693,7 +693,7 @@ function ComponentCard({
           </div>
           {/* Arrow */}
           <div className="absolute bottom-0 left-6 transform translate-y-full">
-            <div className="w-3 h-3 bg-dark-700 border-r border-b border-dark-600 transform rotate-45 -translate-y-1.5" />
+            <div className="w-3 h-3 bg-[#0a0a0a] border border-white/10 border-r border-b border-dark-600 transform rotate-45 -translate-y-1.5" />
           </div>
         </div>
       )}

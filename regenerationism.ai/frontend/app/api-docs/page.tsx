@@ -80,18 +80,19 @@ const endpoints = [
 
 export default function APIDocsPage() {
   return (
-    <div className="min-h-screen py-8 px-6">
-      <div className="max-w-5xl mx-auto">
+    <div className="bg-black min-h-screen pt-24 pb-16">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold mb-4">API Documentation</h1>
-          <p className="text-gray-400 mb-6">
+        <div className="mb-16">
+          <p className="text-caption uppercase text-gray-500 mb-4">Developer Resources</p>
+          <h1 className="section-headline text-white mb-6">API Documentation</h1>
+          <p className="text-lg text-gray-400 mb-8 max-w-2xl">
             Access NIV data programmatically. Free for research and personal use.
           </p>
-          
-          <div className="glass-card rounded-xl p-4">
-            <p className="text-sm text-gray-400 mb-2">Base URL</p>
-            <code className="text-regen-400 font-mono">
+
+          <div className="border border-white/10 bg-[#0a0a0a] p-6">
+            <p className="text-caption uppercase text-gray-500 mb-3">Base URL</p>
+            <code className="text-white font-mono text-lg">
               https://api.regenerationism.ai
             </code>
           </div>
@@ -140,7 +141,7 @@ const { niv_score } = await res.json();`}
         <section className="mt-12">
           <h2 className="text-2xl font-bold mb-6">Rate Limits</h2>
           
-          <div className="glass-card rounded-xl p-6">
+          <div className="border border-white/10 bg-[#0a0a0a] p-6">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
@@ -184,8 +185,8 @@ function CodeExample({ language, code }: { language: string; code: string }) {
   }
   
   return (
-    <div className="glass-card rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-dark-700">
+    <div className="border border-white/10 bg-[#0a0a0a] overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-black border-b border-white/10">
         <span className="text-xs text-gray-400 uppercase">{language}</span>
         <button onClick={copy} className="text-gray-400 hover:text-white">
           {copied ? <Check className="w-4 h-4 text-regen-400" /> : <Copy className="w-4 h-4" />}
@@ -221,10 +222,10 @@ function EndpointCard({
   }
   
   return (
-    <div className="glass-card rounded-xl overflow-hidden">
+    <div className="border border-white/10 bg-[#0a0a0a] overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-4 p-4 hover:bg-dark-700 transition text-left"
+        className="w-full flex items-center gap-4 p-4 hover:bg-black border-b border-white/10 transition text-left"
       >
         <span className="px-2 py-1 bg-regen-500/20 text-regen-400 text-xs font-bold rounded">
           {method}
@@ -265,7 +266,7 @@ function EndpointCard({
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <pre className="bg-dark-700 rounded-lg p-4 text-sm overflow-x-auto">
+            <pre className="bg-black border-b border-white/10 rounded-lg p-4 text-sm overflow-x-auto">
               <code className="text-gray-300">{response}</code>
             </pre>
           </div>

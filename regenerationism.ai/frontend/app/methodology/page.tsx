@@ -181,16 +181,17 @@ export default function MethodologyPage() {
   }, [canCalculate, hasServerKey, apiSettings.fredApiKey, params])
 
   return (
-    <div className="min-h-screen bg-dark-900 pt-20 pb-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-black min-h-screen pt-24 pb-16">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold gradient-text flex items-center gap-3">
-            <BookOpen className="w-8 h-8" />
+        <div className="mb-12">
+          <p className="text-caption uppercase text-gray-500 mb-4">Technical Documentation</p>
+          <h1 className="section-headline text-white flex items-center gap-4">
+            <BookOpen className="w-10 h-10" />
             NIV Methodology
           </h1>
-          <p className="text-gray-400 mt-2">
-            Complete mathematical breakdown of the National Impact Velocity formula with real-time FRED data
+          <p className="text-lg text-gray-400 mt-4 max-w-3xl">
+            Complete mathematical breakdown of the National Impact Velocity formula with real-time FRED data.
           </p>
         </div>
 
@@ -213,7 +214,7 @@ export default function MethodologyPage() {
         <button
           onClick={calculateLive}
           disabled={isCalculating || checkingServerKey || !canCalculate}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-regen-600 to-regen-400 hover:from-regen-500 hover:to-regen-300 text-black font-bold rounded-xl transition disabled:opacity-50 mb-8"
+          className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-black font-medium uppercase tracking-wider hover:bg-gray-100 transition disabled:opacity-50 mb-12"
         >
           {checkingServerKey ? (
             <>
@@ -248,7 +249,7 @@ export default function MethodologyPage() {
         >
           <div className="space-y-6">
             {/* Master Equation */}
-            <div className="text-center p-6 bg-dark-700 rounded-xl border border-regen-500/30">
+            <div className="text-center p-6 bg-[#0a0a0a] border border-white/10 rounded-xl border border-regen-500/30">
               <div className="font-mono text-3xl md:text-4xl text-regen-400 mb-4">
                 NIV<sub>t</sub> = (u<sub>t</sub> · P<sub>t</sub><sup>2</sup>) / (X<sub>t</sub> + F<sub>t</sub>)<sup>η</sup>
               </div>
@@ -262,27 +263,27 @@ export default function MethodologyPage() {
               <h4 className="text-white font-bold text-lg">Component Definitions</h4>
 
               {/* Thrust */}
-              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-blue-500">
+              <div className="p-4 bg-[#0a0a0a] border border-white/10 rounded-lg border-l-4 border-blue-500">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap className="w-5 h-5 text-blue-400" />
                   <span className="font-bold text-blue-400 text-lg">Thrust (u)</span>
                   <span className="text-gray-500">— Kinetic Impulse</span>
                 </div>
-                <div className="font-mono text-blue-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                <div className="font-mono text-blue-300 text-lg mb-3 bg-black p-3 rounded">
                   u = tanh(<span className="text-green-400">+1.0·ΔG</span> <span className="text-green-400">+ 1.0·ΔA</span> <span className="text-red-400">− 0.7·Δr</span>)
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-green-400 font-mono">+ΔG</span>
                     <span className="text-gray-400"> = Investment YoY growth</span>
                     <div className="text-gray-500 text-xs">(positive = expansion)</div>
                   </div>
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-green-400 font-mono">+ΔA</span>
                     <span className="text-gray-400"> = M2 money YoY growth</span>
                     <div className="text-gray-500 text-xs">(positive = liquidity)</div>
                   </div>
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-red-400 font-mono">−Δr</span>
                     <span className="text-gray-400"> = Fed Funds rate Δ</span>
                     <div className="text-gray-500 text-xs">(hikes subtract thrust)</div>
@@ -292,22 +293,22 @@ export default function MethodologyPage() {
               </div>
 
               {/* Efficiency */}
-              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-green-500">
+              <div className="p-4 bg-[#0a0a0a] border border-white/10 rounded-lg border-l-4 border-green-500">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-5 h-5 text-green-400" />
                   <span className="font-bold text-green-400 text-lg">Efficiency (P)</span>
                   <span className="text-gray-500">— Capital Productivity</span>
                 </div>
-                <div className="font-mono text-green-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                <div className="font-mono text-green-300 text-lg mb-3 bg-black p-3 rounded">
                   P = (Investment × 1.15) / GDP
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-gray-400">Investment = </span>
                     <span className="text-white font-mono">GPDIC1</span>
                     <div className="text-gray-500 text-xs">Real Private Domestic Investment</div>
                   </div>
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-gray-400">1.15 = </span>
                     <span className="text-gray-500">R&D/Education proxy multiplier</span>
                   </div>
@@ -316,16 +317,16 @@ export default function MethodologyPage() {
               </div>
 
               {/* Slack */}
-              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-yellow-500">
+              <div className="p-4 bg-[#0a0a0a] border border-white/10 rounded-lg border-l-4 border-yellow-500">
                 <div className="flex items-center gap-2 mb-2">
                   <BarChart3 className="w-5 h-5 text-yellow-400" />
                   <span className="font-bold text-yellow-400 text-lg">Slack (X)</span>
                   <span className="text-gray-500">— Economic Headroom</span>
                 </div>
-                <div className="font-mono text-yellow-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                <div className="font-mono text-yellow-300 text-lg mb-3 bg-black p-3 rounded">
                   X = 1 − (TCU / 100)
                 </div>
-                <div className="bg-dark-800 p-2 rounded text-sm">
+                <div className="bg-black p-2 rounded text-sm">
                   <span className="text-gray-400">TCU = </span>
                   <span className="text-white font-mono">Total Capacity Utilization</span>
                   <span className="text-gray-500"> (typically 70-85%)</span>
@@ -334,27 +335,27 @@ export default function MethodologyPage() {
               </div>
 
               {/* Drag */}
-              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-red-500">
+              <div className="p-4 bg-[#0a0a0a] border border-white/10 rounded-lg border-l-4 border-red-500">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingDown className="w-5 h-5 text-red-400" />
                   <span className="font-bold text-red-400 text-lg">Drag (F)</span>
                   <span className="text-gray-500">— Friction Forces</span>
                 </div>
-                <div className="font-mono text-red-300 text-lg mb-3 bg-dark-800 p-3 rounded">
+                <div className="font-mono text-red-300 text-lg mb-3 bg-black p-3 rounded">
                   F = <span className="text-red-400">0.4·s</span> + <span className="text-red-400">0.4·max(0, r−π)</span> + <span className="text-red-400">0.2·σ</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-red-400 font-mono">s</span>
                     <span className="text-gray-400"> = Yield inversion penalty</span>
                     <div className="text-gray-500 text-xs">|T10Y3M|/100 if inverted</div>
                   </div>
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-red-400 font-mono">r−π</span>
                     <span className="text-gray-400"> = Real interest rate</span>
                     <div className="text-gray-500 text-xs">FedFunds/100 − Inflation</div>
                   </div>
-                  <div className="bg-dark-800 p-2 rounded">
+                  <div className="bg-black p-2 rounded">
                     <span className="text-red-400 font-mono">σ</span>
                     <span className="text-gray-400"> = Rate volatility</span>
                     <div className="text-gray-500 text-xs">12-mo rolling StdDev/100</div>
@@ -364,7 +365,7 @@ export default function MethodologyPage() {
               </div>
 
               {/* Eta */}
-              <div className="p-4 bg-dark-700 rounded-lg border-l-4 border-purple-500">
+              <div className="p-4 bg-[#0a0a0a] border border-white/10 rounded-lg border-l-4 border-purple-500">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="font-bold text-purple-400 text-lg">Nonlinearity (η = {params.eta})</span>
                   <span className="text-gray-500">— Crisis Sensitivity</span>
@@ -411,7 +412,7 @@ export default function MethodologyPage() {
               </div>
 
               {/* Final Calculation */}
-              <div className="p-4 bg-dark-800 rounded-lg font-mono text-center">
+              <div className="p-4 bg-black rounded-lg font-mono text-center">
                 <span className="text-gray-400">NIV = </span>
                 <span className="text-green-400">{breakdown.numerator.toFixed(6)}</span>
                 <span className="text-gray-400"> / </span>
@@ -878,7 +879,7 @@ function CollapsibleSection({
     yellow: 'border-yellow-500/30 bg-yellow-500/5',
     red: 'border-red-500/30 bg-red-500/5',
     purple: 'border-purple-500/30 bg-purple-500/5',
-    gray: 'border-white/10 bg-dark-800',
+    gray: 'border-white/10 bg-black',
   }
 
   const iconColors: Record<string, string> = {
@@ -935,15 +936,15 @@ function ComponentBreakdown({
     <div className="space-y-4">
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 text-center">
-        <div className="p-3 bg-dark-700 rounded-lg">
+        <div className="p-3 bg-[#0a0a0a] border border-white/10 rounded-lg">
           <div className="text-2xl font-mono font-bold text-white">{component.rawValue.toFixed(4)}</div>
           <div className="text-xs text-gray-400">Raw Value</div>
         </div>
-        <div className="p-3 bg-dark-700 rounded-lg">
+        <div className="p-3 bg-[#0a0a0a] border border-white/10 rounded-lg">
           <div className="text-2xl font-mono font-bold text-blue-400">{component.normalizedValue.toFixed(4)}</div>
           <div className="text-xs text-gray-400">Normalized [0,1]</div>
         </div>
-        <div className="p-3 bg-dark-700 rounded-lg">
+        <div className="p-3 bg-[#0a0a0a] border border-white/10 rounded-lg">
           <div className="text-2xl font-mono font-bold text-regen-400">{component.weightedValue.toFixed(4)}</div>
           <div className="text-xs text-gray-400">Weighted (×{weight})</div>
         </div>
@@ -952,7 +953,7 @@ function ComponentBreakdown({
       {/* Steps */}
       <div className="space-y-3">
         {component.steps.map((step, index) => (
-          <div key={step.id} className="p-3 bg-dark-700 rounded-lg">
+          <div key={step.id} className="p-3 bg-[#0a0a0a] border border-white/10 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-full bg-dark-600 flex items-center justify-center text-xs font-bold text-gray-400">
                 {index + 1}
@@ -994,7 +995,7 @@ function StepCard({
   highlight?: boolean
 }) {
   return (
-    <div className={`p-4 rounded-lg ${highlight ? 'bg-regen-500/20 border border-regen-500/30' : 'bg-dark-700'}`}>
+    <div className={`p-4 rounded-lg ${highlight ? 'bg-regen-500/20 border border-regen-500/30' : 'bg-[#0a0a0a] border border-white/10'}`}>
       <div className="flex items-center gap-2 mb-2">
         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${highlight ? 'bg-regen-500 text-black' : 'bg-dark-600 text-gray-400'}`}>
           {step}
@@ -1022,7 +1023,7 @@ function DataSourceCard({
       href={`https://fred.stlouisfed.org/series/${series}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition group"
+      className="p-3 bg-[#0a0a0a] border border-white/10 rounded-lg hover:bg-dark-600 transition group"
     >
       <div className="flex items-center justify-between mb-1">
         <span className="font-mono text-regen-400 font-bold">{series}</span>

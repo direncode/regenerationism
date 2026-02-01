@@ -184,16 +184,17 @@ export default function OOSTestsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-dark-900 pt-20 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-black min-h-screen pt-24 pb-16">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold gradient-text flex items-center gap-3">
-            <FlaskConical className="w-8 h-8" />
+        <div className="mb-12">
+          <p className="text-caption uppercase text-gray-500 mb-4">Statistical Validation</p>
+          <h1 className="section-headline text-white flex items-center gap-4">
+            <FlaskConical className="w-10 h-10" />
             Out-of-Sample Tests
           </h1>
-          <p className="text-gray-400 mt-2">
-            Rigorous statistical validation of NIV predictive power using walk-forward analysis
+          <p className="text-lg text-gray-400 mt-4 max-w-3xl">
+            Rigorous statistical validation of NIV predictive power using walk-forward analysis.
           </p>
         </div>
 
@@ -201,7 +202,7 @@ export default function OOSTestsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-6 bg-dark-800/50 border border-white/10 rounded-xl"
+          className="mb-8 p-6 bg-[#0a0a0a]/50 border border-white/10 rounded-xl"
         >
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Database className="w-5 h-5 text-regen-400" />
@@ -212,7 +213,7 @@ export default function OOSTestsPage() {
             {/* NIV Engine Specification */}
             <div className="space-y-3">
               <h3 className="font-semibold text-regen-400">NIV Engine</h3>
-              <div className="bg-dark-700/50 rounded-lg p-3 font-mono text-xs space-y-1">
+              <div className="bg-black border border-white/10/50 rounded-lg p-3 font-mono text-xs space-y-1">
                 <div className="text-gray-400">// Master Equation</div>
                 <div className="text-white">NIV = (u × P²) / (X + F)^η</div>
                 <div className="text-gray-500 mt-2">where:</div>
@@ -240,7 +241,7 @@ export default function OOSTestsPage() {
               <p className="text-gray-500 text-xs mb-2">
                 OOS tests use full historical range (1970-present) to span multiple recession periods.
               </p>
-              <div className="bg-dark-700/50 rounded-lg p-3 text-xs space-y-1">
+              <div className="bg-black border border-white/10/50 rounded-lg p-3 text-xs space-y-1">
                 <div className="flex justify-between"><span className="text-gray-400">GDP Growth:</span><span className="text-white">A191RL1Q225SBEA (quarterly)</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">M2 Money Supply:</span><span className="text-white">M2SL (monthly)</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">Fed Funds Rate:</span><span className="text-white">FEDFUNDS (monthly)</span></div>
@@ -288,7 +289,7 @@ export default function OOSTestsPage() {
                 className={`p-4 rounded-xl border-2 transition-all text-left ${
                   isActive
                     ? `bg-gradient-to-br ${colors[test.color as keyof typeof colors]} border-opacity-50`
-                    : 'bg-dark-800 border-white/10 hover:border-white/30'
+                    : 'bg-[#0a0a0a] border-white/10 hover:border-white/30'
                 }`}
               >
                 <Icon className={`w-6 h-6 mb-2 ${isActive ? 'text-white' : 'text-gray-400'}`} />
@@ -307,7 +308,7 @@ export default function OOSTestsPage() {
         <button
           onClick={() => runTest(activeTest)}
           disabled={isRunning || checkingServerKey || !canRunTests}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold rounded-xl transition disabled:opacity-50 mb-4"
+          className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-black font-medium uppercase tracking-wider hover:bg-gray-100 transition disabled:opacity-50 mb-8"
         >
           {checkingServerKey ? (
             <>
@@ -339,7 +340,7 @@ export default function OOSTestsPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-8 p-6 bg-dark-800/80 border border-blue-500/30 rounded-xl"
+              className="mb-8 p-6 bg-[#0a0a0a]/80 border border-blue-500/30 rounded-xl"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="relative">
@@ -352,7 +353,7 @@ export default function OOSTestsPage() {
                 </div>
               </div>
               {/* Animated progress bar */}
-              <div className="h-2 bg-dark-600 rounded-full overflow-hidden">
+              <div className="h-2 bg-[#111] rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-blue-600 to-blue-400"
                   initial={{ width: '0%' }}
@@ -447,7 +448,7 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
       </motion.div>
 
       {/* Scoreboard */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Award className="w-6 h-6 text-yellow-400" />
@@ -490,7 +491,7 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
       </div>
 
       {/* Probability Chart */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <h3 className="text-lg font-bold mb-4">Crisis Probability Over Time (12-Month Warning)</h3>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -562,7 +563,7 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
   return (
     <div className="space-y-6">
       {/* Best Configuration */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Settings className="w-6 h-6 text-purple-400" />
@@ -598,7 +599,7 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
       </div>
 
       {/* Results Grid */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <h3 className="text-lg font-bold mb-4">All Configurations Tested</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -663,7 +664,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
   return (
     <div className="space-y-6">
       {/* Main Header */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-2xl font-bold flex items-center gap-2 text-white">
@@ -683,7 +684,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Precision Scoring (RMSE) Card */}
-          <div className="bg-dark-700 rounded-xl p-5">
+          <div className="bg-black border border-white/10 rounded-xl p-5">
             <h4 className="font-bold text-gray-300 mb-4">Precision Scoring (RMSE)</h4>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -701,7 +702,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
                 </span>
               </div>
               {/* Difference bar */}
-              <div className="h-2 bg-dark-600 rounded-full overflow-hidden mt-2">
+              <div className="h-2 bg-[#111] rounded-full overflow-hidden mt-2">
                 <div
                   className={`h-full ${result.difference > 0 ? 'bg-green-500' : 'bg-red-500'}`}
                   style={{ width: `${Math.min(Math.abs(result.difference) * 100000, 100)}%` }}
@@ -715,7 +716,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
           </div>
 
           {/* Clone Factor / Correlation Card */}
-          <div className="bg-dark-700 rounded-xl p-5">
+          <div className="bg-black border border-white/10 rounded-xl p-5">
             <h4 className="font-bold text-gray-300 mb-4">Clone Factor</h4>
             <div className="text-center mb-4">
               <div className="text-5xl font-mono font-bold text-orange-400">
@@ -724,7 +725,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
               <div className="text-sm text-gray-400 mt-2">Prediction Correlation</div>
             </div>
             {/* Correlation bar */}
-            <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
+            <div className="h-3 bg-[#111] rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-orange-600 to-orange-400"
                 style={{ width: `${result.correlation * 100}%` }}
@@ -737,7 +738,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
           </div>
 
           {/* Model Weights Card */}
-          <div className="bg-dark-700 rounded-xl p-5">
+          <div className="bg-black border border-white/10 rounded-xl p-5">
             <h4 className="font-bold text-gray-300 mb-4">Model Weights</h4>
             <div className="space-y-4">
               <div>
@@ -745,7 +746,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
                   <span className="text-gray-400">Fed Weight</span>
                   <span className="font-mono text-red-400 font-bold">{fedWeightPct}%</span>
                 </div>
-                <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
+                <div className="h-3 bg-[#111] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-red-600 to-red-400"
                     style={{ width: `${(1 - result.nivContribution / 100) * 100}%` }}
@@ -757,7 +758,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
                   <span className="text-gray-400">NIV Weight</span>
                   <span className="font-mono text-green-400 font-bold">{nivWeightPct}%</span>
                 </div>
-                <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
+                <div className="h-3 bg-[#111] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-green-600 to-green-400"
                     style={{ width: `${result.nivContribution}%` }}
@@ -812,7 +813,7 @@ function ScoreCard({
   }
 
   return (
-    <div className={`p-4 rounded-xl border-2 ${isWinner ? colors[color] : 'bg-dark-700 border-white/10'}`}>
+    <div className={`p-4 rounded-xl border-2 ${isWinner ? colors[color] : 'bg-black border border-white/10 border-white/10'}`}>
       <div className="text-sm text-gray-400 mb-1">{label}</div>
       <div className={`text-2xl font-mono font-bold ${isWinner ? colors[color].split(' ')[0] : 'text-white'}`}>
         {value}

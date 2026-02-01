@@ -553,16 +553,17 @@ export default function CustomModelPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-dark-900 pt-20 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-black min-h-screen pt-24 pb-16">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold gradient-text flex items-center gap-3">
-            <Settings2 className="w-8 h-8" />
-            Custom Model: Tune NIV Weights
+        <div className="mb-12">
+          <p className="text-caption uppercase text-gray-500 mb-4">Weight Adjustment</p>
+          <h1 className="section-headline text-white flex items-center gap-4">
+            <Settings2 className="w-10 h-10" />
+            Custom Model
           </h1>
-          <p className="text-gray-400 mt-2">
-            Adjust formula weights, run Monte Carlo simulations, and perform sensitivity analysis
+          <p className="text-lg text-gray-400 mt-4 max-w-2xl">
+            Tune NIV formula weights, run Monte Carlo simulations, and perform sensitivity analysis.
           </p>
         </div>
 
@@ -573,10 +574,10 @@ export default function CustomModelPage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3"
+              className="mb-8 p-4 border border-red-500/30 bg-red-500/10 flex items-center gap-3"
             >
               <AlertTriangle className="w-5 h-5 text-red-400" />
-              <span className="text-red-200">{error}</span>
+              <span className="text-red-300">{error}</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -586,7 +587,7 @@ export default function CustomModelPage() {
           <button
             onClick={loadData}
             disabled={isLoading || checkingServerKey || !canCalculate}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-regen-600 to-regen-400 hover:from-regen-500 hover:to-regen-300 text-black font-bold rounded-xl transition disabled:opacity-50 mb-8"
+            className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-black font-medium uppercase tracking-wider hover:bg-gray-100 transition disabled:opacity-50 mb-12"
           >
             {checkingServerKey ? (
               <>
@@ -616,15 +617,15 @@ export default function CustomModelPage() {
         {rawData && (
           <>
             {/* Tab Navigation */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+            <div className="flex gap-px bg-white/10 mb-8 overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-6 py-4 transition whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'bg-regen-500 text-black font-bold'
-                      : 'bg-dark-700 text-gray-400 hover:text-white hover:bg-dark-600'
+                      ? 'bg-white text-black font-medium'
+                      : 'bg-black text-gray-400 hover:text-white hover:bg-[#0a0a0a]'
                   }`}
                 >
                   {tab.icon}
@@ -759,7 +760,7 @@ function AdjustTab({
       {/* Weight Controls */}
       <div className="lg:col-span-1 space-y-4">
         {/* Thrust Weights */}
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-5 h-5 text-blue-400" />
             <h3 className="font-bold text-white">Thrust Weights</h3>
@@ -799,7 +800,7 @@ function AdjustTab({
         </div>
 
         {/* Efficiency */}
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-green-400" />
             <h3 className="font-bold text-white">Efficiency (P)</h3>
@@ -835,7 +836,7 @@ function AdjustTab({
         </div>
 
         {/* Drag Weights */}
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingDown className="w-5 h-5 text-red-400" />
             <h3 className="font-bold text-white">Drag Weights</h3>
@@ -875,7 +876,7 @@ function AdjustTab({
         </div>
 
         {/* Nonlinearity */}
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-5 h-5 text-purple-400" />
             <h3 className="font-bold text-white">Nonlinearity</h3>
@@ -930,7 +931,7 @@ function AdjustTab({
       <div className="lg:col-span-2 space-y-6">
         {/* Current NIV Score */}
         {latestResult && (
-          <div className="glass-card rounded-xl p-6">
+          <div className="border border-white/10 bg-[#0a0a0a] p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-white text-lg">Current NIV Score</h3>
               <span className="text-gray-500 font-mono text-sm">{latestResult.date}</span>
@@ -1014,7 +1015,7 @@ function AdjustTab({
 
         {/* Time Series Chart */}
         {adjustedResults && adjustedResults.length > 0 && (
-          <div className="glass-card rounded-xl p-6">
+          <div className="border border-white/10 bg-[#0a0a0a] p-6">
             <h3 className="font-bold text-white text-lg mb-4">NIV Time Series (Adjusted)</h3>
             <div className="h-80">
               <ResponsiveContainer>
@@ -1109,7 +1110,7 @@ function MonteCarloTab({
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Controls */}
       <div className="space-y-4">
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
             <Shuffle className="w-5 h-5 text-regen-400" />
             Simulation Settings
@@ -1180,7 +1181,7 @@ function MonteCarloTab({
         </div>
 
         {/* Current Weights Display */}
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h4 className="text-sm font-bold text-gray-400 mb-3">Current Base Weights</h4>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2 bg-dark-700 rounded">
@@ -1216,7 +1217,7 @@ function MonteCarloTab({
         {results && (
           <>
             {/* Summary Stats */}
-            <div className="glass-card rounded-xl p-6">
+            <div className="border border-white/10 bg-[#0a0a0a] p-6">
               <h3 className="font-bold text-white text-lg mb-4">Simulation Results</h3>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -1264,7 +1265,7 @@ function MonteCarloTab({
             </div>
 
             {/* Histogram */}
-            <div className="glass-card rounded-xl p-6">
+            <div className="border border-white/10 bg-[#0a0a0a] p-6">
               <h3 className="font-bold text-white text-lg mb-4">NIV Distribution</h3>
               <div className="h-64">
                 <ResponsiveContainer>
@@ -1310,7 +1311,7 @@ function MonteCarloTab({
         )}
 
         {!results && !running && (
-          <div className="glass-card rounded-xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center">
             <Shuffle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-400 mb-2">No Simulation Results</h3>
             <p className="text-gray-500">Configure settings and run Monte Carlo simulation</p>
@@ -1356,7 +1357,7 @@ function SensitivityTab({
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Controls */}
       <div className="space-y-4">
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
             <Target className="w-5 h-5 text-regen-400" />
             Analysis Settings
@@ -1384,7 +1385,7 @@ function SensitivityTab({
         </div>
 
         {/* Interpretation Guide */}
-        <div className="glass-card rounded-xl p-4">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h4 className="text-sm font-bold text-gray-400 mb-3">Interpretation</h4>
           <div className="space-y-2 text-xs text-gray-500">
             <p>• <span className="text-white">Wider bars</span> = more sensitive parameter</p>
@@ -1400,7 +1401,7 @@ function SensitivityTab({
         {results && results.length > 0 && (
           <>
             {/* Tornado Chart */}
-            <div className="glass-card rounded-xl p-6">
+            <div className="border border-white/10 bg-[#0a0a0a] p-6">
               <h3 className="font-bold text-white text-lg mb-4">Tornado Plot - Parameter Sensitivity</h3>
               <div className="h-96">
                 <ResponsiveContainer>
@@ -1437,7 +1438,7 @@ function SensitivityTab({
             </div>
 
             {/* Sensitivity Table */}
-            <div className="glass-card rounded-xl p-6">
+            <div className="border border-white/10 bg-[#0a0a0a] p-6">
               <h3 className="font-bold text-white text-lg mb-4">Sensitivity Rankings</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1474,7 +1475,7 @@ function SensitivityTab({
         )}
 
         {!results && (
-          <div className="glass-card rounded-xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center">
             <Target className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-400 mb-2">No Analysis Results</h3>
             <p className="text-gray-500">Click &quot;Run Sensitivity Analysis&quot; to analyze parameter impacts</p>
@@ -1531,7 +1532,7 @@ function CompareTab({ originalResults, adjustedResults, customWeights }: Compare
   return (
     <div className="space-y-6">
       {/* Weight Comparison */}
-      <div className="glass-card rounded-xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <h3 className="font-bold text-white text-lg mb-4 flex items-center gap-2">
           <GitCompare className="w-5 h-5 text-regen-400" />
           Weight Comparison: Default vs Custom
@@ -1576,7 +1577,7 @@ function CompareTab({ originalResults, adjustedResults, customWeights }: Compare
       {/* NIV Comparison */}
       {latestOriginal && latestAdjusted && (
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="glass-card rounded-xl p-6">
+          <div className="border border-white/10 bg-[#0a0a0a] p-6">
             <h4 className="text-sm text-gray-400 mb-2">Default Weights NIV</h4>
             <div className="text-4xl font-mono font-bold text-gray-400">{(latestOriginal.niv * 100).toFixed(1)}</div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
@@ -1595,7 +1596,7 @@ function CompareTab({ originalResults, adjustedResults, customWeights }: Compare
             </div>
           </div>
 
-          <div className="glass-card rounded-xl p-6 border-2 border-regen-500/30">
+          <div className="border border-white/10 bg-[#0a0a0a] p-6 border-2 border-regen-500/30">
             <h4 className="text-sm text-regen-400 mb-2">Custom Weights NIV</h4>
             <div className={`text-4xl font-mono font-bold ${
               latestAdjusted.niv > latestOriginal.niv ? 'text-green-400' : 'text-red-400'
@@ -1626,7 +1627,7 @@ function CompareTab({ originalResults, adjustedResults, customWeights }: Compare
 
       {/* Time Series Comparison */}
       {comparisonData.length > 0 && (
-        <div className="glass-card rounded-xl p-6">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h3 className="font-bold text-white text-lg mb-4">NIV Over Time: Default vs Custom</h3>
           <div className="h-80">
             <ResponsiveContainer>
@@ -1668,7 +1669,7 @@ function CompareTab({ originalResults, adjustedResults, customWeights }: Compare
 
       {/* Difference Chart */}
       {comparisonData.length > 0 && (
-        <div className="glass-card rounded-xl p-6">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h3 className="font-bold text-white text-lg mb-4">Difference (Custom - Default)</h3>
           <div className="h-48">
             <ResponsiveContainer>
