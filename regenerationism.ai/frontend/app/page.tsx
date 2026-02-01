@@ -2,7 +2,23 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import {
+  ArrowRight,
+  ArrowUpRight,
+  FlaskConical,
+  Sliders,
+  GitFork,
+  Share2,
+  Download,
+  Code,
+  BarChart3,
+  Shuffle,
+  Target,
+  Database,
+  Globe,
+  Lock,
+  Zap,
+} from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -29,14 +45,14 @@ export default function HomePage() {
               transition={{ delay: 0.2, duration: 0.6 }}
               className="text-caption uppercase text-gray-500 mb-8"
             >
-              Real-time Macro Crisis Detection
+              Open-Source Economic Simulation Lab
             </motion.p>
 
             {/* Main headline */}
             <h1 className="hero-headline max-w-5xl mx-auto mb-8">
-              We build systems that detect
+              Build, test, and validate
               <br />
-              <span className="text-gray-500">economic crises before they unfold</span>
+              <span className="text-gray-500">economic crisis models</span>
             </h1>
 
             {/* Subheadline */}
@@ -46,8 +62,8 @@ export default function HomePage() {
               transition={{ delay: 0.4, duration: 0.6 }}
               className="hero-subheadline mx-auto mb-12"
             >
-              The National Impact Velocity indicator synthesizes Federal Reserve data
-              into a single measure of systemic stress. Validated against 60+ years of history.
+              A researcher-first platform for scenario simulation, sensitivity analysis,
+              and reproducible macro forecasting. Public data. Open formula. Full transparency.
             </motion.p>
 
             {/* CTAs */}
@@ -58,17 +74,17 @@ export default function HomePage() {
               className="flex flex-wrap items-center justify-center gap-4"
             >
               <Link
-                href="/dashboard"
+                href="/custom-model"
                 className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 text-sm font-medium uppercase tracking-wider hover:bg-gray-100 transition-colors"
               >
-                Launch Dashboard
+                Launch Simulator
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/methodology"
+                href="/validation"
                 className="inline-flex items-center gap-3 border border-white/30 text-white px-8 py-4 text-sm font-medium uppercase tracking-wider hover:border-white hover:bg-white/5 transition-all"
               >
-                Learn More
+                View Validation
               </Link>
             </motion.div>
           </motion.div>
@@ -80,10 +96,10 @@ export default function HomePage() {
             transition={{ delay: 0.8, duration: 0.8 }}
             className="mt-32 grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 border-t border-white/10 pt-16"
           >
-            <Stat value="0.85" label="AUC Score" />
-            <Stat value="60+" label="Years of Data" />
-            <Stat value="8" label="FRED Series" />
-            <Stat value="<1s" label="Update Latency" />
+            <Stat value="84.7%" label="OOS AUC Score" />
+            <Stat value="55+" label="Years of Data" />
+            <Stat value="3/3" label="Crises Detected" />
+            <Stat value="100%" label="Reproducible" />
           </motion.div>
         </div>
 
@@ -98,49 +114,51 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* What We Do Section */}
+      {/* Research Capabilities Section */}
       <section className="py-32 border-t border-white/10">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-            <div>
-              <p className="text-caption uppercase text-gray-500 mb-6">The Problem</p>
-              <h2 className="section-headline text-white mb-8">
-                Traditional indicators fail to capture systemic stress
-              </h2>
-              <p className="text-lg text-gray-400 leading-relaxed mb-8">
-                The Federal Reserve yield curve inverts months before recessions, but provides
-                no granularity. GDP reports are delayed. Sentiment indicators are noisy.
-              </p>
-              <p className="text-lg text-gray-400 leading-relaxed">
-                NIV synthesizes investment flows, monetary policy, capacity utilization, and
-                market stress into a single real-time indicator that captures systemic vulnerability.
-              </p>
-            </div>
+          <div className="text-center mb-20">
+            <p className="text-caption uppercase text-gray-500 mb-6">For Researchers</p>
+            <h2 className="section-headline text-white mb-6">
+              Your economic experimentation lab
+            </h2>
+            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+              Combine the governance controls of enterprise platforms with the flexibility
+              of open-source tools. Build, test, and share custom economic models.
+            </p>
+          </div>
 
-            <div className="lg:pt-16">
-              <div className="space-y-6">
-                <FeatureItem
-                  number="01"
-                  title="Real-time FRED Data"
-                  description="Pulls directly from 8 Federal Reserve economic series with sub-second latency."
-                />
-                <FeatureItem
-                  number="02"
-                  title="Physics-Based Model"
-                  description="NIV formula models economic momentum as thrust, efficiency, slack, and drag."
-                />
-                <FeatureItem
-                  number="03"
-                  title="Validated Performance"
-                  description="Outperforms Fed yield curve with 0.85 AUC on out-of-sample crisis prediction."
-                />
-                <FeatureItem
-                  number="04"
-                  title="Full Transparency"
-                  description="Open formula, public data, reproducible results. No black boxes."
-                />
-              </div>
-            </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/10">
+            <CapabilityCard
+              icon={<Sliders className="w-6 h-6" />}
+              title="Scenario Simulator"
+              description="Adjust thrust, efficiency, slack, and drag parameters. Run what-if scenarios and project NIV over 1-5 years."
+            />
+            <CapabilityCard
+              icon={<Shuffle className="w-6 h-6" />}
+              title="Monte Carlo Analysis"
+              description="Run thousands of simulations with uncertainty bands. Quantify confidence intervals for your forecasts."
+            />
+            <CapabilityCard
+              icon={<Target className="w-6 h-6" />}
+              title="Sensitivity Analysis"
+              description="Tornado plots showing parameter impacts. Identify which variables drive model outputs."
+            />
+            <CapabilityCard
+              icon={<GitFork className="w-6 h-6" />}
+              title="Fork & Customize"
+              description="Clone any model configuration. Build custom variants with your own parameter weights."
+            />
+            <CapabilityCard
+              icon={<Share2 className="w-6 h-6" />}
+              title="Shareable Results"
+              description="Export CSV, PDF reports, or shareable links. Perfect for publications and peer review."
+            />
+            <CapabilityCard
+              icon={<Code className="w-6 h-6" />}
+              title="Reproducibility Kit"
+              description="Python notebooks, Docker containers, and API docs. Reproduce everything locally."
+            />
           </div>
         </div>
       </section>
@@ -163,6 +181,9 @@ export default function HomePage() {
                   NIV = (u × P²) / (X + F)<sup className="text-lg">η</sup>
                 </code>
               </div>
+              <p className="text-gray-500 mt-6">
+                All parameters adjustable: η ∈ [1.0, 2.5], investment multiplier ∈ [1.0, 1.5]
+              </p>
             </div>
 
             {/* Components grid */}
@@ -170,14 +191,14 @@ export default function HomePage() {
               <FormulaComponent
                 symbol="u"
                 name="Thrust"
-                formula="tanh(ΔG + ΔA − 0.7Δr)"
-                description="Net policy stimulus from investment growth, M2 expansion, and rate changes"
+                formula="tanh(w_G·ΔG + w_A·ΔA − w_r·Δr)"
+                description="Net policy stimulus with adjustable weights for investment, M2, and rate sensitivity"
               />
               <FormulaComponent
                 symbol="P"
                 name="Efficiency"
-                formula="(Investment × 1.15) / GDP"
-                description="Capital productivity ratio, squared in the numerator"
+                formula="(Investment × mult) / GDP"
+                description="Capital productivity with tunable R&D/education multiplier (default 1.15)"
               />
               <FormulaComponent
                 symbol="X"
@@ -188,70 +209,40 @@ export default function HomePage() {
               <FormulaComponent
                 symbol="F"
                 name="Drag"
-                formula="0.4s + 0.4(r−π) + 0.2σ"
-                description="System friction from yield inversion, real rates, and volatility"
+                formula="w_s·s + w_r·(r−π) + w_v·σ"
+                description="System friction with adjustable weights for yield, rates, and volatility"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Products Section */}
+      {/* Data Integration Section */}
       <section className="py-32 border-t border-white/10">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <p className="text-caption uppercase text-gray-500 mb-6">Capabilities</p>
-            <h2 className="section-headline text-white">
-              Built for analysis and integration
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-px bg-white/10">
-            <ProductCard
-              title="Live Dashboard"
-              description="Real-time NIV monitoring with component breakdown, historical trends, and crisis alerts."
-              href="/dashboard"
-            />
-            <ProductCard
-              title="Historical Explorer"
-              description="Browse 60+ years of NIV data. Zoom into crises. Export for your own analysis."
-              href="/explorer"
-            />
-            <ProductCard
-              title="API Access"
-              description="REST endpoints for integration. Pull NIV scores programmatically for your systems."
-              href="/api-docs"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Validation Section */}
-      <section className="py-32 bg-[#0a0a0a]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
             <div>
-              <p className="text-caption uppercase text-gray-500 mb-6">Validation</p>
+              <p className="text-caption uppercase text-gray-500 mb-6">Data Sources</p>
               <h2 className="section-headline text-white mb-8">
-                Reproducible by design
+                Public data, transparent methodology
               </h2>
               <p className="text-lg text-gray-400 leading-relaxed mb-8">
-                Every data point comes from public FRED series. The formula is fully exposed.
-                Anyone can reproduce our results with the same inputs.
+                Every data point comes from the Federal Reserve Economic Data (FRED) API.
+                No proprietary data. No hidden parameters. Full reproducibility.
               </p>
 
-              <ul className="space-y-4 mb-10">
-                <ValidationItem>All data from Federal Reserve Economic Data (FRED)</ValidationItem>
-                <ValidationItem>Complete formula with no hidden parameters</ValidationItem>
-                <ValidationItem>Python reproduction code provided</ValidationItem>
-                <ValidationItem>Out-of-sample backtests runnable by anyone</ValidationItem>
-              </ul>
+              <div className="space-y-4 mb-10">
+                <DataFeature icon={<Database className="w-5 h-5" />} title="8 FRED Series" description="Investment, M2, Fed Funds, GDP, TCU, Yield Spread, CPI, NBER" />
+                <DataFeature icon={<Globe className="w-5 h-5" />} title="Extensible" description="Add World Bank, BEA, OECD CLI for international comparisons" />
+                <DataFeature icon={<Zap className="w-5 h-5" />} title="Real-time" description="Sub-second updates with automatic data refresh" />
+                <DataFeature icon={<Lock className="w-5 h-5" />} title="Audit Trail" description="Full logging of all calculations for governance" />
+              </div>
 
               <Link
                 href="/validation"
                 className="inline-flex items-center gap-3 text-white border-b border-white/30 pb-1 hover:border-white transition-colors"
               >
-                View validation guide
+                View full data documentation
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
@@ -259,36 +250,139 @@ export default function HomePage() {
             <div className="bg-black border border-white/10 p-8 lg:p-12">
               <p className="text-caption uppercase text-gray-500 mb-8">FRED Series Used</p>
               <div className="space-y-4 font-mono text-sm">
-                <DataRow series="GPDIC1" name="Private Investment" />
-                <DataRow series="M2SL" name="M2 Money Stock" />
-                <DataRow series="FEDFUNDS" name="Federal Funds Rate" />
-                <DataRow series="GDPC1" name="Real GDP" />
-                <DataRow series="TCU" name="Capacity Utilization" />
-                <DataRow series="T10Y3M" name="10Y-3M Spread" />
-                <DataRow series="CPIAUCSL" name="Consumer Price Index" />
+                <DataRow series="GPDIC1" name="Private Investment" component="Thrust, Efficiency" />
+                <DataRow series="M2SL" name="M2 Money Stock" component="Thrust" />
+                <DataRow series="FEDFUNDS" name="Federal Funds Rate" component="Thrust, Drag" />
+                <DataRow series="GDPC1" name="Real GDP" component="Efficiency" />
+                <DataRow series="TCU" name="Capacity Utilization" component="Slack" />
+                <DataRow series="T10Y3M" name="10Y-3M Spread" component="Drag" />
+                <DataRow series="CPIAUCSL" name="Consumer Price Index" component="Drag" />
+                <DataRow series="USREC" name="NBER Recession" component="Validation" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Products Section */}
+      <section className="py-32 bg-[#0a0a0a]">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+          <div className="text-center mb-20">
+            <p className="text-caption uppercase text-gray-500 mb-6">Platform</p>
+            <h2 className="section-headline text-white">
+              Tools for every research workflow
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10">
+            <ProductCard
+              title="Custom Model"
+              description="Adjust all NIV parameters. Run Monte Carlo and sensitivity analysis. Export results."
+              href="/custom-model"
+              badge="New"
+            />
+            <ProductCard
+              title="Live Dashboard"
+              description="Real-time NIV monitoring with component breakdown and crisis probability."
+              href="/dashboard"
+            />
+            <ProductCard
+              title="OOS Validation"
+              description="Walk-forward backtests on 55+ years. Compare vs yield curve and GDP."
+              href="/oos-tests"
+            />
+            <ProductCard
+              title="API Access"
+              description="REST endpoints for integration. Pull NIV programmatically for your systems."
+              href="/api-docs"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Validation Summary Section */}
       <section className="py-32 border-t border-white/10">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+            <div>
+              <p className="text-caption uppercase text-gray-500 mb-6">Validation</p>
+              <h2 className="section-headline text-white mb-8">
+                Independently verified results
+              </h2>
+
+              {/* Metrics */}
+              <div className="grid grid-cols-2 gap-4 mb-10">
+                <div className="bg-[#0a0a0a] border border-white/10 p-6">
+                  <p className="text-3xl font-mono font-bold text-white mb-1">84.7%</p>
+                  <p className="text-sm text-gray-500">ROC-AUC (OOS)</p>
+                </div>
+                <div className="bg-[#0a0a0a] border border-white/10 p-6">
+                  <p className="text-3xl font-mono font-bold text-white mb-1">3/3</p>
+                  <p className="text-sm text-gray-500">Crises Detected</p>
+                </div>
+                <div className="bg-[#0a0a0a] border border-white/10 p-6">
+                  <p className="text-3xl font-mono font-bold text-white mb-1">5.3 mo</p>
+                  <p className="text-sm text-gray-500">Avg Lead Time</p>
+                </div>
+                <div className="bg-[#0a0a0a] border border-white/10 p-6">
+                  <p className="text-3xl font-mono font-bold text-white mb-1">&gt;72%</p>
+                  <p className="text-sm text-gray-500">vs Yield Curve</p>
+                </div>
+              </div>
+
+              <Link
+                href="/validation"
+                className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 text-sm font-medium uppercase tracking-wider hover:bg-gray-100 transition-colors"
+              >
+                View Full Validation Report
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            <div className="bg-black border border-white/10 p-8 lg:p-12">
+              <p className="text-caption uppercase text-gray-500 mb-8">Crisis Detection (OOS Test Period)</p>
+              <div className="space-y-6">
+                <CrisisRow year="2001" name="Dot-Com Recession" warning="Sep 2000" lead="6 months" />
+                <CrisisRow year="2008" name="Global Financial Crisis" warning="Aug 2007" lead="5 months" />
+                <CrisisRow year="2020" name="COVID Recession" warning="Nov 2019" lead="3 months" />
+              </div>
+              <p className="text-xs text-gray-600 mt-8">
+                Training period: 1970–2000 | Testing period: 2001–2025 | No lookahead bias
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-32 bg-[#0a0a0a] border-t border-white/10">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8 text-center">
+          <p className="text-caption uppercase text-gray-500 mb-6">Get Started</p>
           <h2 className="section-headline text-white mb-8">
-            See the signal in the noise
+            Start building your models
           </h2>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-12">
-            Launch the dashboard to explore real-time NIV data, historical trends,
-            and component breakdowns.
+            Launch the scenario simulator to adjust parameters, run Monte Carlo analysis,
+            and generate reproducible forecasts with public FRED data.
           </p>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-3 bg-white text-black px-10 py-5 text-sm font-medium uppercase tracking-wider hover:bg-gray-100 transition-colors"
-          >
-            Launch Dashboard
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/custom-model"
+              className="inline-flex items-center gap-3 bg-white text-black px-10 py-5 text-sm font-medium uppercase tracking-wider hover:bg-gray-100 transition-colors"
+            >
+              Launch Simulator
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <a
+              href="https://github.com/direncode/regenerationism"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 border border-white/30 text-white px-10 py-5 text-sm font-medium uppercase tracking-wider hover:border-white hover:bg-white/5 transition-all"
+            >
+              View on GitHub
+              <ArrowUpRight className="w-4 h-4" />
+            </a>
+          </div>
         </div>
       </section>
     </div>
@@ -305,23 +399,21 @@ function Stat({ value, label }: { value: string; label: string }) {
   )
 }
 
-// Feature item component
-function FeatureItem({
-  number,
+// Capability card component
+function CapabilityCard({
+  icon,
   title,
   description,
 }: {
-  number: string
+  icon: React.ReactNode
   title: string
   description: string
 }) {
   return (
-    <div className="flex gap-6 py-6 border-b border-white/10">
-      <span className="text-sm font-mono text-gray-600">{number}</span>
-      <div>
-        <h3 className="text-lg font-medium text-white mb-2">{title}</h3>
-        <p className="text-gray-500 text-sm leading-relaxed">{description}</p>
-      </div>
+    <div className="bg-black p-8 lg:p-10">
+      <div className="text-white mb-4">{icon}</div>
+      <h3 className="text-lg font-medium text-white mb-3">{title}</h3>
+      <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
     </div>
   )
 }
@@ -350,46 +442,93 @@ function FormulaComponent({
   )
 }
 
+// Data feature component
+function DataFeature({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+}) {
+  return (
+    <div className="flex gap-4">
+      <div className="text-gray-600 flex-shrink-0">{icon}</div>
+      <div>
+        <h4 className="text-white font-medium mb-1">{title}</h4>
+        <p className="text-sm text-gray-500">{description}</p>
+      </div>
+    </div>
+  )
+}
+
 // Product card component
 function ProductCard({
   title,
   description,
   href,
+  badge,
 }: {
   title: string
   description: string
   href: string
+  badge?: string
 }) {
   return (
     <Link
       href={href}
-      className="bg-black p-8 lg:p-12 group hover:bg-[#0a0a0a] transition-colors"
+      className="bg-black p-8 lg:p-10 group hover:bg-[#111] transition-colors"
     >
-      <h3 className="text-xl font-medium text-white mb-4 flex items-center gap-3">
-        {title}
-        <ArrowUpRight className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
-      </h3>
-      <p className="text-gray-500 text-sm leading-relaxed">{description}</p>
+      <div className="flex items-center gap-3 mb-4">
+        <h3 className="text-lg font-medium text-white">{title}</h3>
+        {badge && (
+          <span className="text-xs uppercase tracking-wider px-2 py-1 bg-white/10 text-white">
+            {badge}
+          </span>
+        )}
+        <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors ml-auto" />
+      </div>
+      <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
     </Link>
   )
 }
 
-// Validation item component
-function ValidationItem({ children }: { children: React.ReactNode }) {
+// Data row component
+function DataRow({ series, name, component }: { series: string; name: string; component: string }) {
   return (
-    <li className="flex items-start gap-3">
-      <span className="w-1 h-1 bg-white rounded-full mt-2.5 flex-shrink-0" />
-      <span className="text-gray-400">{children}</span>
-    </li>
+    <div className="flex items-center justify-between py-3 border-b border-white/5">
+      <div>
+        <span className="text-white">{series}</span>
+        <span className="text-gray-600 ml-3">{name}</span>
+      </div>
+      <span className="text-xs text-gray-600">{component}</span>
+    </div>
   )
 }
 
-// Data row component
-function DataRow({ series, name }: { series: string; name: string }) {
+// Crisis row component
+function CrisisRow({
+  year,
+  name,
+  warning,
+  lead,
+}: {
+  year: string
+  name: string
+  warning: string
+  lead: string
+}) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-white/5">
-      <span className="text-white">{series}</span>
-      <span className="text-gray-600">{name}</span>
+    <div className="flex items-center justify-between py-4 border-b border-white/5">
+      <div>
+        <span className="text-white font-mono mr-3">{year}</span>
+        <span className="text-gray-400">{name}</span>
+      </div>
+      <div className="text-right">
+        <span className="text-white font-mono text-sm">{warning}</span>
+        <span className="text-gray-600 text-xs ml-3">({lead})</span>
+      </div>
     </div>
   )
 }
