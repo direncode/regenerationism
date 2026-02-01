@@ -23,6 +23,7 @@ export default function Footer() {
             <ul className="space-y-4">
               <FooterLink href="/dashboard">Dashboard</FooterLink>
               <FooterLink href="/explorer">Explorer</FooterLink>
+              <FooterLink href="/custom-model">Custom Model</FooterLink>
               <FooterLink href="/api-docs">API</FooterLink>
             </ul>
           </div>

@@ -315,7 +315,7 @@ function runSensitivityAnalysis(
     w_G: 'Investment Growth Weight (w_G)',
     w_A: 'M2 Growth Weight (w_A)',
     w_r: 'Rate Change Weight (w_r)',
-    mult: 'R&D Multiplier (mult)',
+    mult: 'Investment Multiplier (×1.15)',
     w_s: 'Yield Penalty Weight (w_s)',
     w_real: 'Real Rate Weight (w_real)',
     w_vol: 'Volatility Weight (w_vol)',
@@ -802,18 +802,36 @@ function AdjustTab({
         <div className="glass-card rounded-xl p-4">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-green-400" />
-            <h3 className="font-bold text-white">Efficiency</h3>
+            <h3 className="font-bold text-white">Efficiency (P)</h3>
           </div>
           <WeightSlider
-            label="R&D Multiplier"
+            label="Investment Multiplier"
             value={customWeights.mult}
             min={1.0}
             max={1.5}
-            step={0.05}
+            step={0.01}
             onChange={(v) => updateWeight('mult', v)}
-            tooltip="Quality uplift factor for investment efficiency"
+            tooltip="Efficiency = (Investment × mult) / GDP. Default 1.15 accounts for R&D and education quality uplift."
             color="green"
           />
+          <div className="mt-3 flex gap-2">
+            {[1.0, 1.10, 1.15, 1.20, 1.30].map((preset) => (
+              <button
+                key={preset}
+                onClick={() => updateWeight('mult', preset)}
+                className={`px-3 py-1 text-xs rounded-lg transition ${
+                  customWeights.mult === preset
+                    ? 'bg-green-500 text-white font-bold'
+                    : 'bg-dark-600 text-gray-400 hover:text-white'
+                }`}
+              >
+                ×{preset.toFixed(2)}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-3">
+            P = (Investment × {customWeights.mult.toFixed(2)}) / GDP → P² in numerator
+          </p>
         </div>
 
         {/* Drag Weights */}
