@@ -12,9 +12,9 @@ import {
   Database,
   FlaskConical,
   ArrowRight,
+  ArrowUpRight,
   Github,
   Mail,
-  BookOpen,
   Table,
   Code,
   Play,
@@ -158,7 +158,6 @@ export default function ValidationPage() {
   const { apiSettings } = useSessionStore()
   const [copied, setCopied] = useState<string | null>(null)
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
-  const [sampleNivData, setSampleNivData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -205,8 +204,6 @@ export default function ValidationPage() {
         { eta: 1.5, weights: { thrust: 1, efficiency: 1, slack: 1, drag: 1 }, smoothWindow: 1 }
       )
 
-      setSampleNivData(nivData.slice(-24)) // Last 24 months
-
       // Download as CSV
       const headers = 'date,niv,thrust,efficiency,slack,drag,probability,status\n'
       const rows = nivData.slice(-24).map(d =>
@@ -227,23 +224,21 @@ export default function ValidationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 py-12 px-6">
-      <div className="max-w-5xl mx-auto">
+    <div className="bg-black min-h-screen pt-24 pb-20">
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
-            <CheckCircle className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-medium text-emerald-300">For Academic Review</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-neutral-100 mb-4">
+          <p className="text-caption uppercase text-gray-500 mb-4">For Academic Review</p>
+          <h1 className="section-headline text-white mb-6">
             Validation & Reproducibility
           </h1>
-          <p className="text-xl text-neutral-400 max-w-3xl mx-auto">
-            Everything you need to independently verify NIV calculations. Public data, open formula, full transparency.
+          <p className="text-lg text-gray-400 max-w-2xl">
+            Everything you need to independently verify NIV calculations.
+            Public data, open formula, full transparency.
           </p>
         </motion.div>
 
@@ -252,36 +247,39 @@ export default function ValidationPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid md:grid-cols-3 gap-4 mb-12"
+          className="grid md:grid-cols-3 gap-px bg-white/10 mb-16"
         >
           <button
             onClick={downloadCSV}
-            className="card p-6 text-left hover:border-emerald-500/30 transition group"
+            className="bg-black p-8 text-left hover:bg-[#0a0a0a] transition group"
           >
-            <Download className="w-8 h-8 text-emerald-400 mb-3" />
-            <h3 className="font-bold text-neutral-100 mb-1">Sample FRED Data</h3>
-            <p className="text-sm text-neutral-500">Download CSV with FRED series for manual calculation</p>
+            <Download className="w-6 h-6 text-white mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">Sample FRED Data</h3>
+            <p className="text-sm text-gray-500">Download CSV with FRED series for manual calculation</p>
           </button>
 
           <button
             onClick={generateLiveSampleCSV}
             disabled={loading || (!hasServerKey && !apiSettings.fredApiKey)}
-            className="card p-6 text-left hover:border-blue-500/30 transition group disabled:opacity-50"
+            className="bg-black p-8 text-left hover:bg-[#0a0a0a] transition group disabled:opacity-50"
           >
-            <Database className="w-8 h-8 text-blue-400 mb-3" />
-            <h3 className="font-bold text-neutral-100 mb-1">Live Dashboard Data</h3>
-            <p className="text-sm text-neutral-500">
+            <Database className="w-6 h-6 text-white mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">Live Dashboard Data</h3>
+            <p className="text-sm text-gray-500">
               {loading ? 'Generating...' : 'Export current NIV values with all components'}
             </p>
           </button>
 
           <Link
             href="/oos-tests"
-            className="card p-6 text-left hover:border-purple-500/30 transition group"
+            className="bg-black p-8 text-left hover:bg-[#0a0a0a] transition group"
           >
-            <FlaskConical className="w-8 h-8 text-purple-400 mb-3" />
-            <h3 className="font-bold text-neutral-100 mb-1">OOS Backtest</h3>
-            <p className="text-sm text-neutral-500">Run walk-forward tests on 60+ years of data</p>
+            <FlaskConical className="w-6 h-6 text-white mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+              OOS Backtest
+              <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-white transition" />
+            </h3>
+            <p className="text-sm text-gray-500">Run walk-forward tests on 60+ years of data</p>
           </Link>
         </motion.div>
 
@@ -290,41 +288,22 @@ export default function ValidationPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="card p-8 mb-12 border border-emerald-500/20"
+          className="border border-white/10 p-8 lg:p-12 mb-16"
         >
-          <h2 className="text-2xl font-bold text-neutral-100 mb-6 flex items-center gap-3">
-            <CheckCircle className="w-7 h-7 text-emerald-400" />
-            Reproducibility Checklist
-          </h2>
+          <h2 className="text-xl font-medium text-white mb-8">Reproducibility Checklist</h2>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <ChecklistItem checked>
-                All data from public FRED API (Federal Reserve Economic Data)
-              </ChecklistItem>
-              <ChecklistItem checked>
-                Complete formula exposed with no hidden parameters
-              </ChecklistItem>
-              <ChecklistItem checked>
-                Source code available on GitHub
-              </ChecklistItem>
-              <ChecklistItem checked>
-                Python and Excel reproduction guides provided
-              </ChecklistItem>
+              <ChecklistItem>All data from public FRED API (Federal Reserve Economic Data)</ChecklistItem>
+              <ChecklistItem>Complete formula exposed with no hidden parameters</ChecklistItem>
+              <ChecklistItem>Source code available on GitHub</ChecklistItem>
+              <ChecklistItem>Python and Excel reproduction guides provided</ChecklistItem>
             </div>
             <div className="space-y-4">
-              <ChecklistItem checked>
-                Out-of-sample backtests (1970-present) runnable by anyone
-              </ChecklistItem>
-              <ChecklistItem checked>
-                No proprietary data or models
-              </ChecklistItem>
-              <ChecklistItem checked>
-                Real-time dashboard values downloadable as CSV
-              </ChecklistItem>
-              <ChecklistItem checked>
-                Audit log of all calculations available
-              </ChecklistItem>
+              <ChecklistItem>Out-of-sample backtests (1970-present) runnable by anyone</ChecklistItem>
+              <ChecklistItem>No proprietary data or models</ChecklistItem>
+              <ChecklistItem>Real-time dashboard values downloadable as CSV</ChecklistItem>
+              <ChecklistItem>Audit log of all calculations available</ChecklistItem>
             </div>
           </div>
         </motion.div>
@@ -334,24 +313,21 @@ export default function ValidationPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="card p-8 mb-12"
+          className="border border-white/10 p-8 lg:p-12 mb-16"
         >
-          <h2 className="text-2xl font-bold text-neutral-100 mb-6 flex items-center gap-3">
-            <Database className="w-7 h-7 text-blue-400" />
-            FRED Data Series Reference
-          </h2>
+          <h2 className="text-xl font-medium text-white mb-8">FRED Data Series Reference</h2>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="border-b border-neutral-800">
-                  <th className="text-left py-3 px-4 text-neutral-400 font-medium">Series ID</th>
-                  <th className="text-left py-3 px-4 text-neutral-400 font-medium">Description</th>
-                  <th className="text-left py-3 px-4 text-neutral-400 font-medium">Frequency</th>
-                  <th className="text-left py-3 px-4 text-neutral-400 font-medium">Used For</th>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-4 pr-8 text-caption uppercase text-gray-500">Series ID</th>
+                  <th className="text-left py-4 pr-8 text-caption uppercase text-gray-500">Description</th>
+                  <th className="text-left py-4 pr-8 text-caption uppercase text-gray-500">Frequency</th>
+                  <th className="text-left py-4 text-caption uppercase text-gray-500">Used For</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-800/50">
+              <tbody className="text-sm">
                 <FredSeriesRow id="GPDIC1" desc="Real Private Domestic Investment" freq="Quarterly" use="Efficiency (P), Investment Growth (dG)" />
                 <FredSeriesRow id="M2SL" desc="M2 Money Stock" freq="Monthly" use="M2 Growth (dA) in Thrust" />
                 <FredSeriesRow id="FEDFUNDS" desc="Federal Funds Effective Rate" freq="Monthly" use="Rate Change (dr), Real Rate, Volatility" />
@@ -359,19 +335,17 @@ export default function ValidationPage() {
                 <FredSeriesRow id="TCU" desc="Capacity Utilization" freq="Monthly" use="Slack (X) calculation" />
                 <FredSeriesRow id="T10Y3M" desc="10Y-3M Treasury Spread" freq="Daily" use="Yield Penalty in Drag" />
                 <FredSeriesRow id="CPIAUCSL" desc="Consumer Price Index" freq="Monthly" use="Inflation for Real Rate" />
-                <FredSeriesRow id="USREC" desc="NBER Recession Indicator" freq="Monthly" use="Backtest validation" />
+                <FredSeriesRow id="USREC" desc="NBER Crisis Indicator" freq="Monthly" use="Backtest validation" />
               </tbody>
             </table>
           </div>
 
-          <div className="mt-6 p-4 bg-neutral-900 rounded-lg">
-            <p className="text-sm text-neutral-500">
-              <strong className="text-neutral-300">Note:</strong> Quarterly series (GPDIC1, GDPC1) are forward-filled to monthly frequency. All data is publicly available at{' '}
-              <a href="https://fred.stlouisfed.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                fred.stlouisfed.org
-              </a>
-            </p>
-          </div>
+          <p className="text-sm text-gray-600 mt-8">
+            Quarterly series (GPDIC1, GDPC1) are forward-filled to monthly frequency. All data is publicly available at{' '}
+            <a href="https://fred.stlouisfed.org" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">
+              fred.stlouisfed.org
+            </a>
+          </p>
         </motion.div>
 
         {/* Python Code Section */}
@@ -380,46 +354,43 @@ export default function ValidationPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
           id="python"
-          className="card p-8 mb-12"
+          className="border border-white/10 p-8 lg:p-12 mb-16"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-neutral-100 flex items-center gap-3">
-              <Code className="w-7 h-7 text-yellow-400" />
-              Python Reproduction Code
-            </h2>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl font-medium text-white">Python Reproduction Code</h2>
             <button
               onClick={() => copyToClipboard(PYTHON_CODE, 'python')}
-              className="flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-300 hover:border-neutral-600 transition text-sm"
+              className="flex items-center gap-2 px-4 py-2 border border-white/20 text-sm text-gray-300 hover:border-white hover:text-white transition"
             >
-              {copied === 'python' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              {copied === 'python' ? 'Copied!' : 'Copy Code'}
+              {copied === 'python' ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied === 'python' ? 'Copied' : 'Copy'}
             </button>
           </div>
 
-          <div className="bg-neutral-900 rounded-lg p-4 overflow-x-auto">
-            <pre className="text-sm font-mono text-neutral-300 whitespace-pre-wrap">
+          <div className="bg-[#0a0a0a] p-6 overflow-x-auto">
+            <pre className="text-sm font-mono text-gray-300 whitespace-pre-wrap">
               {PYTHON_CODE}
             </pre>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-4">
+          <div className="mt-6 flex flex-wrap gap-6">
             <a
               href="https://fred.stlouisfed.org/docs/api/api_key.html"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition"
             >
               Get FRED API Key
-              <ExternalLink className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4" />
             </a>
             <a
               href="https://pypi.org/project/fredapi/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition"
             >
               fredapi Python Package
-              <ExternalLink className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4" />
             </a>
           </div>
         </motion.div>
@@ -429,24 +400,21 @@ export default function ValidationPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="card p-8 mb-12"
+          className="border border-white/10 p-8 lg:p-12 mb-16"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-neutral-100 flex items-center gap-3">
-              <Table className="w-7 h-7 text-green-400" />
-              Excel Reproduction Steps
-            </h2>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl font-medium text-white">Excel Reproduction Steps</h2>
             <button
               onClick={() => copyToClipboard(EXCEL_STEPS, 'excel')}
-              className="flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-300 hover:border-neutral-600 transition text-sm"
+              className="flex items-center gap-2 px-4 py-2 border border-white/20 text-sm text-gray-300 hover:border-white hover:text-white transition"
             >
-              {copied === 'excel' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              {copied === 'excel' ? 'Copied!' : 'Copy Steps'}
+              {copied === 'excel' ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied === 'excel' ? 'Copied' : 'Copy'}
             </button>
           </div>
 
-          <div className="bg-neutral-900 rounded-lg p-4 overflow-x-auto">
-            <pre className="text-sm font-mono text-neutral-300 whitespace-pre-wrap">
+          <div className="bg-[#0a0a0a] p-6 overflow-x-auto">
+            <pre className="text-sm font-mono text-gray-300 whitespace-pre-wrap">
               {EXCEL_STEPS}
             </pre>
           </div>
@@ -457,56 +425,50 @@ export default function ValidationPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="card p-8 mb-12 border border-purple-500/20"
+          className="border border-white/10 p-8 lg:p-12 mb-16"
         >
-          <h2 className="text-2xl font-bold text-neutral-100 mb-6 flex items-center gap-3">
-            <FlaskConical className="w-7 h-7 text-purple-400" />
-            Out-of-Sample Backtest Example
-          </h2>
+          <h2 className="text-xl font-medium text-white mb-8">Out-of-Sample Backtest Example</h2>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="p-4 bg-neutral-900 rounded-lg">
-              <h3 className="font-bold text-neutral-200 mb-3">Training Period</h3>
-              <p className="text-3xl font-mono text-purple-400 mb-2">1970 - 2000</p>
-              <p className="text-sm text-neutral-500">Model parameters fixed during this period</p>
+          <div className="grid md:grid-cols-2 gap-px bg-white/10 mb-8">
+            <div className="bg-black p-8">
+              <p className="text-caption uppercase text-gray-500 mb-2">Training Period</p>
+              <p className="text-3xl font-mono text-white mb-2">1970 – 2000</p>
+              <p className="text-sm text-gray-600">Model parameters fixed during this period</p>
             </div>
-            <div className="p-4 bg-neutral-900 rounded-lg">
-              <h3 className="font-bold text-neutral-200 mb-3">Testing Period</h3>
-              <p className="text-3xl font-mono text-emerald-400 mb-2">2001 - 2025</p>
-              <p className="text-sm text-neutral-500">True out-of-sample evaluation</p>
+            <div className="bg-black p-8">
+              <p className="text-caption uppercase text-gray-500 mb-2">Testing Period</p>
+              <p className="text-3xl font-mono text-white mb-2">2001 – 2025</p>
+              <p className="text-sm text-gray-600">True out-of-sample evaluation</p>
             </div>
           </div>
 
-          <div className="space-y-4 mb-6">
-            <div className="p-4 bg-neutral-900 rounded-lg">
-              <h3 className="font-bold text-neutral-200 mb-2">Methodology</h3>
-              <ul className="text-sm text-neutral-400 space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-400">1.</span>
-                  Walk-forward analysis with 12-month crisis warning window
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-400">2.</span>
-                  Compare NIV vs Federal Reserve yield curve (T10Y3M) as baseline
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-400">3.</span>
-                  Evaluate using ROC-AUC on NBER crisis dates
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-400">4.</span>
-                  Test covers 2001, 2008, 2020 crises (not seen during training)
-                </li>
-              </ul>
-            </div>
+          <div className="bg-[#0a0a0a] p-6 mb-8">
+            <p className="text-caption uppercase text-gray-500 mb-4">Methodology</p>
+            <ul className="space-y-3 text-sm text-gray-400">
+              <li className="flex items-start gap-3">
+                <span className="font-mono text-gray-600">01</span>
+                Walk-forward analysis with 12-month crisis warning window
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-mono text-gray-600">02</span>
+                Compare NIV vs Federal Reserve yield curve (T10Y3M) as baseline
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-mono text-gray-600">03</span>
+                Evaluate using ROC-AUC on NBER crisis dates
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-mono text-gray-600">04</span>
+                Test covers 2001, 2008, 2020 crises (not seen during training)
+              </li>
+            </ul>
           </div>
 
           <Link
             href="/oos-tests"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition"
+            className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 text-sm font-medium uppercase tracking-wider hover:bg-gray-100 transition"
           >
-            <Play className="w-5 h-5" />
-            Run OOS Backtest Now
+            Run OOS Backtest
             <ArrowRight className="w-4 h-4" />
           </Link>
         </motion.div>
@@ -516,12 +478,12 @@ export default function ValidationPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="card p-8 border border-accent-500/20"
+          className="border border-white/10 p-8 lg:p-12"
         >
-          <h2 className="text-2xl font-bold text-neutral-100 mb-4">
+          <h2 className="text-xl font-medium text-white mb-4">
             Seeking Academic & Industry Validation
           </h2>
-          <p className="text-neutral-400 mb-6">
+          <p className="text-gray-400 mb-8 max-w-2xl">
             We welcome rigorous review from researchers, economists, and industry practitioners.
             Full source code access and methodology discussions available upon request.
           </p>
@@ -531,15 +493,15 @@ export default function ValidationPage() {
               href="https://github.com/direncode/regenerationism"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-neutral-200 hover:border-neutral-600 transition"
+              className="inline-flex items-center gap-2 px-6 py-3 border border-white/20 text-white hover:border-white transition"
             >
               <Github className="w-5 h-5" />
               GitHub Repository
-              <ExternalLink className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4" />
             </a>
             <a
               href="mailto:contact@regenerationism.ai?subject=Academic%20Validation%20Inquiry"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent-500/10 border border-accent-500/30 rounded-xl text-accent-300 hover:bg-accent-500/20 transition"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black hover:bg-gray-100 transition"
             >
               <Mail className="w-5 h-5" />
               Request Validation Access
@@ -552,15 +514,11 @@ export default function ValidationPage() {
 }
 
 // Checklist Item Component
-function ChecklistItem({ checked, children }: { checked: boolean; children: React.ReactNode }) {
+function ChecklistItem({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
-        checked ? 'bg-emerald-500/20 text-emerald-400' : 'bg-neutral-800 text-neutral-500'
-      }`}>
-        {checked && <CheckCircle className="w-3.5 h-3.5" />}
-      </div>
-      <span className={checked ? 'text-neutral-300' : 'text-neutral-500'}>{children}</span>
+      <span className="w-1 h-1 bg-white rounded-full mt-2 flex-shrink-0" />
+      <span className="text-gray-400">{children}</span>
     </div>
   )
 }
@@ -568,20 +526,20 @@ function ChecklistItem({ checked, children }: { checked: boolean; children: Reac
 // FRED Series Row Component
 function FredSeriesRow({ id, desc, freq, use }: { id: string; desc: string; freq: string; use: string }) {
   return (
-    <tr className="hover:bg-neutral-900/50 transition">
-      <td className="py-3 px-4">
+    <tr className="border-b border-white/5 hover:bg-white/5 transition">
+      <td className="py-4 pr-8">
         <a
           href={`https://fred.stlouisfed.org/series/${id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-mono text-blue-400 hover:underline"
+          className="font-mono text-white hover:underline"
         >
           {id}
         </a>
       </td>
-      <td className="py-3 px-4 text-neutral-300">{desc}</td>
-      <td className="py-3 px-4 text-neutral-500">{freq}</td>
-      <td className="py-3 px-4 text-neutral-400">{use}</td>
+      <td className="py-4 pr-8 text-gray-300">{desc}</td>
+      <td className="py-4 pr-8 text-gray-500">{freq}</td>
+      <td className="py-4 text-gray-500">{use}</td>
     </tr>
   )
 }
