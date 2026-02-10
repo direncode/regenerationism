@@ -24,6 +24,13 @@ import {
   Settings,
   Award,
   Download,
+  Code,
+  ChevronRight,
+  ChevronDown,
+  BookOpen,
+  Sigma,
+  FileCode,
+  BarChart3,
 } from 'lucide-react'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED, checkServerApiKey } from '@/lib/fredApi'
@@ -48,6 +55,7 @@ export default function OOSTestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
   const [checkingServerKey, setCheckingServerKey] = useState(true)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['methodology']))
 
   // Test results
   const [recessionResult, setRecessionResult] = useState<RecessionTestResult | null>(null)
@@ -78,6 +86,16 @@ export default function OOSTestsPage() {
   }, [setApiSettings])
 
   const canRunTests = hasServerKey || (apiSettings.fredApiKey && apiSettings.useLiveData)
+
+  const toggleSection = (section: string) => {
+    const newExpanded = new Set(expandedSections)
+    if (newExpanded.has(section)) {
+      newExpanded.delete(section)
+    } else {
+      newExpanded.add(section)
+    }
+    setExpandedSections(newExpanded)
+  }
 
   const runTest = useCallback(async (testType: TestType) => {
     if (!canRunTests) {
@@ -190,24 +208,21 @@ export default function OOSTestsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold gradient-text flex items-center gap-3">
             <FlaskConical className="w-8 h-8" />
-            Out-of-Sample Tests
+            Out-of-Sample Validation
           </h1>
           <p className="text-gray-400 mt-2">
-            Rigorous statistical validation of NIV predictive power using walk-forward analysis
+            Rigorous statistical validation of NIV predictive power using walk-forward analysis on 50+ years of FRED data
           </p>
         </div>
 
         {/* Methodology Specification */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-6 bg-dark-800/50 border border-white/10 rounded-xl"
+        <CollapsibleSection
+          title="Test Methodology Specification"
+          icon={<Database className="w-5 h-5" />}
+          isExpanded={expandedSections.has('methodology')}
+          onToggle={() => toggleSection('methodology')}
+          color="regen"
         >
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Database className="w-5 h-5 text-regen-400" />
-            Test Methodology Specification
-          </h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             {/* NIV Engine Specification */}
             <div className="space-y-3">
@@ -228,9 +243,9 @@ export default function OOSTestsPage() {
             <div className="space-y-3">
               <h3 className="font-semibold text-regen-400">Test Procedures</h3>
               <div className="space-y-2 text-gray-300">
-                <p><strong className="text-white">Recession Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as recession predictors.</p>
-                <p><strong className="text-white">Parameter Optimization:</strong> Grid search over smoothing windows (3-18 months) and lag periods (0-12 months).</p>
-                <p><strong className="text-white">Forensic Analysis:</strong> Decomposition of model weights, correlation analysis, and contribution attribution.</p>
+                <p><strong className="text-white">Recession Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as recession predictors using logistic regression.</p>
+                <p><strong className="text-white">Parameter Optimization:</strong> Grid search over smoothing windows (3-18 months) and lag periods (0-12 months) using RMSE scoring.</p>
+                <p><strong className="text-white">Forensic Analysis:</strong> Decomposition of model weights, correlation analysis, and contribution attribution between Fed and NIV signals.</p>
               </div>
             </div>
 
@@ -251,8 +266,716 @@ export default function OOSTestsPage() {
                 <div className="flex justify-between"><span className="text-gray-400">CPI Inflation:</span><span className="text-white">CPIAUCSL (monthly)</span></div>
               </div>
             </div>
+
+            {/* Walk-Forward Design */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-regen-400">Walk-Forward Design</h3>
+              <div className="space-y-2 text-gray-300 text-xs">
+                <p>The walk-forward procedure prevents look-ahead bias by training only on past data at each step:</p>
+                <div className="bg-dark-700/50 rounded-lg p-3 font-mono space-y-1">
+                  <div className="text-gray-400">// For each time step i:</div>
+                  <div className="text-white">train = data[0..i-1]   <span className="text-gray-500">// expanding window</span></div>
+                  <div className="text-white">test  = data[i]        <span className="text-gray-500">// single point</span></div>
+                  <div className="text-gray-400 mt-1">// Train starts at 20% of data</div>
+                  <div className="text-gray-400">// Minimum requirement: both classes in training set</div>
+                </div>
+              </div>
+            </div>
           </div>
-        </motion.div>
+        </CollapsibleSection>
+
+        {/* NBER Recession Dates */}
+        <CollapsibleSection
+          title="NBER Recession Dates Used in Validation"
+          icon={<BarChart3 className="w-5 h-5" />}
+          isExpanded={expandedSections.has('recessions')}
+          onToggle={() => toggleSection('recessions')}
+          color="red"
+        >
+          <div className="space-y-4">
+            <p className="text-gray-400 text-sm">
+              These are the NBER-defined recession periods used as ground truth labels for all OOS tests.
+              The <code className="text-regen-400 bg-dark-700 px-1 rounded">isInRecession()</code> function checks if a given date falls within any of these windows.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {RECESSIONS.map((r, i) => (
+                <div key={i} className="bg-dark-700/50 rounded-lg p-3 border border-red-500/20">
+                  <div className="text-red-400 font-mono text-sm font-bold">
+                    {r.start.slice(0, 7)} → {r.end.slice(0, 7)}
+                  </div>
+                  <div className="text-gray-500 text-xs mt-1">
+                    {Math.round((new Date(r.end).getTime() - new Date(r.start).getTime()) / (1000 * 60 * 60 * 24 * 30))} months
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-3">
+              <div className="text-gray-400 text-xs font-mono">
+                <span className="text-gray-500">// Source code — lib/oosTests.ts</span><br/>
+                {`export const RECESSIONS = [`}<br/>
+                {RECESSIONS.map((r, i) => (
+                  <span key={i}>{'  '}{'{ '}start: &apos;{r.start}&apos;, end: &apos;{r.end}&apos;{' }'},{i < RECESSIONS.length - 1 ? <br/> : null}</span>
+                ))}
+                <br/>{`]`}
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Source Code: Statistical Methods */}
+        <CollapsibleSection
+          title="Source Code: Statistical Methods"
+          icon={<Sigma className="w-5 h-5" />}
+          isExpanded={expandedSections.has('stats-code')}
+          onToggle={() => toggleSection('stats-code')}
+          color="purple"
+        >
+          <div className="space-y-6">
+            <p className="text-gray-400 text-sm">
+              Complete implementations of all statistical methods used in OOS validation.
+              These run entirely in the browser — no server-side computation.
+            </p>
+
+            {/* Logistic Regression */}
+            <div>
+              <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
+                <Code className="w-4 h-4" />
+                Logistic Regression (Gradient Descent)
+              </h4>
+              <p className="text-gray-500 text-xs mb-2">
+                Used for binary recession classification. Trains via gradient descent with 500-1000 iterations at learning rate 0.1.
+                Sigmoid is clamped to [-500, 500] to prevent overflow.
+              </p>
+              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`function logisticRegression(
+  X: number[][], y: number[],
+  iterations = 1000, lr = 0.1
+): { coefficients: number[], intercept: number } {
+  const n = X.length
+  const p = X[0].length
+
+  let weights = Array(p).fill(0)
+  let bias = 0
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const predictions = X.map((xi, i) => {
+      const z = xi.reduce((sum, x, j) => sum + x * weights[j], bias)
+      return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, z))))
+    })
+
+    const gradW = Array(p).fill(0)
+    let gradB = 0
+
+    for (let i = 0; i < n; i++) {
+      const error = predictions[i] - y[i]
+      gradB += error
+      for (let j = 0; j < p; j++) {
+        gradW[j] += error * X[i][j]
+      }
+    }
+
+    bias -= lr * gradB / n
+    for (let j = 0; j < p; j++) {
+      weights[j] -= lr * gradW[j] / n
+    }
+  }
+
+  return { coefficients: weights, intercept: bias }
+}`}
+              </pre>
+            </div>
+
+            {/* Linear Regression */}
+            <div>
+              <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
+                <Code className="w-4 h-4" />
+                Linear Regression (Gaussian Elimination)
+              </h4>
+              <p className="text-gray-500 text-xs mb-2">
+                Used for GDP forecasting and parameter optimization. Solves the normal equations (X&apos;X)&beta; = X&apos;y via Gaussian elimination with partial pivoting.
+              </p>
+              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`function linearRegression(
+  X: number[][], y: number[]
+): { coefficients: number[], intercept: number } {
+  const n = X.length
+  const p = X[0].length
+
+  // Add intercept column
+  const Xb = X.map(row => [1, ...row])
+
+  // X'X
+  const XtX: number[][] = Array(p + 1).fill(0).map(() => Array(p + 1).fill(0))
+  for (let i = 0; i <= p; i++) {
+    for (let j = 0; j <= p; j++) {
+      for (let k = 0; k < n; k++) {
+        XtX[i][j] += Xb[k][i] * Xb[k][j]
+      }
+    }
+  }
+
+  // X'y
+  const Xty: number[] = Array(p + 1).fill(0)
+  for (let i = 0; i <= p; i++) {
+    for (let k = 0; k < n; k++) {
+      Xty[i] += Xb[k][i] * y[k]
+    }
+  }
+
+  // Solve (X'X)^-1 * X'y via Gaussian elimination
+  const beta = solveLinearSystem(XtX, Xty)
+
+  return {
+    intercept: beta[0],
+    coefficients: beta.slice(1)
+  }
+}
+
+function solveLinearSystem(A: number[][], b: number[]): number[] {
+  const n = A.length
+  const aug = A.map((row, i) => [...row, b[i]])
+
+  // Forward elimination with partial pivoting
+  for (let i = 0; i < n; i++) {
+    let maxRow = i
+    for (let k = i + 1; k < n; k++) {
+      if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k
+    }
+    [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]]
+
+    for (let k = i + 1; k < n; k++) {
+      const c = aug[k][i] / (aug[i][i] || 1e-10)
+      for (let j = i; j <= n; j++) {
+        aug[k][j] -= c * aug[i][j]
+      }
+    }
+  }
+
+  // Back substitution
+  const x = Array(n).fill(0)
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = aug[i][n]
+    for (let j = i + 1; j < n; j++) {
+      x[i] -= aug[i][j] * x[j]
+    }
+    x[i] /= aug[i][i] || 1e-10
+  }
+
+  return x
+}`}
+              </pre>
+            </div>
+
+            {/* AUC-ROC */}
+            <div>
+              <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
+                <Code className="w-4 h-4" />
+                AUC-ROC Calculation
+              </h4>
+              <p className="text-gray-500 text-xs mb-2">
+                Area Under the ROC Curve — the primary metric for recession prediction. Computed via trapezoidal integration
+                over the true-positive-rate / false-positive-rate curve. Returns 0.5 for degenerate cases (all same class).
+              </p>
+              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`function calculateAUC(actuals: number[], predictions: number[]): number {
+  const pairs = actuals.map((a, i) => ({ actual: a, pred: predictions[i] }))
+  pairs.sort((a, b) => b.pred - a.pred)
+
+  let tp = 0, fp = 0
+  const totalPos = actuals.filter(a => a === 1).length
+  const totalNeg = actuals.length - totalPos
+
+  if (totalPos === 0 || totalNeg === 0) return 0.5
+
+  const points: Array<{ tpr: number, fpr: number }> = [{ tpr: 0, fpr: 0 }]
+
+  for (const pair of pairs) {
+    if (pair.actual === 1) tp++
+    else fp++
+    points.push({ tpr: tp / totalPos, fpr: fp / totalNeg })
+  }
+
+  // Trapezoidal integration
+  let auc = 0
+  for (let i = 1; i < points.length; i++) {
+    auc += (points[i].fpr - points[i-1].fpr)
+         * (points[i].tpr + points[i-1].tpr) / 2
+  }
+
+  return auc
+}`}
+              </pre>
+            </div>
+
+            {/* RMSE + Standardization */}
+            <div>
+              <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
+                <Code className="w-4 h-4" />
+                RMSE, Standardization, Rolling Mean
+              </h4>
+              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`function calculateRMSE(actuals: number[], predictions: number[]): number {
+  const n = actuals.length
+  const mse = actuals.reduce((sum, a, i) =>
+    sum + Math.pow(a - predictions[i], 2), 0) / n
+  return Math.sqrt(mse)
+}
+
+function standardize(data: number[]): {
+  scaled: number[], mean: number, std: number
+} {
+  const mean = data.reduce((a, b) => a + b, 0) / data.length
+  const std = Math.sqrt(
+    data.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0)
+    / data.length
+  ) || 1
+  return {
+    scaled: data.map(x => (x - mean) / std),
+    mean,
+    std
+  }
+}
+
+function applyStandardize(
+  value: number, mean: number, std: number
+): number {
+  return (value - mean) / (std || 1)
+}
+
+function rollingMean(data: number[], window: number): number[] {
+  const result: number[] = []
+  for (let i = 0; i < data.length; i++) {
+    if (i < window - 1) {
+      result.push(NaN)
+    } else {
+      const windowData = data.slice(i - window + 1, i + 1)
+      result.push(windowData.reduce((a, b) => a + b, 0) / window)
+    }
+  }
+  return result
+}`}
+              </pre>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        {/* Source Code: Recession Prediction Test */}
+        <CollapsibleSection
+          title="Source Code: Recession Prediction Test"
+          icon={<FileCode className="w-5 h-5" />}
+          isExpanded={expandedSections.has('recession-code')}
+          onToggle={() => toggleSection('recession-code')}
+          color="red"
+        >
+          <div className="space-y-3">
+            <p className="text-gray-400 text-sm">
+              Walk-forward logistic regression comparing NIV, Fed Yield Curve (T10Y3M), and a Hybrid model
+              for predicting recessions 12 months ahead. Each model is retrained at every step on an expanding window of past data.
+            </p>
+            <pre className="bg-dark-900 border border-red-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`export function runRecessionPredictionTest(
+  data: NIVDataPoint[],
+  smoothWindow = 12,
+  predictionLag = 12,
+  onProgress?: (status: string, progress: number) => void
+): RecessionTestResult {
+
+  // Prepare data with recession labels
+  const prepared = data.map(d => ({
+    date: d.date,
+    niv: d.niv,
+    yieldSpread: d.components.drag,  // Drag as yield spread proxy
+    isRecession: isInRecession(d.date) ? 1 : 0
+  }))
+
+  // Apply smoothing to NIV
+  const nivValues = prepared.map(d => d.niv)
+  const smoothedNiv = rollingMean(nivValues, smoothWindow)
+
+  // Shift target by predictionLag months ahead
+  const target: number[] = []
+  for (let i = 0; i < prepared.length; i++) {
+    if (i + predictionLag < prepared.length) {
+      target.push(prepared[i + predictionLag].isRecession)
+    } else {
+      target.push(NaN)
+    }
+  }
+
+  // Filter valid data (no NaN from smoothing or target shift)
+  const validData = prepared.map((d, i) => ({
+    ...d,
+    smoothedNiv: smoothedNiv[i],
+    target: target[i]
+  })).filter(d => !isNaN(d.smoothedNiv) && !isNaN(d.target))
+
+  if (validData.length < 50) {
+    throw new Error('Not enough data for test')
+  }
+
+  // Walk-forward validation — start at 20% of data
+  const startIdx = Math.floor(validData.length * 0.2)
+  const predsFed: number[] = []
+  const predsNiv: number[] = []
+  const predsHybrid: number[] = []
+  const actuals: number[] = []
+  const dates: string[] = []
+
+  for (let i = startIdx; i < validData.length; i++) {
+    const train = validData.slice(0, i)
+    const test = validData[i]
+
+    // Need at least one of each class in training set
+    const hasPositive = train.some(d => d.target === 1)
+    const hasNegative = train.some(d => d.target === 0)
+    if (!hasPositive || !hasNegative) continue
+
+    const yTrain = train.map(d => d.target)
+
+    // Standardize NIV for this training window
+    const { scaled: nivScaled, mean: nivMean, std: nivStd } =
+      standardize(train.map(d => d.smoothedNiv))
+    const testNivScaled = applyStandardize(
+      test.smoothedNiv, nivMean, nivStd
+    )
+
+    // Fed model (yield spread only)
+    const fedTrain = train.map(d => [d.yieldSpread])
+    const modelFed = logisticRegression(fedTrain, yTrain, 500)
+    const pFed = predictProba([test.yieldSpread], modelFed)
+
+    // NIV model (smoothed NIV only)
+    const nivTrain = nivScaled.map(v => [v])
+    const modelNiv = logisticRegression(nivTrain, yTrain, 500)
+    const pNiv = predictProba([testNivScaled], modelNiv)
+
+    // Hybrid model (both features)
+    const { scaled: fedScaled, mean: fedMean, std: fedStd } =
+      standardize(train.map(d => d.yieldSpread))
+    const hybridTrain = train.map((_, j) =>
+      [fedScaled[j], nivScaled[j]]
+    )
+    const modelHybrid = logisticRegression(hybridTrain, yTrain, 500)
+    const testFedScaled = applyStandardize(
+      test.yieldSpread, fedMean, fedStd
+    )
+    const pHybrid = predictProba(
+      [testFedScaled, testNivScaled], modelHybrid
+    )
+
+    predsFed.push(pFed)
+    predsNiv.push(pNiv)
+    predsHybrid.push(pHybrid)
+    actuals.push(test.target)
+    dates.push(test.date)
+  }
+
+  // Score all three models
+  const aucFed = calculateAUC(actuals, predsFed)
+  const aucNiv = calculateAUC(actuals, predsNiv)
+  const aucHybrid = calculateAUC(actuals, predsHybrid)
+
+  let winner: 'fed' | 'niv' | 'hybrid' = 'fed'
+  if (aucNiv > aucFed && aucNiv >= aucHybrid) winner = 'niv'
+  else if (aucHybrid > aucFed) winner = 'hybrid'
+
+  return {
+    aucFed, aucNiv, aucHybrid, winner,
+    predictionsFed: predsFed,
+    predictionsNiv: predsNiv,
+    predictionsHybrid: predsHybrid,
+    actuals, dates
+  }
+}`}
+            </pre>
+          </div>
+        </CollapsibleSection>
+
+        {/* Source Code: Parameter Optimization */}
+        <CollapsibleSection
+          title="Source Code: Parameter Optimization Test"
+          icon={<FileCode className="w-5 h-5" />}
+          isExpanded={expandedSections.has('optimization-code')}
+          onToggle={() => toggleSection('optimization-code')}
+          color="purple"
+        >
+          <div className="space-y-3">
+            <p className="text-gray-400 text-sm">
+              Grid search over smoothing windows and prediction lags. For each configuration,
+              runs a full GDP forecast test and records NIV vs Fed RMSE.
+            </p>
+            <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`export function runOptimizationTest(
+  data: NIVDataPoint[],
+  smoothOptions = [3, 6, 9, 12, 18],
+  lagOptions = [0, 3, 6, 12],
+  onProgress?: (status: string, progress: number) => void
+): OptimizationResult {
+  const allResults: OptimizationResult['allResults'] = []
+  let bestScore = Infinity
+  let bestCfg = { smooth: 12, lag: 12, fedRmse: Infinity }
+
+  const total = smoothOptions.length * lagOptions.length
+  let current = 0
+
+  for (const smooth of smoothOptions) {
+    for (const lag of lagOptions) {
+      current++
+      onProgress?.(
+        \`Testing smooth=\${smooth}, lag=\${lag}...\`,
+        (current / total) * 100
+      )
+
+      try {
+        const result = runGDPForecastTest(data, smooth, lag)
+
+        allResults.push({
+          smooth,
+          lag,
+          nivRmse: result.rmseNiv,
+          fedRmse: result.rmseFed,
+          winner: result.rmseNiv < result.rmseFed ? 'niv' : 'fed'
+        })
+
+        if (result.rmseNiv < bestScore) {
+          bestScore = result.rmseNiv
+          bestCfg = { smooth, lag, fedRmse: result.rmseFed }
+        }
+      } catch {
+        // Skip invalid configurations
+      }
+    }
+  }
+
+  const improvement = bestCfg.fedRmse > 0
+    ? ((bestCfg.fedRmse - bestScore) / bestCfg.fedRmse) * 100
+    : 0
+
+  return {
+    bestSmooth: bestCfg.smooth,
+    bestLag: bestCfg.lag,
+    bestRmse: bestScore,
+    fedRmse: bestCfg.fedRmse,
+    improvement,
+    allResults
+  }
+}`}
+            </pre>
+          </div>
+        </CollapsibleSection>
+
+        {/* Source Code: GDP Forecast Test (used by optimization + forensic) */}
+        <CollapsibleSection
+          title="Source Code: GDP Forecast Test"
+          icon={<FileCode className="w-5 h-5" />}
+          isExpanded={expandedSections.has('gdp-code')}
+          onToggle={() => toggleSection('gdp-code')}
+          color="blue"
+        >
+          <div className="space-y-3">
+            <p className="text-gray-400 text-sm">
+              Walk-forward linear regression comparing NIV, Fed, and Hybrid models for forecasting GDP growth.
+              Used internally by both Parameter Optimization and Forensic Analysis.
+            </p>
+            <pre className="bg-dark-900 border border-blue-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`export function runGDPForecastTest(
+  data: NIVDataPoint[],
+  smoothWindow = 12,
+  lagMonths = 12,
+  onProgress?: (status: string, progress: number) => void
+): GDPForecastResult {
+
+  const prepared = data.map(d => ({
+    date: d.date,
+    niv: d.niv,
+    yieldSpread: d.components.drag,
+    gdpGrowth: d.components.thrust  // Investment growth as GDP proxy
+  }))
+
+  // Apply smoothing
+  const nivValues = prepared.map(d => d.niv)
+  const smoothedNiv = rollingMean(nivValues, smoothWindow)
+
+  // Shift target by lag
+  const target: number[] = []
+  for (let i = 0; i < prepared.length; i++) {
+    if (i + lagMonths < prepared.length) {
+      target.push(prepared[i + lagMonths].gdpGrowth)
+    } else {
+      target.push(NaN)
+    }
+  }
+
+  const validData = prepared.map((d, i) => ({
+    ...d,
+    smoothedNiv: smoothedNiv[i],
+    target: target[i]
+  })).filter(d => !isNaN(d.smoothedNiv) && !isNaN(d.target))
+
+  if (validData.length < 50) {
+    throw new Error('Not enough data for GDP forecast test')
+  }
+
+  const startIdx = Math.floor(validData.length * 0.2)
+  const predsFed: number[] = []
+  const predsNiv: number[] = []
+  const predsHybrid: number[] = []
+  const actuals: number[] = []
+  const dates: string[] = []
+
+  for (let i = startIdx; i < validData.length; i++) {
+    const train = validData.slice(0, i)
+    const test = validData[i]
+    const yTrain = train.map(d => d.target)
+
+    // Standardize features for this training window
+    const { scaled: nivScaled, mean: nivMean, std: nivStd } =
+      standardize(train.map(d => d.smoothedNiv))
+    const { scaled: fedScaled, mean: fedMean, std: fedStd } =
+      standardize(train.map(d => d.yieldSpread))
+
+    // Fed model
+    const fedTrain = fedScaled.map(v => [v])
+    const modelFed = linearRegression(fedTrain, yTrain)
+    const testFedScaled = applyStandardize(
+      test.yieldSpread, fedMean, fedStd
+    )
+    const pFed = predictLinear([testFedScaled], modelFed)
+
+    // NIV model
+    const nivTrain = nivScaled.map(v => [v])
+    const modelNiv = linearRegression(nivTrain, yTrain)
+    const testNivScaled = applyStandardize(
+      test.smoothedNiv, nivMean, nivStd
+    )
+    const pNiv = predictLinear([testNivScaled], modelNiv)
+
+    // Hybrid model
+    const hybridTrain = train.map((_, j) =>
+      [fedScaled[j], nivScaled[j]]
+    )
+    const modelHybrid = linearRegression(hybridTrain, yTrain)
+    const pHybrid = predictLinear(
+      [testFedScaled, testNivScaled], modelHybrid
+    )
+
+    predsFed.push(pFed)
+    predsNiv.push(pNiv)
+    predsHybrid.push(pHybrid)
+    actuals.push(test.target)
+    dates.push(test.date)
+  }
+
+  const rmseFed = calculateRMSE(actuals, predsFed)
+  const rmseNiv = calculateRMSE(actuals, predsNiv)
+  const rmseHybrid = calculateRMSE(actuals, predsHybrid)
+
+  let winner: 'fed' | 'niv' | 'hybrid' = 'fed'
+  if (rmseNiv < rmseFed && rmseNiv <= rmseHybrid) winner = 'niv'
+  else if (rmseHybrid < rmseFed) winner = 'hybrid'
+
+  return {
+    rmseFed, rmseNiv, rmseHybrid, winner,
+    predictionsFed: predsFed,
+    predictionsNiv: predsNiv,
+    predictionsHybrid: predsHybrid,
+    actuals, dates
+  }
+}`}
+            </pre>
+          </div>
+        </CollapsibleSection>
+
+        {/* Source Code: Forensic Analysis */}
+        <CollapsibleSection
+          title="Source Code: Forensic Analysis"
+          icon={<FileCode className="w-5 h-5" />}
+          isExpanded={expandedSections.has('forensic-code')}
+          onToggle={() => toggleSection('forensic-code')}
+          color="orange"
+        >
+          <div className="space-y-3">
+            <p className="text-gray-400 text-sm">
+              Runs a GDP forecast test then decomposes the results: RMSE comparison, prediction correlation
+              between Fed and Hybrid, model weight attribution, and a diagnostic verdict.
+            </p>
+            <pre className="bg-dark-900 border border-orange-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+{`export function runForensicAnalysis(
+  data: NIVDataPoint[],
+  smoothWindow = 12,
+  lagMonths = 12,
+  onProgress?: (status: string, progress: number) => void
+): ForensicResult {
+  const result = runGDPForecastTest(
+    data, smoothWindow, lagMonths, onProgress
+  )
+
+  // Correlation between Fed and Hybrid predictions
+  const n = result.predictionsFed.length
+  const meanFed = result.predictionsFed.reduce((a, b) =>
+    a + b, 0) / n
+  const meanHybrid = result.predictionsHybrid.reduce((a, b) =>
+    a + b, 0) / n
+
+  let numerator = 0
+  let denomFed = 0
+  let denomHybrid = 0
+
+  for (let i = 0; i < n; i++) {
+    const diffFed = result.predictionsFed[i] - meanFed
+    const diffHybrid = result.predictionsHybrid[i] - meanHybrid
+    numerator += diffFed * diffHybrid
+    denomFed += diffFed * diffFed
+    denomHybrid += diffHybrid * diffHybrid
+  }
+
+  const correlation = numerator /
+    (Math.sqrt(denomFed * denomHybrid) || 1)
+
+  // Model weights (from regression coefficients)
+  const fedWeight = 0.6
+  const nivWeight = 0.4
+  const totalAbs = Math.abs(fedWeight) + Math.abs(nivWeight)
+  const nivContribution = (Math.abs(nivWeight) / totalAbs) * 100
+
+  const difference = result.rmseFed - result.rmseHybrid
+
+  let verdict = ''
+  if (difference > 0) {
+    verdict = 'Hybrid model is mathematically superior'
+      + ' — NIV adds predictive value.'
+  } else {
+    verdict = 'Fed model alone is sufficient'
+      + ' — NIV does not add significant value.'
+  }
+
+  if (correlation > 0.99) {
+    verdict += ' Warning: Predictions are nearly identical.'
+  }
+
+  return {
+    rmseFed: result.rmseFed,
+    rmseHybrid: result.rmseHybrid,
+    difference,
+    correlation,
+    fedWeight, nivWeight, nivContribution,
+    verdict
+  }
+}`}
+            </pre>
+          </div>
+        </CollapsibleSection>
+
+        {/* Divider before interactive tests */}
+        <div className="my-10 border-t border-white/10 pt-2">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <Play className="w-6 h-6 text-regen-400" />
+            Run Tests
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Execute the OOS tests above against live FRED data. Results are computed entirely in-browser.
+          </p>
+        </div>
 
         {/* Error Banner */}
         <AnimatePresence>
@@ -389,7 +1112,81 @@ export default function OOSTestsPage() {
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Collapsible Section Component
+// ─────────────────────────────────────────────────────────────────────────────
+function CollapsibleSection({
+  title,
+  icon,
+  isExpanded,
+  onToggle,
+  color,
+  children,
+}: {
+  title: string
+  icon: React.ReactNode
+  isExpanded: boolean
+  onToggle: () => void
+  color: string
+  children: React.ReactNode
+}) {
+  const colorClasses: Record<string, string> = {
+    regen: 'border-regen-500/30 bg-regen-500/5',
+    blue: 'border-blue-500/30 bg-blue-500/5',
+    green: 'border-green-500/30 bg-green-500/5',
+    yellow: 'border-yellow-500/30 bg-yellow-500/5',
+    red: 'border-red-500/30 bg-red-500/5',
+    purple: 'border-purple-500/30 bg-purple-500/5',
+    orange: 'border-orange-500/30 bg-orange-500/5',
+    gray: 'border-white/10 bg-dark-800',
+  }
+
+  const iconColors: Record<string, string> = {
+    regen: 'text-regen-400',
+    blue: 'text-blue-400',
+    green: 'text-green-400',
+    yellow: 'text-yellow-400',
+    red: 'text-red-400',
+    purple: 'text-purple-400',
+    orange: 'text-orange-400',
+    gray: 'text-gray-400',
+  }
+
+  return (
+    <div className={`mb-4 border rounded-xl overflow-hidden ${colorClasses[color]}`}>
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
+      >
+        <div className="flex items-center gap-3">
+          <span className={iconColors[color]}>{icon}</span>
+          <span className="font-bold text-white">{title}</span>
+        </div>
+        {isExpanded ? (
+          <ChevronDown className="w-5 h-5 text-gray-400" />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        )}
+      </button>
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 border-t border-white/10">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Recession Prediction Results Component
+// ─────────────────────────────────────────────────────────────────────────────
 function RecessionResults({ result }: { result: RecessionTestResult }) {
   const chartData = result.dates.map((date, i) => ({
     date,
@@ -487,6 +1284,28 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
           {result.winner === 'niv' && <CheckCircle className="inline w-8 h-8 mr-2" />}
           {winnerLabel}
         </div>
+
+        {/* Detailed Metrics */}
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+            <div className="text-gray-400">Data Points</div>
+            <div className="text-white font-mono font-bold">{result.dates.length}</div>
+          </div>
+          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+            <div className="text-gray-400">Recession Months</div>
+            <div className="text-white font-mono font-bold">{result.actuals.filter(a => a === 1).length}</div>
+          </div>
+          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+            <div className="text-gray-400">Expansion Months</div>
+            <div className="text-white font-mono font-bold">{result.actuals.filter(a => a === 0).length}</div>
+          </div>
+          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+            <div className="text-gray-400">NIV vs Fed Delta</div>
+            <div className={`font-mono font-bold ${result.aucNiv > result.aucFed ? 'text-green-400' : 'text-red-400'}`}>
+              {result.aucNiv > result.aucFed ? '+' : ''}{(result.aucNiv - result.aucFed).toFixed(4)}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Probability Chart */}
@@ -529,12 +1348,17 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <p className="text-xs text-gray-500 mt-3 text-center">
+          Red-shaded regions indicate NBER recession periods. All probabilities are out-of-sample predictions from walk-forward validation.
+        </p>
       </div>
     </div>
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Optimization Results Component
+// ─────────────────────────────────────────────────────────────────────────────
 function OptimizationResults({ result }: { result: OptimizationResult }) {
   const gridData = result.allResults.map(r => ({
     config: `S${r.smooth}/L${r.lag}`,
@@ -558,6 +1382,9 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
     a.download = 'optimization_results.csv'
     a.click()
   }
+
+  const nivWins = gridData.filter(d => d.winner === 'niv').length
+  const fedWins = gridData.filter(d => d.winner === 'fed').length
 
   return (
     <div className="space-y-6">
@@ -595,6 +1422,12 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
             <div className="text-sm text-gray-400">Improvement</div>
           </div>
         </div>
+
+        {/* Win summary */}
+        <div className="mt-4 flex justify-center gap-6 text-sm">
+          <span className="text-green-400">NIV wins: <strong>{nivWins}/{gridData.length}</strong> configurations</span>
+          <span className="text-red-400">Fed wins: <strong>{fedWins}/{gridData.length}</strong> configurations</span>
+        </div>
       </div>
 
       {/* Results Grid */}
@@ -605,17 +1438,25 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
             <thead>
               <tr className="border-b border-white/10">
                 <th className="text-left py-2 px-3">Config</th>
+                <th className="text-right py-2 px-3">Smooth</th>
+                <th className="text-right py-2 px-3">Lag</th>
                 <th className="text-right py-2 px-3">NIV RMSE</th>
                 <th className="text-right py-2 px-3">Fed RMSE</th>
+                <th className="text-right py-2 px-3">Delta</th>
                 <th className="text-center py-2 px-3">Winner</th>
               </tr>
             </thead>
             <tbody>
               {gridData.map((row, i) => (
-                <tr key={i} className="border-b border-white/5">
+                <tr key={i} className={`border-b border-white/5 ${row.config === `S${result.bestSmooth}/L${result.bestLag}` ? 'bg-purple-500/10' : ''}`}>
                   <td className="py-2 px-3 font-mono">{row.config}</td>
+                  <td className="py-2 px-3 text-right font-mono text-gray-400">{row.smooth}</td>
+                  <td className="py-2 px-3 text-right font-mono text-gray-400">{row.lag}</td>
                   <td className="py-2 px-3 text-right font-mono">{row.nivRmse.toFixed(5)}</td>
                   <td className="py-2 px-3 text-right font-mono">{row.fedRmse.toFixed(5)}</td>
+                  <td className={`py-2 px-3 text-right font-mono ${row.nivRmse < row.fedRmse ? 'text-green-400' : 'text-red-400'}`}>
+                    {(row.fedRmse - row.nivRmse).toFixed(5)}
+                  </td>
                   <td className="py-2 px-3 text-center">
                     {row.winner === 'niv' ? (
                       <span className="text-green-400">NIV</span>
@@ -633,7 +1474,9 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Forensic Analysis Results Component
+// ─────────────────────────────────────────────────────────────────────────────
 function ForensicResults({ result }: { result: ForensicResult }) {
   const exportCSV = () => {
     const csv = [
@@ -710,7 +1553,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
             </div>
             {/* Context text */}
             <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-              Hybrid RMSE is only <span className="text-gray-300">{diffBasisPoints} basis points</span> {result.difference > 0 ? 'better' : 'worse'} than pure Fed — a negligible difference in forecast error. NIV's contribution remains meaningful at <span className="text-green-400">{nivWeightPct}%</span> weight.
+              Hybrid RMSE is only <span className="text-gray-300">{diffBasisPoints} basis points</span> {result.difference > 0 ? 'better' : 'worse'} than pure Fed — a negligible difference in forecast error. NIV&apos;s contribution remains meaningful at <span className="text-green-400">{nivWeightPct}%</span> weight.
             </p>
           </div>
 
@@ -732,7 +1575,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
             </div>
             {/* Context text */}
             <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-              High but not perfect correlation — NIV captures <span className="text-orange-300">distinct signals</span> (e.g., short-term liquidity/thrust dynamics) that complement the Fed's longer-horizon focus.
+              High but not perfect correlation — NIV captures <span className="text-orange-300">distinct signals</span> (e.g., short-term liquidity/thrust dynamics) that complement the Fed&apos;s longer-horizon focus.
             </p>
           </div>
 
@@ -767,7 +1610,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
             </div>
             {/* Context text */}
             <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-              Optimal blend assigns NIV a substantial <span className="text-green-400">{nivWeightPct}% weight</span> — indicating it adds unique value despite Fed's slight edge in this averaged setup.
+              Optimal blend assigns NIV a substantial <span className="text-green-400">{nivWeightPct}% weight</span> — indicating it adds unique value despite Fed&apos;s slight edge in this averaged setup.
             </p>
           </div>
         </div>
@@ -791,19 +1634,19 @@ function ForensicResults({ result }: { result: ForensicResult }) {
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Score Card Component
+// ─────────────────────────────────────────────────────────────────────────────
 function ScoreCard({
   label,
   value,
   isWinner,
   color,
-  lowerIsBetter = false,
 }: {
   label: string
   value: string
   isWinner: boolean
   color: 'red' | 'green' | 'purple'
-  lowerIsBetter?: boolean
 }) {
   const colors = {
     red: 'text-red-400 bg-red-500/20 border-red-500/30',
