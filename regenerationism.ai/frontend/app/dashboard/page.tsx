@@ -12,7 +12,12 @@ import {
   Download,
   Loader2,
   AlertCircle,
+  Info,
+  FlaskConical,
+  FileSpreadsheet,
+  ExternalLink,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useSessionStore } from '@/store/sessionStore'
 import { calculateNIVFromFRED, NIVDataPoint, checkServerApiKey } from '@/lib/fredApi'
 import {
@@ -166,25 +171,75 @@ export default function DashboardPage() {
   }
 
   const exportCSV = () => {
-    if (!history.length) return
+    if (!history.length || !data) return
 
+    // Include full component data for reproducibility
     const csv = [
-      'date,niv_score',
-      ...history.map(d => `${d.date},${d.niv.toFixed(2)}`)
+      'date,niv_score,thrust,efficiency,slack,drag,status',
+      ...history.map(d => `${d.date},${d.niv.toFixed(4)},${data.components.thrust.toFixed(4)},${data.components.efficiency.toFixed(4)},${data.components.slack.toFixed(4)},${data.components.drag.toFixed(4)},${data.vs_fed.niv_signal}`)
     ].join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `niv_data_${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `niv_dashboard_data_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+  }
+
+  // Export detailed current data with all FRED sources
+  const exportDetailedCSV = () => {
+    if (!data) return
+
+    const detailedData = `NIV Dashboard Export - ${new Date().toISOString()}
+=====================================
+
+CURRENT NIV SCORE
+Date: ${data.date}
+NIV Score: ${data.niv_score.toFixed(4)}
+Status: ${data.vs_fed.niv_signal}
+
+COMPONENTS
+Thrust (u): ${data.components.thrust.toFixed(6)}
+Efficiency (P): ${data.components.efficiency.toFixed(6)}
+Slack (X): ${data.components.slack.toFixed(6)}
+Drag (F): ${data.components.drag.toFixed(6)}
+
+FORMULAS USED
+Master: NIV = (u × P²) / (X + F)^η where η = 1.5
+Thrust: u = tanh(ΔG + ΔA - 0.7Δr)
+Efficiency: P = (Investment × 1.15) / GDP
+Slack: X = 1 - (TCU / 100)
+Drag: F = 0.4s + 0.4(r-π) + 0.2σ
+
+FRED SERIES USED
+- GPDIC1: Private Investment (Quarterly)
+- M2SL: M2 Money Stock (Monthly)
+- FEDFUNDS: Federal Funds Rate (Monthly)
+- GDPC1: Real GDP (Quarterly)
+- TCU: Capacity Utilization (Monthly)
+- T10Y3M: 10Y-3M Treasury Spread (Daily)
+- CPIAUCSL: Consumer Price Index (Monthly)
+
+DATA SOURCE
+Federal Reserve Economic Data (FRED): https://fred.stlouisfed.org
+
+REPRODUCIBILITY
+Visit /validation for step-by-step reproduction guide
+`
+
+    const blob = new Blob([detailedData], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `niv_full_export_${new Date().toISOString().split('T')[0]}.txt`
     a.click()
   }
 
   // Still checking server key
   if (checkingServerKey) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -193,9 +248,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Initializing...</p>
+            <p className="text-gray-400 mb-2">Initializing connection to FRED API...</p>
+            <p className="text-xs text-gray-500">Checking server configuration</p>
           </div>
         </div>
       </div>
@@ -205,7 +261,7 @@ export default function DashboardPage() {
   // No API key configured (and server doesn't have one)
   if (!hasServerKey && (!apiSettings.fredApiKey || !apiSettings.useLiveData)) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -214,9 +270,31 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-            <p className="text-gray-400">Unable to load data</p>
+            <h2 className="text-xl font-bold text-gray-300 mb-2">Unable to Load Data</h2>
+            <p className="text-gray-400 mb-6">
+              FRED API connection not available. This may be a temporary issue.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-black border border-white/10 rounded-lg hover:bg-dark-500 transition"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry Connection
+              </button>
+              <Link
+                href="/validation"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-500/10 border border-accent-500/30 text-accent-300 rounded-lg hover:bg-accent-500/20 transition"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View Static Validation Data
+              </Link>
+            </div>
+            <p className="text-xs text-gray-500 mt-6">
+              Data source: Federal Reserve Economic Data (FRED)
+            </p>
           </div>
         </div>
       </div>
@@ -226,7 +304,7 @@ export default function DashboardPage() {
   // Loading state
   if (loading && !data) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -235,9 +313,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <Loader2 className="w-12 h-12 text-regen-400 animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Loading live FRED data...</p>
+            <h2 className="text-xl font-bold text-gray-300 mb-2">Loading Live FRED Data</h2>
+            <p className="text-gray-400 mb-4">Fetching 8 economic series from Federal Reserve...</p>
+            <div className="text-xs text-gray-500 space-y-1">
+              <p>GPDIC1, M2SL, FEDFUNDS, GDPC1, TCU, T10Y3M, CPIAUCSL, USREC</p>
+            </div>
           </div>
         </div>
       </div>
@@ -247,7 +329,7 @@ export default function DashboardPage() {
   // Error state
   if (error && !data) {
     return (
-      <div className="min-h-screen py-8 px-6">
+      <div className="bg-black min-h-screen pt-24 pb-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -256,18 +338,30 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-12 text-center max-w-lg mx-auto">
+          <div className="border border-white/10 bg-[#0a0a0a] p-12 text-center max-w-lg mx-auto">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2 text-red-400">Failed to Load Data</h2>
             <p className="text-gray-400 mb-6">{error}</p>
 
-            <button
-              onClick={refresh}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Try Again
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={refresh}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-black border border-white/10 rounded-lg hover:bg-dark-500 transition"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try Again
+              </button>
+              <Link
+                href="/validation"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-500/10 border border-accent-500/30 text-accent-300 rounded-lg hover:bg-accent-500/20 transition text-sm"
+              >
+                <Download className="w-4 h-4" />
+                Download Sample Data Instead
+              </Link>
+            </div>
+            <p className="text-xs text-gray-500 mt-6">
+              If issues persist, try the validation page for offline data
+            </p>
           </div>
         </div>
       </div>
@@ -288,41 +382,66 @@ export default function DashboardPage() {
   const statusLabel = data.niv_score > 5 ? 'EXPANSION' : data.niv_score > 2 ? 'CAUTION' : data.niv_score > 0 ? 'SLOWDOWN' : 'CONTRACTION'
 
   return (
-    <div className="min-h-screen py-8 px-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="bg-black min-h-screen pt-24 pb-16">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">NIV Dashboard</h1>
-            <p className="text-gray-400">Real-time macro crisis detection</p>
+            <p className="text-caption uppercase text-gray-500 mb-2">Real-time Monitoring</p>
+            <h1 className="section-headline text-white">NIV Dashboard</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-gray-500">
               Updated: {lastUpdate?.toLocaleTimeString() || 'Never'}
             </span>
             <button
               onClick={refresh}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-dark-600 rounded-lg hover:bg-dark-500 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-black border border-white/10 rounded-lg hover:bg-dark-500 transition disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <button
-              onClick={exportCSV}
-              disabled={!history.length}
-              className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
+            {/* Download dropdown */}
+            <div className="relative group">
+              <button
+                disabled={!history.length}
+                className="flex items-center gap-2 px-4 py-2 bg-regen-500 text-black font-bold rounded-lg hover:bg-regen-400 transition disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+              <div className="absolute right-0 mt-2 w-56 bg-[#0a0a0a] border border-white/10 border border-dark-600 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <button
+                  onClick={exportCSV}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-300 hover:bg-black border border-white/10 transition"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  Download CSV
+                </button>
+                <button
+                  onClick={exportDetailedCSV}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-300 hover:bg-black border border-white/10 transition border-t border-dark-600"
+                >
+                  <Download className="w-4 h-4 text-blue-400" />
+                  Full Export (with formulas)
+                </button>
+              </div>
+            </div>
+            <Link
+              href="/oos-tests"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-500/30 transition"
             >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+              <FlaskConical className="w-4 h-4" />
+              View OOS Tests
+            </Link>
           </div>
         </div>
 
         {/* Main Grid */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           {/* NIV Score Display - Takes 1 column */}
-          <div className="glass-card rounded-2xl p-6 flex flex-col items-center justify-center">
+          <div className="border border-white/10 bg-[#0a0a0a] p-6 flex flex-col items-center justify-center">
             <span className="text-sm text-gray-400 uppercase tracking-wider mb-2">
               NIV Score
             </span>
@@ -347,7 +466,7 @@ export default function DashboardPage() {
           </div>
 
           {/* NIV Score + Trend - Takes 2 columns */}
-          <div className="lg:col-span-2 glass-card rounded-2xl p-6">
+          <div className="lg:col-span-2 border border-white/10 bg-[#0a0a0a] p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold">NIV Trend</h3>
@@ -397,6 +516,11 @@ export default function DashboardPage() {
             status={data.components.interpretation.thrust_status}
             icon={<Zap className="w-6 h-6" />}
             trend={data.components.thrust > 0 ? 'up' : 'down'}
+            tooltip={{
+              formula: 'u = tanh(ΔG + ΔA - 0.7Δr)',
+              series: ['GPDIC1 (Investment YoY)', 'M2SL (M2 YoY)', 'FEDFUNDS (Rate Change)'],
+              description: 'Net policy stimulus: Investment growth + M2 growth - rate hikes'
+            }}
           />
           <ComponentCard
             title="Efficiency (P)"
@@ -404,6 +528,11 @@ export default function DashboardPage() {
             status={data.components.interpretation.efficiency_status}
             icon={<TrendingUp className="w-6 h-6" />}
             trend={data.components.efficiency > 0.01 ? 'up' : 'down'}
+            tooltip={{
+              formula: 'P = (Investment × 1.15) / GDP',
+              series: ['GPDIC1 (Investment)', 'GDPC1 (Real GDP)'],
+              description: 'Capital productivity ratio (squared in NIV formula)'
+            }}
           />
           <ComponentCard
             title="Slack (X)"
@@ -411,6 +540,11 @@ export default function DashboardPage() {
             status={data.components.interpretation.slack_status}
             icon={<BarChart3 className="w-6 h-6" />}
             trend={data.components.slack < 0.2 ? 'up' : 'down'}
+            tooltip={{
+              formula: 'X = 1 - (TCU / 100)',
+              series: ['TCU (Capacity Utilization)'],
+              description: 'Economic headroom: higher slack = more room before overheating'
+            }}
           />
           <ComponentCard
             title="Drag (F)"
@@ -418,16 +552,21 @@ export default function DashboardPage() {
             status={data.components.interpretation.drag_status}
             icon={<TrendingDown className="w-6 h-6" />}
             trend={data.components.drag < 0.03 ? 'up' : 'down'}
+            tooltip={{
+              formula: 'F = 0.4s + 0.4(r-π) + 0.2σ',
+              series: ['T10Y3M (Yield Spread)', 'FEDFUNDS/CPIAUCSL (Real Rate)', 'FEDFUNDS StdDev (Volatility)'],
+              description: 'System friction: yield penalty + real rates + volatility'
+            }}
           />
         </div>
 
         {/* NIV vs Fed Comparison */}
-        <div className="glass-card rounded-2xl p-6">
+        <div className="border border-white/10 bg-[#0a0a0a] p-6">
           <h3 className="text-lg font-bold mb-6">NIV vs Fed Yield Curve</h3>
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* NIV Signal */}
-            <div className="text-center p-6 bg-dark-700 rounded-xl">
+            <div className="text-center p-6 bg-[#0a0a0a] border border-white/10 rounded-xl">
               <Activity className="w-10 h-10 text-regen-400 mx-auto mb-4" />
               <h4 className="font-bold mb-2">NIV Signal</h4>
               <div className={`text-2xl font-bold ${
@@ -441,7 +580,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Fed Signal */}
-            <div className="text-center p-6 bg-dark-700 rounded-xl">
+            <div className="text-center p-6 bg-[#0a0a0a] border border-white/10 rounded-xl">
               <BarChart3 className="w-10 h-10 text-blue-400 mx-auto mb-4" />
               <h4 className="font-bold mb-2">Fed Yield Curve</h4>
               <div className={`text-2xl font-bold ${
@@ -481,34 +620,83 @@ function ComponentCard({
   status,
   icon,
   trend,
+  tooltip,
 }: {
   title: string
   value: number
   status: string
   icon: React.ReactNode
   trend: 'up' | 'down'
+  tooltip?: {
+    formula: string
+    series: string[]
+    description: string
+  }
 }) {
+  const [showTooltip, setShowTooltip] = useState(false)
   const color = trend === 'up' ? '#22c55e' : '#ef4444'
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card rounded-xl p-6"
+      className="border border-white/10 bg-[#0a0a0a] p-6 relative"
     >
       <div className="flex items-center justify-between mb-4">
         <div style={{ color }}>{icon}</div>
-        {trend === 'up' ? (
-          <TrendingUp className="w-4 h-4 text-regen-400" />
-        ) : (
-          <TrendingDown className="w-4 h-4 text-red-400" />
-        )}
+        <div className="flex items-center gap-2">
+          {tooltip && (
+            <button
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              className="text-gray-500 hover:text-gray-300 transition"
+            >
+              <Info className="w-4 h-4" />
+            </button>
+          )}
+          {trend === 'up' ? (
+            <TrendingUp className="w-4 h-4 text-regen-400" />
+          ) : (
+            <TrendingDown className="w-4 h-4 text-red-400" />
+          )}
+        </div>
       </div>
       <h4 className="text-sm text-gray-400 mb-1">{title}</h4>
       <div className="text-2xl font-mono font-bold mb-2" style={{ color }}>
         {value.toFixed(3)}
       </div>
       <p className="text-xs text-gray-500">{status}</p>
+
+      {/* Tooltip */}
+      {tooltip && showTooltip && (
+        <div className="absolute z-50 bottom-full left-0 mb-2 w-72 bg-[#0a0a0a] border border-white/10 border border-dark-600 rounded-lg shadow-xl p-4">
+          <div className="text-xs space-y-3">
+            <div>
+              <span className="text-gray-500 block mb-1">Formula:</span>
+              <code className="text-blue-400 font-mono">{tooltip.formula}</code>
+            </div>
+            <div>
+              <span className="text-gray-500 block mb-1">FRED Series:</span>
+              <ul className="space-y-1">
+                {tooltip.series.map((s, i) => (
+                  <li key={i} className="text-gray-300 flex items-center gap-1">
+                    <span className="w-1 h-1 bg-regen-400 rounded-full" />
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <span className="text-gray-500 block mb-1">Interpretation:</span>
+              <p className="text-gray-400">{tooltip.description}</p>
+            </div>
+          </div>
+          {/* Arrow */}
+          <div className="absolute bottom-0 left-6 transform translate-y-full">
+            <div className="w-3 h-3 bg-[#0a0a0a] border border-white/10 border-r border-b border-dark-600 transform rotate-45 -translate-y-1.5" />
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }

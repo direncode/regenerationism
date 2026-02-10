@@ -27,7 +27,6 @@ import {
   Code,
   ChevronRight,
   ChevronDown,
-  BookOpen,
   Sigma,
   FileCode,
   BarChart3,
@@ -55,7 +54,7 @@ export default function OOSTestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null)
   const [checkingServerKey, setCheckingServerKey] = useState(true)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['methodology']))
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
 
   // Test results
   const [recessionResult, setRecessionResult] = useState<RecessionTestResult | null>(null)
@@ -180,8 +179,8 @@ export default function OOSTestsPage() {
   const tests = [
     {
       id: 'recession' as TestType,
-      name: 'Recession Prediction',
-      description: 'Can NIV predict recessions better than the Fed yield curve?',
+      name: 'Crisis Prediction',
+      description: 'Can NIV predict systemic stress better than the Fed yield curve?',
       icon: AlertTriangle,
       color: 'red',
     },
@@ -202,32 +201,36 @@ export default function OOSTestsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-dark-900 pt-20 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-black min-h-screen pt-24 pb-16">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold gradient-text flex items-center gap-3">
-            <FlaskConical className="w-8 h-8" />
-            Out-of-Sample Validation
+        <div className="mb-12">
+          <p className="text-caption uppercase text-gray-500 mb-4">Statistical Validation</p>
+          <h1 className="section-headline text-white flex items-center gap-4">
+            <FlaskConical className="w-10 h-10" />
+            Out-of-Sample Tests
           </h1>
-          <p className="text-gray-400 mt-2">
-            Rigorous statistical validation of NIV predictive power using walk-forward analysis on 50+ years of FRED data
+          <p className="text-lg text-gray-400 mt-4 max-w-3xl">
+            Rigorous statistical validation of NIV predictive power using walk-forward analysis.
           </p>
         </div>
 
         {/* Methodology Specification */}
-        <CollapsibleSection
-          title="Test Methodology Specification"
-          icon={<Database className="w-5 h-5" />}
-          isExpanded={expandedSections.has('methodology')}
-          onToggle={() => toggleSection('methodology')}
-          color="regen"
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-6 bg-[#0a0a0a]/50 border border-white/10 rounded-xl"
         >
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Database className="w-5 h-5 text-regen-400" />
+            Test Methodology Specification
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             {/* NIV Engine Specification */}
             <div className="space-y-3">
               <h3 className="font-semibold text-regen-400">NIV Engine</h3>
-              <div className="bg-dark-700/50 rounded-lg p-3 font-mono text-xs space-y-1">
+              <div className="bg-black border border-white/10/50 rounded-lg p-3 font-mono text-xs space-y-1">
                 <div className="text-gray-400">// Master Equation</div>
                 <div className="text-white">NIV = (u × P²) / (X + F)^η</div>
                 <div className="text-gray-500 mt-2">where:</div>
@@ -243,9 +246,9 @@ export default function OOSTestsPage() {
             <div className="space-y-3">
               <h3 className="font-semibold text-regen-400">Test Procedures</h3>
               <div className="space-y-2 text-gray-300">
-                <p><strong className="text-white">Recession Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as recession predictors using logistic regression.</p>
-                <p><strong className="text-white">Parameter Optimization:</strong> Grid search over smoothing windows (3-18 months) and lag periods (0-12 months) using RMSE scoring.</p>
-                <p><strong className="text-white">Forensic Analysis:</strong> Decomposition of model weights, correlation analysis, and contribution attribution between Fed and NIV signals.</p>
+                <p><strong className="text-white">Crisis Prediction:</strong> Walk-forward ROC-AUC comparison with 12-month warning window. Compares NIV vs Fed yield curve (T10Y3M) as systemic stress predictors.</p>
+                <p><strong className="text-white">Parameter Optimization:</strong> Grid search over smoothing windows (3-18 months) and lag periods (0-12 months).</p>
+                <p><strong className="text-white">Forensic Analysis:</strong> Decomposition of model weights, correlation analysis, and contribution attribution.</p>
               </div>
             </div>
 
@@ -255,7 +258,7 @@ export default function OOSTestsPage() {
               <p className="text-gray-500 text-xs mb-2">
                 OOS tests use full historical range (1970-present) to span multiple recession periods.
               </p>
-              <div className="bg-dark-700/50 rounded-lg p-3 text-xs space-y-1">
+              <div className="bg-black border border-white/10/50 rounded-lg p-3 text-xs space-y-1">
                 <div className="flex justify-between"><span className="text-gray-400">GDP Growth:</span><span className="text-white">A191RL1Q225SBEA (quarterly)</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">M2 Money Supply:</span><span className="text-white">M2SL (monthly)</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">Fed Funds Rate:</span><span className="text-white">FEDFUNDS (monthly)</span></div>
@@ -266,23 +269,8 @@ export default function OOSTestsPage() {
                 <div className="flex justify-between"><span className="text-gray-400">CPI Inflation:</span><span className="text-white">CPIAUCSL (monthly)</span></div>
               </div>
             </div>
-
-            {/* Walk-Forward Design */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-regen-400">Walk-Forward Design</h3>
-              <div className="space-y-2 text-gray-300 text-xs">
-                <p>The walk-forward procedure prevents look-ahead bias by training only on past data at each step:</p>
-                <div className="bg-dark-700/50 rounded-lg p-3 font-mono space-y-1">
-                  <div className="text-gray-400">// For each time step i:</div>
-                  <div className="text-white">train = data[0..i-1]   <span className="text-gray-500">// expanding window</span></div>
-                  <div className="text-white">test  = data[i]        <span className="text-gray-500">// single point</span></div>
-                  <div className="text-gray-400 mt-1">// Train starts at 20% of data</div>
-                  <div className="text-gray-400">// Minimum requirement: both classes in training set</div>
-                </div>
-              </div>
-            </div>
           </div>
-        </CollapsibleSection>
+        </motion.div>
 
         {/* NBER Recession Dates */}
         <CollapsibleSection
@@ -290,18 +278,17 @@ export default function OOSTestsPage() {
           icon={<BarChart3 className="w-5 h-5" />}
           isExpanded={expandedSections.has('recessions')}
           onToggle={() => toggleSection('recessions')}
-          color="red"
         >
           <div className="space-y-4">
             <p className="text-gray-400 text-sm">
-              These are the NBER-defined recession periods used as ground truth labels for all OOS tests.
-              The <code className="text-regen-400 bg-dark-700 px-1 rounded">isInRecession()</code> function checks if a given date falls within any of these windows.
+              NBER-defined recession periods used as ground truth labels for all OOS tests.
+              The <code className="text-regen-400 bg-black px-1 rounded">isInRecession()</code> function checks if a given date falls within any of these windows.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {RECESSIONS.map((r, i) => (
-                <div key={i} className="bg-dark-700/50 rounded-lg p-3 border border-red-500/20">
+                <div key={i} className="bg-black border border-white/10 rounded-lg p-3">
                   <div className="text-red-400 font-mono text-sm font-bold">
-                    {r.start.slice(0, 7)} → {r.end.slice(0, 7)}
+                    {r.start.slice(0, 7)} &rarr; {r.end.slice(0, 7)}
                   </div>
                   <div className="text-gray-500 text-xs mt-1">
                     {Math.round((new Date(r.end).getTime() - new Date(r.start).getTime()) / (1000 * 60 * 60 * 24 * 30))} months
@@ -309,16 +296,11 @@ export default function OOSTestsPage() {
                 </div>
               ))}
             </div>
-            <div className="bg-dark-700/50 rounded-lg p-3">
-              <div className="text-gray-400 text-xs font-mono">
-                <span className="text-gray-500">// Source code — lib/oosTests.ts</span><br/>
-                {`export const RECESSIONS = [`}<br/>
-                {RECESSIONS.map((r, i) => (
-                  <span key={i}>{'  '}{'{ '}start: &apos;{r.start}&apos;, end: &apos;{r.end}&apos;{' }'},{i < RECESSIONS.length - 1 ? <br/> : null}</span>
-                ))}
-                <br/>{`]`}
-              </div>
-            </div>
+            <pre className="bg-black border border-white/10 rounded-lg p-3 text-xs font-mono text-gray-400 overflow-x-auto">
+{`export const RECESSIONS = [
+${RECESSIONS.map(r => `  { start: '${r.start}', end: '${r.end}' },`).join('\n')}
+]`}
+            </pre>
           </div>
         </CollapsibleSection>
 
@@ -328,7 +310,6 @@ export default function OOSTestsPage() {
           icon={<Sigma className="w-5 h-5" />}
           isExpanded={expandedSections.has('stats-code')}
           onToggle={() => toggleSection('stats-code')}
-          color="purple"
         >
           <div className="space-y-6">
             <p className="text-gray-400 text-sm">
@@ -336,17 +317,15 @@ export default function OOSTestsPage() {
               These run entirely in the browser — no server-side computation.
             </p>
 
-            {/* Logistic Regression */}
             <div>
               <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
                 <Code className="w-4 h-4" />
                 Logistic Regression (Gradient Descent)
               </h4>
               <p className="text-gray-500 text-xs mb-2">
-                Used for binary recession classification. Trains via gradient descent with 500-1000 iterations at learning rate 0.1.
-                Sigmoid is clamped to [-500, 500] to prevent overflow.
+                Binary recession classification. Gradient descent with 500-1000 iterations, lr=0.1. Sigmoid clamped to [-500, 500].
               </p>
-              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+              <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`function logisticRegression(
   X: number[][], y: number[],
   iterations = 1000, lr = 0.1
@@ -385,23 +364,21 @@ export default function OOSTestsPage() {
               </pre>
             </div>
 
-            {/* Linear Regression */}
             <div>
               <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
                 <Code className="w-4 h-4" />
                 Linear Regression (Gaussian Elimination)
               </h4>
               <p className="text-gray-500 text-xs mb-2">
-                Used for GDP forecasting and parameter optimization. Solves the normal equations (X&apos;X)&beta; = X&apos;y via Gaussian elimination with partial pivoting.
+                GDP forecasting and parameter optimization. Normal equations solved via Gaussian elimination with partial pivoting.
               </p>
-              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+              <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`function linearRegression(
   X: number[][], y: number[]
 ): { coefficients: number[], intercept: number } {
   const n = X.length
   const p = X[0].length
 
-  // Add intercept column
   const Xb = X.map(row => [1, ...row])
 
   // X'X
@@ -422,20 +399,14 @@ export default function OOSTestsPage() {
     }
   }
 
-  // Solve (X'X)^-1 * X'y via Gaussian elimination
   const beta = solveLinearSystem(XtX, Xty)
-
-  return {
-    intercept: beta[0],
-    coefficients: beta.slice(1)
-  }
+  return { intercept: beta[0], coefficients: beta.slice(1) }
 }
 
 function solveLinearSystem(A: number[][], b: number[]): number[] {
   const n = A.length
   const aug = A.map((row, i) => [...row, b[i]])
 
-  // Forward elimination with partial pivoting
   for (let i = 0; i < n; i++) {
     let maxRow = i
     for (let k = i + 1; k < n; k++) {
@@ -451,7 +422,6 @@ function solveLinearSystem(A: number[][], b: number[]): number[] {
     }
   }
 
-  // Back substitution
   const x = Array(n).fill(0)
   for (let i = n - 1; i >= 0; i--) {
     x[i] = aug[i][n]
@@ -460,23 +430,20 @@ function solveLinearSystem(A: number[][], b: number[]): number[] {
     }
     x[i] /= aug[i][i] || 1e-10
   }
-
   return x
 }`}
               </pre>
             </div>
 
-            {/* AUC-ROC */}
             <div>
               <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
                 <Code className="w-4 h-4" />
                 AUC-ROC Calculation
               </h4>
               <p className="text-gray-500 text-xs mb-2">
-                Area Under the ROC Curve — the primary metric for recession prediction. Computed via trapezoidal integration
-                over the true-positive-rate / false-positive-rate curve. Returns 0.5 for degenerate cases (all same class).
+                Primary recession prediction metric. Trapezoidal integration over the TPR/FPR curve. Returns 0.5 for degenerate cases.
               </p>
-              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+              <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`function calculateAUC(actuals: number[], predictions: number[]): number {
   const pairs = actuals.map((a, i) => ({ actual: a, pred: predictions[i] }))
   pairs.sort((a, b) => b.pred - a.pred)
@@ -495,25 +462,22 @@ function solveLinearSystem(A: number[][], b: number[]): number[] {
     points.push({ tpr: tp / totalPos, fpr: fp / totalNeg })
   }
 
-  // Trapezoidal integration
   let auc = 0
   for (let i = 1; i < points.length; i++) {
     auc += (points[i].fpr - points[i-1].fpr)
          * (points[i].tpr + points[i-1].tpr) / 2
   }
-
   return auc
 }`}
               </pre>
             </div>
 
-            {/* RMSE + Standardization */}
             <div>
               <h4 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
                 <Code className="w-4 h-4" />
                 RMSE, Standardization, Rolling Mean
               </h4>
-              <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+              <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`function calculateRMSE(actuals: number[], predictions: number[]): number {
   const n = actuals.length
   const mse = actuals.reduce((sum, a, i) =>
@@ -531,15 +495,8 @@ function standardize(data: number[]): {
   ) || 1
   return {
     scaled: data.map(x => (x - mean) / std),
-    mean,
-    std
+    mean, std
   }
-}
-
-function applyStandardize(
-  value: number, mean: number, std: number
-): number {
-  return (value - mean) / (std || 1)
 }
 
 function rollingMean(data: number[], window: number): number[] {
@@ -561,18 +518,17 @@ function rollingMean(data: number[], window: number): number[] {
 
         {/* Source Code: Recession Prediction Test */}
         <CollapsibleSection
-          title="Source Code: Recession Prediction Test"
+          title="Source Code: Crisis Prediction Test"
           icon={<FileCode className="w-5 h-5" />}
           isExpanded={expandedSections.has('recession-code')}
           onToggle={() => toggleSection('recession-code')}
-          color="red"
         >
           <div className="space-y-3">
             <p className="text-gray-400 text-sm">
-              Walk-forward logistic regression comparing NIV, Fed Yield Curve (T10Y3M), and a Hybrid model
-              for predicting recessions 12 months ahead. Each model is retrained at every step on an expanding window of past data.
+              Walk-forward logistic regression comparing NIV, Fed Yield Curve (T10Y3M), and Hybrid model
+              for predicting recessions 12 months ahead. Retrained at every step on expanding window.
             </p>
-            <pre className="bg-dark-900 border border-red-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+            <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`export function runRecessionPredictionTest(
   data: NIVDataPoint[],
   smoothWindow = 12,
@@ -580,15 +536,13 @@ function rollingMean(data: number[], window: number): number[] {
   onProgress?: (status: string, progress: number) => void
 ): RecessionTestResult {
 
-  // Prepare data with recession labels
   const prepared = data.map(d => ({
     date: d.date,
     niv: d.niv,
-    yieldSpread: d.components.drag,  // Drag as yield spread proxy
+    yieldSpread: d.components.drag,
     isRecession: isInRecession(d.date) ? 1 : 0
   }))
 
-  // Apply smoothing to NIV
   const nivValues = prepared.map(d => d.niv)
   const smoothedNiv = rollingMean(nivValues, smoothWindow)
 
@@ -602,7 +556,6 @@ function rollingMean(data: number[], window: number): number[] {
     }
   }
 
-  // Filter valid data (no NaN from smoothing or target shift)
   const validData = prepared.map((d, i) => ({
     ...d,
     smoothedNiv: smoothedNiv[i],
@@ -613,7 +566,7 @@ function rollingMean(data: number[], window: number): number[] {
     throw new Error('Not enough data for test')
   }
 
-  // Walk-forward validation — start at 20% of data
+  // Walk-forward: start at 20% of data
   const startIdx = Math.floor(validData.length * 0.2)
   const predsFed: number[] = []
   const predsNiv: number[] = []
@@ -625,14 +578,12 @@ function rollingMean(data: number[], window: number): number[] {
     const train = validData.slice(0, i)
     const test = validData[i]
 
-    // Need at least one of each class in training set
     const hasPositive = train.some(d => d.target === 1)
     const hasNegative = train.some(d => d.target === 0)
     if (!hasPositive || !hasNegative) continue
 
     const yTrain = train.map(d => d.target)
 
-    // Standardize NIV for this training window
     const { scaled: nivScaled, mean: nivMean, std: nivStd } =
       standardize(train.map(d => d.smoothedNiv))
     const testNivScaled = applyStandardize(
@@ -670,7 +621,6 @@ function rollingMean(data: number[], window: number): number[] {
     dates.push(test.date)
   }
 
-  // Score all three models
   const aucFed = calculateAUC(actuals, predsFed)
   const aucNiv = calculateAUC(actuals, predsNiv)
   const aucHybrid = calculateAUC(actuals, predsHybrid)
@@ -697,14 +647,12 @@ function rollingMean(data: number[], window: number): number[] {
           icon={<FileCode className="w-5 h-5" />}
           isExpanded={expandedSections.has('optimization-code')}
           onToggle={() => toggleSection('optimization-code')}
-          color="purple"
         >
           <div className="space-y-3">
             <p className="text-gray-400 text-sm">
-              Grid search over smoothing windows and prediction lags. For each configuration,
-              runs a full GDP forecast test and records NIV vs Fed RMSE.
+              Grid search over smoothing windows and prediction lags. Runs a full GDP forecast test per configuration.
             </p>
-            <pre className="bg-dark-900 border border-purple-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+            <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`export function runOptimizationTest(
   data: NIVDataPoint[],
   smoothOptions = [3, 6, 9, 12, 18],
@@ -728,10 +676,8 @@ function rollingMean(data: number[], window: number): number[] {
 
       try {
         const result = runGDPForecastTest(data, smooth, lag)
-
         allResults.push({
-          smooth,
-          lag,
+          smooth, lag,
           nivRmse: result.rmseNiv,
           fedRmse: result.rmseFed,
           winner: result.rmseNiv < result.rmseFed ? 'niv' : 'fed'
@@ -764,20 +710,19 @@ function rollingMean(data: number[], window: number): number[] {
           </div>
         </CollapsibleSection>
 
-        {/* Source Code: GDP Forecast Test (used by optimization + forensic) */}
+        {/* Source Code: GDP Forecast Test */}
         <CollapsibleSection
           title="Source Code: GDP Forecast Test"
           icon={<FileCode className="w-5 h-5" />}
           isExpanded={expandedSections.has('gdp-code')}
           onToggle={() => toggleSection('gdp-code')}
-          color="blue"
         >
           <div className="space-y-3">
             <p className="text-gray-400 text-sm">
-              Walk-forward linear regression comparing NIV, Fed, and Hybrid models for forecasting GDP growth.
-              Used internally by both Parameter Optimization and Forensic Analysis.
+              Walk-forward linear regression comparing NIV, Fed, and Hybrid models for GDP growth forecasting.
+              Used by both Parameter Optimization and Forensic Analysis.
             </p>
-            <pre className="bg-dark-900 border border-blue-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+            <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`export function runGDPForecastTest(
   data: NIVDataPoint[],
   smoothWindow = 12,
@@ -789,14 +734,12 @@ function rollingMean(data: number[], window: number): number[] {
     date: d.date,
     niv: d.niv,
     yieldSpread: d.components.drag,
-    gdpGrowth: d.components.thrust  // Investment growth as GDP proxy
+    gdpGrowth: d.components.thrust
   }))
 
-  // Apply smoothing
   const nivValues = prepared.map(d => d.niv)
   const smoothedNiv = rollingMean(nivValues, smoothWindow)
 
-  // Shift target by lag
   const target: number[] = []
   for (let i = 0; i < prepared.length; i++) {
     if (i + lagMonths < prepared.length) {
@@ -828,13 +771,11 @@ function rollingMean(data: number[], window: number): number[] {
     const test = validData[i]
     const yTrain = train.map(d => d.target)
 
-    // Standardize features for this training window
     const { scaled: nivScaled, mean: nivMean, std: nivStd } =
       standardize(train.map(d => d.smoothedNiv))
     const { scaled: fedScaled, mean: fedMean, std: fedStd } =
       standardize(train.map(d => d.yieldSpread))
 
-    // Fed model
     const fedTrain = fedScaled.map(v => [v])
     const modelFed = linearRegression(fedTrain, yTrain)
     const testFedScaled = applyStandardize(
@@ -842,7 +783,6 @@ function rollingMean(data: number[], window: number): number[] {
     )
     const pFed = predictLinear([testFedScaled], modelFed)
 
-    // NIV model
     const nivTrain = nivScaled.map(v => [v])
     const modelNiv = linearRegression(nivTrain, yTrain)
     const testNivScaled = applyStandardize(
@@ -850,7 +790,6 @@ function rollingMean(data: number[], window: number): number[] {
     )
     const pNiv = predictLinear([testNivScaled], modelNiv)
 
-    // Hybrid model
     const hybridTrain = train.map((_, j) =>
       [fedScaled[j], nivScaled[j]]
     )
@@ -892,14 +831,12 @@ function rollingMean(data: number[], window: number): number[] {
           icon={<FileCode className="w-5 h-5" />}
           isExpanded={expandedSections.has('forensic-code')}
           onToggle={() => toggleSection('forensic-code')}
-          color="orange"
         >
           <div className="space-y-3">
             <p className="text-gray-400 text-sm">
-              Runs a GDP forecast test then decomposes the results: RMSE comparison, prediction correlation
-              between Fed and Hybrid, model weight attribution, and a diagnostic verdict.
+              Runs GDP forecast test then decomposes: RMSE comparison, prediction correlation, model weights, and verdict.
             </p>
-            <pre className="bg-dark-900 border border-orange-500/20 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
+            <pre className="bg-black border border-white/10 rounded-lg p-4 overflow-x-auto text-xs font-mono text-gray-300 leading-relaxed">
 {`export function runForensicAnalysis(
   data: NIVDataPoint[],
   smoothWindow = 12,
@@ -910,7 +847,6 @@ function rollingMean(data: number[], window: number): number[] {
     data, smoothWindow, lagMonths, onProgress
   )
 
-  // Correlation between Fed and Hybrid predictions
   const n = result.predictionsFed.length
   const meanFed = result.predictionsFed.reduce((a, b) =>
     a + b, 0) / n
@@ -932,7 +868,6 @@ function rollingMean(data: number[], window: number): number[] {
   const correlation = numerator /
     (Math.sqrt(denomFed * denomHybrid) || 1)
 
-  // Model weights (from regression coefficients)
   const fedWeight = 0.6
   const nivWeight = 0.4
   const totalAbs = Math.abs(fedWeight) + Math.abs(nivWeight)
@@ -956,8 +891,7 @@ function rollingMean(data: number[], window: number): number[] {
   return {
     rmseFed: result.rmseFed,
     rmseHybrid: result.rmseHybrid,
-    difference,
-    correlation,
+    difference, correlation,
     fedWeight, nivWeight, nivContribution,
     verdict
   }
@@ -967,13 +901,14 @@ function rollingMean(data: number[], window: number): number[] {
         </CollapsibleSection>
 
         {/* Divider before interactive tests */}
-        <div className="my-10 border-t border-white/10 pt-2">
+        <div className="my-10 border-t border-white/10 pt-6">
+          <p className="text-caption uppercase text-gray-500 mb-4">Interactive Testing</p>
           <h2 className="text-2xl font-bold text-white flex items-center gap-3">
             <Play className="w-6 h-6 text-regen-400" />
             Run Tests
           </h2>
           <p className="text-gray-500 text-sm mt-1">
-            Execute the OOS tests above against live FRED data. Results are computed entirely in-browser.
+            Execute the OOS tests above against live FRED data. All computation runs in-browser.
           </p>
         </div>
 
@@ -1011,7 +946,7 @@ function rollingMean(data: number[], window: number): number[] {
                 className={`p-4 rounded-xl border-2 transition-all text-left ${
                   isActive
                     ? `bg-gradient-to-br ${colors[test.color as keyof typeof colors]} border-opacity-50`
-                    : 'bg-dark-800 border-white/10 hover:border-white/30'
+                    : 'bg-[#0a0a0a] border-white/10 hover:border-white/30'
                 }`}
               >
                 <Icon className={`w-6 h-6 mb-2 ${isActive ? 'text-white' : 'text-gray-400'}`} />
@@ -1030,7 +965,7 @@ function rollingMean(data: number[], window: number): number[] {
         <button
           onClick={() => runTest(activeTest)}
           disabled={isRunning || checkingServerKey || !canRunTests}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold rounded-xl transition disabled:opacity-50 mb-4"
+          className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-black font-medium uppercase tracking-wider hover:bg-gray-100 transition disabled:opacity-50 mb-8"
         >
           {checkingServerKey ? (
             <>
@@ -1062,7 +997,7 @@ function rollingMean(data: number[], window: number): number[] {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-8 p-6 bg-dark-800/80 border border-blue-500/30 rounded-xl"
+              className="mb-8 p-6 bg-[#0a0a0a]/80 border border-blue-500/30 rounded-xl"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="relative">
@@ -1075,7 +1010,7 @@ function rollingMean(data: number[], window: number): number[] {
                 </div>
               </div>
               {/* Animated progress bar */}
-              <div className="h-2 bg-dark-600 rounded-full overflow-hidden">
+              <div className="h-2 bg-[#111] rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-blue-600 to-blue-400"
                   initial={{ width: '0%' }}
@@ -1112,81 +1047,7 @@ function rollingMean(data: number[], window: number): number[] {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Collapsible Section Component
-// ─────────────────────────────────────────────────────────────────────────────
-function CollapsibleSection({
-  title,
-  icon,
-  isExpanded,
-  onToggle,
-  color,
-  children,
-}: {
-  title: string
-  icon: React.ReactNode
-  isExpanded: boolean
-  onToggle: () => void
-  color: string
-  children: React.ReactNode
-}) {
-  const colorClasses: Record<string, string> = {
-    regen: 'border-regen-500/30 bg-regen-500/5',
-    blue: 'border-blue-500/30 bg-blue-500/5',
-    green: 'border-green-500/30 bg-green-500/5',
-    yellow: 'border-yellow-500/30 bg-yellow-500/5',
-    red: 'border-red-500/30 bg-red-500/5',
-    purple: 'border-purple-500/30 bg-purple-500/5',
-    orange: 'border-orange-500/30 bg-orange-500/5',
-    gray: 'border-white/10 bg-dark-800',
-  }
-
-  const iconColors: Record<string, string> = {
-    regen: 'text-regen-400',
-    blue: 'text-blue-400',
-    green: 'text-green-400',
-    yellow: 'text-yellow-400',
-    red: 'text-red-400',
-    purple: 'text-purple-400',
-    orange: 'text-orange-400',
-    gray: 'text-gray-400',
-  }
-
-  return (
-    <div className={`mb-4 border rounded-xl overflow-hidden ${colorClasses[color]}`}>
-      <button
-        onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
-      >
-        <div className="flex items-center gap-3">
-          <span className={iconColors[color]}>{icon}</span>
-          <span className="font-bold text-white">{title}</span>
-        </div>
-        {isExpanded ? (
-          <ChevronDown className="w-5 h-5 text-gray-400" />
-        ) : (
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        )}
-      </button>
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="p-4 border-t border-white/10">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Recession Prediction Results Component
-// ─────────────────────────────────────────────────────────────────────────────
 function RecessionResults({ result }: { result: RecessionTestResult }) {
   const chartData = result.dates.map((date, i) => ({
     date,
@@ -1228,7 +1089,7 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
           NIV outperforms the Fed Yield Curve by{' '}
           <span className="text-green-400">{improvementPct}%</span>
-          {' '}in Recession Detection Accuracy
+          {' '}in Crisis Detection Accuracy
         </h2>
         <div className="flex justify-center gap-8 text-xl font-mono">
           <div>
@@ -1244,11 +1105,11 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
       </motion.div>
 
       {/* Scoreboard */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Award className="w-6 h-6 text-yellow-400" />
-            Recession Prediction Scoreboard (AUC)
+            Crisis Prediction Scoreboard (AUC)
           </h3>
           <button
             onClick={exportCSV}
@@ -1287,19 +1148,19 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
 
         {/* Detailed Metrics */}
         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+          <div className="bg-black border border-white/10 rounded-lg p-3 text-center">
             <div className="text-gray-400">Data Points</div>
             <div className="text-white font-mono font-bold">{result.dates.length}</div>
           </div>
-          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+          <div className="bg-black border border-white/10 rounded-lg p-3 text-center">
             <div className="text-gray-400">Recession Months</div>
             <div className="text-white font-mono font-bold">{result.actuals.filter(a => a === 1).length}</div>
           </div>
-          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+          <div className="bg-black border border-white/10 rounded-lg p-3 text-center">
             <div className="text-gray-400">Expansion Months</div>
             <div className="text-white font-mono font-bold">{result.actuals.filter(a => a === 0).length}</div>
           </div>
-          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
+          <div className="bg-black border border-white/10 rounded-lg p-3 text-center">
             <div className="text-gray-400">NIV vs Fed Delta</div>
             <div className={`font-mono font-bold ${result.aucNiv > result.aucFed ? 'text-green-400' : 'text-red-400'}`}>
               {result.aucNiv > result.aucFed ? '+' : ''}{(result.aucNiv - result.aucFed).toFixed(4)}
@@ -1309,8 +1170,8 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
       </div>
 
       {/* Probability Chart */}
-      <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-lg font-bold mb-4">Recession Probability Over Time (12-Month Warning)</h3>
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
+        <h3 className="text-lg font-bold mb-4">Crisis Probability Over Time (12-Month Warning)</h3>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
@@ -1348,17 +1209,12 @@ function RecessionResults({ result }: { result: RecessionTestResult }) {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-xs text-gray-500 mt-3 text-center">
-          Red-shaded regions indicate NBER recession periods. All probabilities are out-of-sample predictions from walk-forward validation.
-        </p>
       </div>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Optimization Results Component
-// ─────────────────────────────────────────────────────────────────────────────
 function OptimizationResults({ result }: { result: OptimizationResult }) {
   const gridData = result.allResults.map(r => ({
     config: `S${r.smooth}/L${r.lag}`,
@@ -1389,7 +1245,7 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
   return (
     <div className="space-y-6">
       {/* Best Configuration */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Settings className="w-6 h-6 text-purple-400" />
@@ -1431,7 +1287,7 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
       </div>
 
       {/* Results Grid */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <h3 className="text-lg font-bold mb-4">All Configurations Tested</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1474,9 +1330,7 @@ function OptimizationResults({ result }: { result: OptimizationResult }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Forensic Analysis Results Component
-// ─────────────────────────────────────────────────────────────────────────────
 function ForensicResults({ result }: { result: ForensicResult }) {
   const exportCSV = () => {
     const csv = [
@@ -1506,7 +1360,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
   return (
     <div className="space-y-6">
       {/* Main Header */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="border border-white/10 bg-[#0a0a0a] p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-2xl font-bold flex items-center gap-2 text-white">
@@ -1526,7 +1380,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Precision Scoring (RMSE) Card */}
-          <div className="bg-dark-700 rounded-xl p-5">
+          <div className="bg-black border border-white/10 rounded-xl p-5">
             <h4 className="font-bold text-gray-300 mb-4">Precision Scoring (RMSE)</h4>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -1544,7 +1398,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
                 </span>
               </div>
               {/* Difference bar */}
-              <div className="h-2 bg-dark-600 rounded-full overflow-hidden mt-2">
+              <div className="h-2 bg-[#111] rounded-full overflow-hidden mt-2">
                 <div
                   className={`h-full ${result.difference > 0 ? 'bg-green-500' : 'bg-red-500'}`}
                   style={{ width: `${Math.min(Math.abs(result.difference) * 100000, 100)}%` }}
@@ -1553,12 +1407,12 @@ function ForensicResults({ result }: { result: ForensicResult }) {
             </div>
             {/* Context text */}
             <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-              Hybrid RMSE is only <span className="text-gray-300">{diffBasisPoints} basis points</span> {result.difference > 0 ? 'better' : 'worse'} than pure Fed — a negligible difference in forecast error. NIV&apos;s contribution remains meaningful at <span className="text-green-400">{nivWeightPct}%</span> weight.
+              Hybrid RMSE is only <span className="text-gray-300">{diffBasisPoints} basis points</span> {result.difference > 0 ? 'better' : 'worse'} than pure Fed — a negligible difference in forecast error. NIV's contribution remains meaningful at <span className="text-green-400">{nivWeightPct}%</span> weight.
             </p>
           </div>
 
           {/* Clone Factor / Correlation Card */}
-          <div className="bg-dark-700 rounded-xl p-5">
+          <div className="bg-black border border-white/10 rounded-xl p-5">
             <h4 className="font-bold text-gray-300 mb-4">Clone Factor</h4>
             <div className="text-center mb-4">
               <div className="text-5xl font-mono font-bold text-orange-400">
@@ -1567,7 +1421,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
               <div className="text-sm text-gray-400 mt-2">Prediction Correlation</div>
             </div>
             {/* Correlation bar */}
-            <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
+            <div className="h-3 bg-[#111] rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-orange-600 to-orange-400"
                 style={{ width: `${result.correlation * 100}%` }}
@@ -1575,12 +1429,12 @@ function ForensicResults({ result }: { result: ForensicResult }) {
             </div>
             {/* Context text */}
             <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-              High but not perfect correlation — NIV captures <span className="text-orange-300">distinct signals</span> (e.g., short-term liquidity/thrust dynamics) that complement the Fed&apos;s longer-horizon focus.
+              High but not perfect correlation — NIV captures <span className="text-orange-300">distinct signals</span> (e.g., short-term liquidity/thrust dynamics) that complement the Fed's longer-horizon focus.
             </p>
           </div>
 
           {/* Model Weights Card */}
-          <div className="bg-dark-700 rounded-xl p-5">
+          <div className="bg-black border border-white/10 rounded-xl p-5">
             <h4 className="font-bold text-gray-300 mb-4">Model Weights</h4>
             <div className="space-y-4">
               <div>
@@ -1588,7 +1442,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
                   <span className="text-gray-400">Fed Weight</span>
                   <span className="font-mono text-red-400 font-bold">{fedWeightPct}%</span>
                 </div>
-                <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
+                <div className="h-3 bg-[#111] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-red-600 to-red-400"
                     style={{ width: `${(1 - result.nivContribution / 100) * 100}%` }}
@@ -1600,7 +1454,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
                   <span className="text-gray-400">NIV Weight</span>
                   <span className="font-mono text-green-400 font-bold">{nivWeightPct}%</span>
                 </div>
-                <div className="h-3 bg-dark-600 rounded-full overflow-hidden">
+                <div className="h-3 bg-[#111] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-green-600 to-green-400"
                     style={{ width: `${result.nivContribution}%` }}
@@ -1610,7 +1464,7 @@ function ForensicResults({ result }: { result: ForensicResult }) {
             </div>
             {/* Context text */}
             <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-              Optimal blend assigns NIV a substantial <span className="text-green-400">{nivWeightPct}% weight</span> — indicating it adds unique value despite Fed&apos;s slight edge in this averaged setup.
+              Optimal blend assigns NIV a substantial <span className="text-green-400">{nivWeightPct}% weight</span> — indicating it adds unique value despite Fed's slight edge in this averaged setup.
             </p>
           </div>
         </div>
@@ -1634,19 +1488,19 @@ function ForensicResults({ result }: { result: ForensicResult }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Score Card Component
-// ─────────────────────────────────────────────────────────────────────────────
 function ScoreCard({
   label,
   value,
   isWinner,
   color,
+  lowerIsBetter = false,
 }: {
   label: string
   value: string
   isWinner: boolean
   color: 'red' | 'green' | 'purple'
+  lowerIsBetter?: boolean
 }) {
   const colors = {
     red: 'text-red-400 bg-red-500/20 border-red-500/30',
@@ -1655,7 +1509,7 @@ function ScoreCard({
   }
 
   return (
-    <div className={`p-4 rounded-xl border-2 ${isWinner ? colors[color] : 'bg-dark-700 border-white/10'}`}>
+    <div className={`p-4 rounded-xl border-2 ${isWinner ? colors[color] : 'bg-black border border-white/10 border-white/10'}`}>
       <div className="text-sm text-gray-400 mb-1">{label}</div>
       <div className={`text-2xl font-mono font-bold ${isWinner ? colors[color].split(' ')[0] : 'text-white'}`}>
         {value}
@@ -1666,6 +1520,52 @@ function ScoreCard({
           <span className="text-sm font-bold">Winner</span>
         </div>
       )}
+    </div>
+  )
+}
+
+// Collapsible Section Component (Palantir style)
+function CollapsibleSection({
+  title,
+  icon,
+  isExpanded,
+  onToggle,
+  children,
+}: {
+  title: string
+  icon: React.ReactNode
+  isExpanded: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mb-4 border border-white/10 rounded-xl overflow-hidden bg-[#0a0a0a]/50">
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-gray-400">{icon}</span>
+          <span className="font-bold text-white">{title}</span>
+        </div>
+        {isExpanded ? (
+          <ChevronDown className="w-5 h-5 text-gray-400" />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        )}
+      </button>
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 border-t border-white/10">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -29,8 +29,8 @@ export default function RedAlertBanner({ probability }: RedAlertBannerProps) {
             <div>
               <span className="font-bold text-red-400">RED ALERT: </span>
               <span className="text-white">
-                Recession probability at <strong>{probability}%</strong>. 
-                NIV detects elevated liquidity stress.
+                Crisis probability at <strong>{probability}%</strong>.
+                NIV detects elevated systemic stress.
               </span>
             </div>
           </div>
