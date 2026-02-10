@@ -550,8 +550,7 @@ export default function MethodologyPage() {
               <h4 className="text-white font-bold mt-6">Predictive Power:</h4>
               <p>
                 NIV achieves <strong className="text-regen-400">0.85 AUC</strong> on out-of-sample recession prediction,
-                outperforming the Fed Yield Curve (T10Y3M) by detecting liquidity stress
-                <strong className="text-regen-400"> 6 months earlier</strong> on average.
+                outperforming the Fed Yield Curve (T10Y3M) by detecting liquidity stress earlier.
               </p>
             </div>
           </div>
