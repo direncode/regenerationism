@@ -740,18 +740,19 @@ function predictLinear(x: number[], model: LinearModel): number {
 // ENSEMBLE WALK-FORWARD LOOP
 // ═══════════════════════════════════════════════════════════════════════════
 
-function runEnsembleWalkForward(
+async function runEnsembleWalkForward(
   validData: PreparedDataPoint[],
   windowType: 'expanding' | 'fixed',
   fixedWindowSize: number,
   onProgress?: (status: string, progress: number) => void
-): {
+): Promise<{
   dates: string[]; actuals: number[]
   probs: number[]; lower: number[]; upper: number[]; warnings: string[]
   pLog: number[]; pBoost: number[]; pNeural: number[]
-} {
+}> {
   const n = validData.length
   const startIdx = Math.floor(n * 0.2)
+  const retrainEvery = 5 // Only retrain models every 5 steps (5x speedup)
 
   const dates: string[] = [], actuals: number[] = []
   const probs: number[] = [], lower: number[] = [], upper: number[] = [], warnings: string[] = []
@@ -759,71 +760,62 @@ function runEnsembleWalkForward(
 
   const conformal = new ConformalPredictor(0.1)
 
+  // Cached models — reused between retraining steps
+  let cachedM1: LinearModel | null = null
+  let cachedM2: BoostedModel | null = null
+  let cachedM3: NeuralModel | null = null
+  let cachedMeans: number[] = []
+  let cachedStds: number[] = []
+  let cachedIso: IsotonicModel | null = null
+  let stepsSinceStart = 0
+
   for (let i = startIdx; i < n; i++) {
     const trainStart = windowType === 'fixed' ? Math.max(0, i - fixedWindowSize) : 0
     const trainSlice = validData.slice(trainStart, i)
     const test = validData[i]
 
-    // Must have both classes
     const hasPos = trainSlice.some(d => d.target === 1)
     const hasNeg = trainSlice.some(d => d.target === 0)
     if (!hasPos || !hasNeg) continue
 
-    // Standardize using training statistics
-    const { trainX, allX, means, stds } = standardizeFeatures(trainSlice, validData)
-    const testX = test.features.map((v, j) => (v - means[j]) / stds[j])
-    const yTrain = trainSlice.map(d => d.target)
+    // Only retrain every N steps (cache models between retrains)
+    const shouldRetrain = cachedM1 === null || stepsSinceStart % retrainEvery === 0
+    if (shouldRetrain) {
+      const { trainX, means, stds } = standardizeFeatures(trainSlice, validData)
+      const yTrain = trainSlice.map(d => d.target)
+      cachedMeans = means
+      cachedStds = stds
 
-    // --- Train base learners ---
-    let p1: number, p2: number, p3: number
-    try {
-      const m1 = logisticRegressionL2(trainX, yTrain, 200, 0.05, 0.01)
-      p1 = predictProba(testX, m1)
-    } catch { p1 = 0.5 }
+      try { cachedM1 = logisticRegressionL2(trainX, yTrain, 100, 0.05, 0.01) } catch { cachedM1 = null }
+      try { cachedM2 = trainBoostedStumps(trainX, yTrain, 15) } catch { cachedM2 = null }
+      try { cachedM3 = trainNeural(trainX, yTrain, 8, 10, 0.01) } catch { cachedM3 = null }
 
-    try {
-      const m2 = trainBoostedStumps(trainX, yTrain, 25)
-      p2 = predictBoosted(testX, m2)
-    } catch { p2 = 0.5 }
-
-    try {
-      const m3 = trainNeural(trainX, yTrain, 8, 25, 0.01)
-      p3 = predictNeural(testX, m3)
-    } catch { p3 = 0.5 }
-
-    // --- Ensemble: average of log-odds (approximation to stacking) ---
-    const ensembleLogit = (logit(p1) + logit(p2) + logit(p3)) / 3
-    let pRaw = sigmoid(ensembleLogit)
-
-    // --- Calibration: fit isotonic on recent training predictions ---
-    // Use last 30% of training data for calibration
-    const calStart = Math.floor(trainSlice.length * 0.7)
-    const calSlice = trainSlice.slice(calStart)
-    if (calSlice.length >= 10) {
-      try {
-        const calX = calSlice.map(d => d.features.map((v, j) => (v - means[j]) / stds[j]))
-        const calY = calSlice.map(d => d.target)
-        // Get ensemble predictions on calibration set
-        const calPreds = calX.map(cx => {
-          try {
-            const m1c = logisticRegressionL2(trainX.slice(0, calStart), yTrain.slice(0, calStart), 200, 0.05, 0.01)
-            const cp1 = predictProba(cx, m1c)
-            // Use simplified ensemble for calibration (just logistic for speed)
-            return cp1
-          } catch { return 0.5 }
-        })
-        const iso = fitIsotonic(calPreds, calY)
-        pRaw = applyIsotonic(pRaw, iso)
-      } catch {
-        // Calibration failed; use raw
+      // Calibration on last 30% of train
+      const calStart = Math.floor(trainSlice.length * 0.7)
+      const calSlice = trainSlice.slice(calStart)
+      if (calSlice.length >= 10 && cachedM1) {
+        try {
+          const calX = calSlice.map(d => d.features.map((v, j) => (v - means[j]) / stds[j]))
+          const calY = calSlice.map(d => d.target)
+          const calPreds = calX.map(cx => predictProba(cx, cachedM1!))
+          cachedIso = fitIsotonic(calPreds, calY)
+        } catch { cachedIso = null }
       }
     }
 
-    // --- Conformal interval ---
+    // Predict using cached models
+    const testX = test.features.map((v, j) => (v - cachedMeans[j]) / cachedStds[j])
+    const p1 = cachedM1 ? predictProba(testX, cachedM1) : 0.5
+    const p2 = cachedM2 ? predictBoosted(testX, cachedM2) : 0.5
+    const p3 = cachedM3 ? predictNeural(testX, cachedM3) : 0.5
+
+    const ensembleLogit = (logit(p1) + logit(p2) + logit(p3)) / 3
+    let pRaw = sigmoid(ensembleLogit)
+    if (cachedIso) pRaw = applyIsotonic(pRaw, cachedIso)
+
     const interval = conformal.getInterval(pRaw)
     const warning = classifyWarning(pRaw, interval.lower)
 
-    // Update conformal with previous prediction
     if (actuals.length > 0) {
       conformal.update(probs[probs.length - 1], actuals[actuals.length - 1])
     }
@@ -837,9 +829,12 @@ function runEnsembleWalkForward(
     pLog.push(p1)
     pBoost.push(p2)
     pNeural.push(p3)
+    stepsSinceStart++
 
-    if (i % 25 === 0) {
-      onProgress?.(`Step ${i}/${n}`, 20 + (i / n) * 70)
+    // Yield to main thread every 10 steps to prevent "not responding"
+    if (stepsSinceStart % 10 === 0) {
+      onProgress?.(`Walk-forward step ${i}/${n}`, 20 + ((i - startIdx) / (n - startIdx)) * 70)
+      await new Promise(r => setTimeout(r, 0))
     }
   }
 
@@ -853,12 +848,12 @@ function runEnsembleWalkForward(
 /**
  * Test 1: Calibrated Ensemble Recession Prediction
  */
-export function runEnsembleRecessionTest(
+export async function runEnsembleRecessionTest(
   data: NIVDataPoint[],
   smoothWindow = 12,
   predictionLag = 12,
   onProgress?: (status: string, progress: number) => void
-): EnsembleRecessionResult {
+): Promise<EnsembleRecessionResult> {
   const testStart = performance.now()
   auditLog.logSystem('Ensemble Recession Test started', 'INFO',
     { dataPoints: data.length, smoothWindow, predictionLag }, 'OOS-EnsembleTest')
@@ -869,7 +864,7 @@ export function runEnsembleRecessionTest(
 
   onProgress?.('Running calibrated ensemble walk-forward...', 10)
 
-  const result = runEnsembleWalkForward(validData, 'expanding', 180, onProgress)
+  const result = await runEnsembleWalkForward(validData, 'expanding', 180, onProgress)
 
   onProgress?.('Computing metrics...', 92)
 
@@ -922,13 +917,14 @@ export function runEnsembleRecessionTest(
 /**
  * Test 2: Multi-Horizon Analysis
  */
-export function runMultiHorizonTest(
+export async function runMultiHorizonTest(
   data: NIVDataPoint[],
   smoothWindow = 12,
   horizons = [3, 6, 12, 18],
   onProgress?: (status: string, progress: number) => void
-): MultiHorizonResult {
+): Promise<MultiHorizonResult> {
   const results: MultiHorizonResult['horizons'] = []
+  const retrainEvery = 5
 
   for (let h = 0; h < horizons.length; h++) {
     const horizon = horizons[h]
@@ -938,10 +934,15 @@ export function runMultiHorizonTest(
       const validData = prepareData(data, smoothWindow, horizon)
       if (validData.length < 50) continue
 
-      // Use simplified walk-forward (logistic only for speed)
       const n = validData.length
       const startIdx = Math.floor(n * 0.2)
       const predsEnsemble: number[] = [], predsLogistic: number[] = [], actuals: number[] = []
+
+      // Cached models for this horizon
+      let cachedM1: LinearModel | null = null
+      let cachedM2: BoostedModel | null = null
+      let cachedMeans: number[] = [], cachedStds: number[] = []
+      let step = 0
 
       for (let i = startIdx; i < n; i++) {
         const train = validData.slice(0, i)
@@ -951,32 +952,28 @@ export function runMultiHorizonTest(
         const hasNeg = train.some(d => d.target === 0)
         if (!hasPos || !hasNeg) continue
 
-        const { trainX, means, stds } = standardizeFeatures(train, validData)
-        const testX = test.features.map((v, j) => (v - means[j]) / stds[j])
-        const yTrain = train.map(d => d.target)
-
-        try {
-          const m1 = logisticRegressionL2(trainX, yTrain, 200, 0.05, 0.01)
-          const p1 = predictProba(testX, m1)
-          predsLogistic.push(p1)
-
-          const m2 = trainBoostedStumps(trainX, yTrain, 20)
-          const p2 = predictBoosted(testX, m2)
-
-          predsEnsemble.push(sigmoid((logit(p1) + logit(p2)) / 2))
-        } catch {
-          // Fallback: just logistic
-          try {
-            const m1 = logisticRegressionL2(trainX, yTrain, 200, 0.05, 0.01)
-            const p1 = predictProba(testX, m1)
-            predsLogistic.push(p1)
-            predsEnsemble.push(p1)
-          } catch {
-            predsLogistic.push(0.5)
-            predsEnsemble.push(0.5)
-          }
+        const shouldRetrain = cachedM1 === null || step % retrainEvery === 0
+        if (shouldRetrain) {
+          const { trainX, means, stds } = standardizeFeatures(train, validData)
+          const yTrain = train.map(d => d.target)
+          cachedMeans = means
+          cachedStds = stds
+          try { cachedM1 = logisticRegressionL2(trainX, yTrain, 80, 0.05, 0.01) } catch { cachedM1 = null }
+          try { cachedM2 = trainBoostedStumps(trainX, yTrain, 10) } catch { cachedM2 = null }
         }
+
+        const testX = test.features.map((v, j) => (v - cachedMeans[j]) / cachedStds[j])
+        const p1 = cachedM1 ? predictProba(testX, cachedM1) : 0.5
+        const p2 = cachedM2 ? predictBoosted(testX, cachedM2) : 0.5
+        predsLogistic.push(p1)
+        predsEnsemble.push(sigmoid((logit(p1) + logit(p2)) / 2))
         actuals.push(test.target)
+        step++
+
+        // Yield every 10 steps
+        if (step % 10 === 0) {
+          await new Promise(r => setTimeout(r, 0))
+        }
       }
 
       if (actuals.length < 10) continue
@@ -1005,22 +1002,22 @@ export function runMultiHorizonTest(
 /**
  * Test 3: Protocol Comparison (Expanding vs Fixed Window)
  */
-export function runProtocolComparisonTest(
+export async function runProtocolComparisonTest(
   data: NIVDataPoint[],
   smoothWindow = 12,
   predictionLag = 12,
   onProgress?: (status: string, progress: number) => void
-): ProtocolComparisonResult {
+): Promise<ProtocolComparisonResult> {
   onProgress?.('Preparing data...', 0)
   const validData = prepareData(data, smoothWindow, predictionLag)
   if (validData.length < 50) throw new Error('Not enough data')
 
   onProgress?.('Running expanding window...', 10)
-  const expanding = runEnsembleWalkForward(validData, 'expanding', 180, (s, p) =>
+  const expanding = await runEnsembleWalkForward(validData, 'expanding', 180, (s, p) =>
     onProgress?.(`Expanding: ${s}`, 10 + p * 0.4))
 
   onProgress?.('Running fixed window (15yr)...', 50)
-  const fixed = runEnsembleWalkForward(validData, 'fixed', 180, (s, p) =>
+  const fixed = await runEnsembleWalkForward(validData, 'fixed', 180, (s, p) =>
     onProgress?.(`Fixed: ${s}`, 50 + p * 0.4))
 
   onProgress?.('Computing metrics...', 92)

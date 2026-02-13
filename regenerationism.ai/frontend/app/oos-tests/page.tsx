@@ -141,7 +141,7 @@ export default function OOSTestsPage() {
 
       switch (testType) {
         case 'ensemble': {
-          const res = runEnsembleRecessionTest(
+          const res = await runEnsembleRecessionTest(
             nivData, params.smoothWindow, 12,
             (status, progress) => setLoadingStatus(`${status} (${progress.toFixed(0)}%)`)
           )
@@ -149,7 +149,7 @@ export default function OOSTestsPage() {
           break
         }
         case 'multiHorizon': {
-          const res = runMultiHorizonTest(
+          const res = await runMultiHorizonTest(
             nivData, params.smoothWindow, [3, 6, 12, 18],
             (status, progress) => setLoadingStatus(`${status} (${progress.toFixed(0)}%)`)
           )
@@ -157,7 +157,7 @@ export default function OOSTestsPage() {
           break
         }
         case 'protocol': {
-          const res = runProtocolComparisonTest(
+          const res = await runProtocolComparisonTest(
             nivData, params.smoothWindow, 12,
             (status, progress) => setLoadingStatus(`${status} (${progress.toFixed(0)}%)`)
           )
