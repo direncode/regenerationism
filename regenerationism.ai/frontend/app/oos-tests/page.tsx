@@ -274,6 +274,14 @@ export default function OOSTestsPage() {
               <Download className="w-4 h-4" />
               Results Document
             </a>
+            <a
+              href="/NIV_Final_OOS_Report.md"
+              download
+              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded-lg hover:bg-amber-500/30 transition text-sm font-medium"
+            >
+              <Award className="w-4 h-4" />
+              Final Report
+            </a>
           </div>
         </div>
 
