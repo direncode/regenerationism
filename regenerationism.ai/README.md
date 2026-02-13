@@ -6,7 +6,7 @@
 [![API](https://img.shields.io/badge/API-available-blue)](https://api.regenerationism.ai)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**NIV detects recessions 6 months before the Fed Yield Curve with 0.85 AUC.**
+**NIV detects recessions before the Fed Yield Curve with 0.85 AUC.**
 
 ---
 
@@ -33,7 +33,6 @@ Where:
 | Metric | NIV | Fed Yield Curve |
 |--------|-----|-----------------|
 | AUC (Recession Prediction) | **0.85** | 0.72 |
-| Lead Time | **~6 months** | ~2 months |
 | False Positive Rate | 12% | 18% |
 | Detected 2008 | ✅ July 2007 | ❌ Dec 2007 |
 | Detected 2020 | ✅ Dec 2019 | ❌ Feb 2020 |

@@ -182,7 +182,7 @@ export default function CrashCam() {
         <div>
           <h3 className="text-xl font-bold text-neutral-100">NIV vs Fed Yield Curve</h3>
           <p className="text-sm text-neutral-500">
-            Live recession probability from FRED data ({allData[0]?.date} - {allData[allData.length - 1]?.date})
+            Live crisis probability from FRED data ({allData[0]?.date} - {allData[allData.length - 1]?.date})
           </p>
         </div>
         <div className="flex items-center gap-3">
