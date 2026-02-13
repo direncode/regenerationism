@@ -257,30 +257,14 @@ export default function OOSTestsPage() {
             Next-generation OOS validation with calibrated ensemble, conformal prediction intervals,
             and multi-protocol walk-forward analysis. All computation runs in-browser.
           </p>
-          <div className="mt-4 flex gap-3">
+          <div className="mt-4">
             <a
-              href="/NIV_Next_Gen_OOS_Framework.md"
+              href="/NIV_Final_OOS_Report.md"
               download
               className="inline-flex items-center gap-2 px-4 py-2 bg-regen-500/20 border border-regen-500/40 text-regen-400 rounded-lg hover:bg-regen-500/30 transition text-sm font-medium"
             >
               <FileText className="w-4 h-4" />
-              Download Methodology
-            </a>
-            <a
-              href="/NIV_Out_of_Sample_Methodology_and_Results.md"
-              download
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-lg hover:bg-white/10 transition text-sm font-medium"
-            >
-              <Download className="w-4 h-4" />
-              Results Document
-            </a>
-            <a
-              href="/NIV_Final_OOS_Report.md"
-              download
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded-lg hover:bg-amber-500/30 transition text-sm font-medium"
-            >
-              <Award className="w-4 h-4" />
-              Final Report
+              Download Final Report
             </a>
           </div>
         </div>
