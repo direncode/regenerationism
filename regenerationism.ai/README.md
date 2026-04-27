@@ -4,7 +4,7 @@
 
 [![Live Demo](https://img.shields.io/badge/demo-live-success)](https://regenerationism.ai)
 [![API](https://img.shields.io/badge/API-available-blue)](https://api.regenerationism.ai)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 **NIV detects recessions before the Fed Yield Curve with 0.85 AUC.**
 
@@ -168,7 +168,7 @@ All data sourced from [FRED](https://fred.stlouisfed.org/) (Federal Reserve Econ
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE).
 
 ---
 
