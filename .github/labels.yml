@@ -1,0 +1,94 @@
+# Synced by .github/workflows/labels.yml using EndBug/label-sync.
+# Edit here, push to main, and run the workflow to apply changes.
+
+- name: bug
+  color: d73a4a
+  description: Something isn't working
+
+- name: enhancement
+  color: a2eeef
+  description: New feature or improvement
+
+- name: feature
+  color: 0e8a16
+  description: Larger user-visible feature
+
+- name: documentation
+  color: 0075ca
+  description: Documentation changes
+
+- name: performance
+  color: fbca04
+  description: Performance-related work
+
+- name: refactor
+  color: c2e0c6
+  description: Internal cleanup with no behavior change
+
+- name: chore
+  color: ededed
+  description: Build, infra, or housekeeping
+
+- name: ci
+  color: 1d76db
+  description: Continuous integration
+
+- name: dependencies
+  color: 0366d6
+  description: Dependency updates
+
+- name: rust
+  color: dea584
+  description: Rust code
+
+- name: frontend
+  color: f9d0c4
+  description: Next.js / TypeScript frontend
+
+- name: docker
+  color: 0db7ed
+  description: Container / image work
+
+- name: methodology
+  color: 5319e7
+  description: NIV formula, OOS validation, or data methodology
+
+- name: data
+  color: 8a2be2
+  description: FRED series, ingestion, or data sources
+
+- name: breaking-change
+  color: b60205
+  description: Backwards-incompatible change
+
+- name: security
+  color: ee0701
+  description: Security-related issue or fix
+
+- name: triage
+  color: fef2c0
+  description: Needs triage
+
+- name: good first issue
+  color: 7057ff
+  description: Good entry point for new contributors
+
+- name: help wanted
+  color: 008672
+  description: Maintainers would welcome help here
+
+- name: question
+  color: d876e3
+  description: Further information is requested
+
+- name: duplicate
+  color: cfd3d7
+  description: This issue or PR already exists
+
+- name: wontfix
+  color: ffffff
+  description: Will not be worked on
+
+- name: ignore-for-release
+  color: ededed
+  description: Exclude from auto-generated release notes

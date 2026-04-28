@@ -1,0 +1,17 @@
+# Code owners for review routing.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+
+* @direncode
+
+# Rust engine
+/src/                                @direncode
+/regenerationism.ai/rust-engine/     @direncode
+
+# Frontend
+/regenerationism.ai/frontend/        @direncode
+
+# Methodology / docs
+/docs/                               @direncode
+
+# CI and repo automation
+/.github/                            @direncode
