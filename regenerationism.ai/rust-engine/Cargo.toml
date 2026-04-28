@@ -2,8 +2,16 @@
 name = "niv-engine"
 version = "1.0.0"
 edition = "2021"
+rust-version = "1.75"
 authors = ["Diren Akkocdemir <diren@regenerationism.ai>"]
 description = "NIV (National Impact Velocity) Calculation Engine - Macro Crisis Detection"
+license = "Apache-2.0"
+repository = "https://github.com/direncode/regenerationism"
+homepage = "https://regenerationism.ai"
+documentation = "https://regenerationism.ai/api-docs"
+readme = "../../README.md"
+keywords = ["macro", "economics", "fred", "recession", "axum"]
+categories = ["science", "web-programming::http-server", "finance"]
 
 [dependencies]
 # Web framework

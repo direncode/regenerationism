@@ -39,4 +39,4 @@ yarn-error.log*
 *.tsbuildinfo
 
 # Rust
-Cargo.lock
+# Cargo.lock is committed for binary crates (this repo) so builds are reproducible.
