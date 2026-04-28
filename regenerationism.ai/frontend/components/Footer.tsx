@@ -45,6 +45,12 @@ export default function Footer() {
               <FooterLink href="https://github.com/direncode/regenerationism" external>
                 GitHub
               </FooterLink>
+              <FooterLink
+                href="https://github.com/direncode/regenerationism/blob/main/LICENSE"
+                external
+              >
+                License
+              </FooterLink>
               <FooterLink href="https://fred.stlouisfed.org" external>
                 FRED Data
               </FooterLink>
@@ -55,7 +61,16 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-600">
-            Open data source: Federal Reserve Economic Data (FRED)
+            Open source under{' '}
+            <a
+              href="https://github.com/direncode/regenerationism/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              Apache 2.0
+            </a>
+            {' · '}Data: Federal Reserve Economic Data (FRED)
           </p>
           <p className="text-sm text-gray-600">
             © {new Date().getFullYear()} Regenerationism

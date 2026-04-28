@@ -2,6 +2,17 @@
   "name": "regenerationism-frontend",
   "version": "1.0.0",
   "description": "Regenerationism.ai - NIV Macro Crisis Detection Dashboard",
+  "license": "Apache-2.0",
+  "author": "Diren Akkocdemir <diren@regenerationism.ai>",
+  "homepage": "https://regenerationism.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/direncode/regenerationism.git",
+    "directory": "regenerationism.ai/frontend"
+  },
+  "bugs": {
+    "url": "https://github.com/direncode/regenerationism/issues"
+  },
   "private": false,
   "scripts": {
     "dev": "next dev",
